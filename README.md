@@ -1,4 +1,4 @@
-##Dislocator 2.0##
+##pyDis##
 
 FULLY IMPLEMENTED FEATURES
 -Cluster based dislocation simulations in GULP
