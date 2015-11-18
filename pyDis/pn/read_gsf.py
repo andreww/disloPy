@@ -32,19 +32,31 @@ def command_line_options():
                                   help="Output file for the gamma surface energies")
     options.add_argument("-s","--suffix",type=str,dest="suffix",default="out",
                                 help="Suffix for ab initio/MM-FF output files")
+    options.add_argument("--indir", action="store_true", 
+                         help="Each GSF point is in its own directory")
                                   
     return options
                
-def get_gsf_energy(energy_regex,base_name,suffix,i,j=None):
+def get_gsf_energy(energy_regex,base_name,suffix,i,j=None,indir=False):
     '''Extracts calculated energy from a generalized stacking fault calculation
     using the regular expression <energy_regex> corresponding to the code used
     to calculate the GSF energy.
+
+    Set argument indir to True if mkdir was True in gsf_setup.
     '''
     
-    if j is None: # gamma-line
-        filename = "%s.%d.%s" % (base_name,i,suffix)
-    else: # gamma surface
-        filename = "%s.%d.%d.%s" % (base_name,i,j,suffix)
+    if indir:
+        # files are in directories named like the files.
+        if j is None: # gamma-line
+            filename = "%s.%d/%s.%d.%s" % (base_name,i,base_name,i,suffix)
+        else: # gamma surface
+            filename = "%s.%d.%d/%s.%d.%d.%s" % (base_name,i,j,base_name,i,j,suffix)
+    else:
+        # Files are in the current directory
+        if j is None: # gamma-line
+            filename = "%s.%d.%s" % (base_name,i,suffix)
+        else: # gamma surface
+            filename = "%s.%d.%d.%s" % (base_name,i,j,suffix)
     
     outfile = open(filename)
     output_lines = outfile.read()
@@ -97,13 +109,13 @@ def main():
     if gamma_line:
         # handle gamma line
         for x in xrange(i_max+1):
-            E,units = get_gsf_energy(regex,args.base_name,args.suffix,i)
+            E,units = get_gsf_energy(regex,args.base_name,args.suffix,i,indir=args.indir)
     else:
         energies = np.zeros((args.x_max+1,args.y_max+1))
         # handle gamma surface
         for i in xrange(args.x_max+1):
             for j in xrange(args.y_max+1):
-                E,units = get_gsf_energy(regex,args.base_name,args.suffix,i,j)
+                E,units = get_gsf_energy(regex,args.base_name,args.suffix,i,j,indir=args.indir)
                 energies[i, j] = E
 
         # get rid of nan values
