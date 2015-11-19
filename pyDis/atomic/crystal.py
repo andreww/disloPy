@@ -219,16 +219,16 @@ class Lattice(object):
     def getC(self):
         return np.copy(self.__c)
                
-    def setA(self,newA):
+    def setA(self, newA):
         self.__a = np.copy(newA)
         
-    def setB(self,newB):
+    def setB(self, newB):
         self.__b = np.copy(newB)  
               
-    def setC(self,newC):
+    def setC(self, newC):
         self.__c = np.copy(newC)
         
-    def setVector(self,newVector,i):
+    def setVector(self, newVector, i):
         '''Can be used to set or change the value of the i-th vector to 
         newVector.
         '''
@@ -239,10 +239,9 @@ class Lattice(object):
         elif i%3 == 2:
             self.setC(newVector)
         else:
-            print("Error: invalid cell index.")
-            # add actual exception later.
+            raise ValueError("{} is not a valid cell index.".format(i))
             
-    def getVector(self,i):
+    def getVector(self, i):
         '''Can be used to retrieve the value of the i-th vector. Provided 
         '''
         if i%3 == 0:

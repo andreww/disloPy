@@ -3,7 +3,7 @@
 import numpy as np
 import numpy.random as rand
 
-from scipy.optimize import fmin_slsqp,curve_fit
+from scipy.optimize import fmin_slsqp, curve_fit
 import matplotlib.pyplot as plt
 
 # suppress divide by zero Runtime warnings
@@ -234,8 +234,8 @@ def mc_step(N,max_x,energy_function,lims,noopt,use_sym,b,spacing,K):
     else:
         try:
             new_par = fmin_slsqp(total_optimizable,params,eqcons=[cons_func],
-                              args=(N,max_x,energy_function,b,spacing,K),
-                                                    bounds=lims,iprint=0)
+                                  args=(N,max_x,energy_function,b,spacing,K),
+                                             bounds=lims,iprint=0, acc=1e-12)
                                    
             E = total_optimizable(new_par,N,max_x,energy_function,b,spacing,K)
         except RuntimeError:
@@ -244,8 +244,8 @@ def mc_step(N,max_x,energy_function,lims,noopt,use_sym,b,spacing,K):
 
     return E,new_par
         
-def run_monte(n_iter,N,max_x=100,energy_function=test_gamma,noopt=False,
-                                         use_sym=False,b=1.,spacing=1.,K=1):
+def run_monte(n_iter, N, max_x=100, energy_function=test_gamma, noopt=False,
+                                         use_sym=False, b=1., spacing=1., K=1):
     Emin = 1e6
     x_opt = None
     if use_sym:
@@ -254,6 +254,9 @@ def run_monte(n_iter,N,max_x=100,energy_function=test_gamma,noopt=False,
         lims = make_limits(N,max_x)
     
     for i in xrange(n_iter):
+        if i % 100 == 0:
+            print("Starting iteration {}...".format(i))
+
         E,x_try = mc_step(N,max_x,energy_function,lims,noopt,use_sym,b,spacing,K)
         is_valid = True
         

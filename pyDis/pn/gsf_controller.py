@@ -5,11 +5,12 @@ import numpy as np
 import sys
 import argparse
 import subprocess
+sys.path.append('/home/richard/code_bases/dislocator2/')
 
 import gsf_setup as gsf
 
-from ..atomic import gulpUtils as gulp
-from ..atomic import castep_utils as castep
+from pyDis.atomic import gulpUtils as gulp
+from pyDis.atomic import castep_utils as castep
 
 def command_line_options():
     '''Parse command line options to enable optional features and change

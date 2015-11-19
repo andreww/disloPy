@@ -132,9 +132,9 @@ def mc_step2d(N,max_x,energy_function,lims,K,shift,constraints,use_sym,
     params = generate_input(N,disl_type,spacing,use_sym)
     
     try:
-        new_par = fmin_slsqp(total_optimizable2d,params,eqcons=constraints,
-                        args=(N,max_x,energy_function,K,shift,b,spacing),
-                                                   bounds=lims,iprint=0)
+        new_par = fmin_slsqp(total_optimizable2d, params, eqcons=constraints,
+                        args=(N, max_x, energy_function, K, shift, b, spacing),
+                                              bounds=lims, iprint=0, acc=1e-12)
                                                                     
         E = total_optimizable2d(new_par,N,max_x,energy_function,K,shift,b,spacing)
     except RuntimeError:
@@ -157,6 +157,8 @@ def run_monte2d(n_iter,N,disl_type,K,max_x=100,energy_function=None,
     Emin = 1e6
     x_opt = None
     for i in xrange(n_iter):
+        if i % 100 == 0:
+            print("Starting iteration {}...".format(i))
         E,x_try = mc_step2d(N,max_x,energy_function,lims,K,shift,constraints,
                                                   use_sym,disl_type,b,spacing)
         is_valid = True

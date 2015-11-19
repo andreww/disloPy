@@ -4,6 +4,7 @@ from __future__ import print_function
 import numpy as np
 import numpy.linalg as lin
 import sys
+sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from ..atomic import aniso
 

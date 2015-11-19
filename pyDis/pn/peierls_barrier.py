@@ -51,8 +51,8 @@ def displace_disloc(params,n_funcs,max_x,energy_function,b=1.,spacing=1.,K=1,xc=
     
     lims = pn1.make_limits(n_funcs,max_x)
     
-    new_par = fmin_slsqp(shift_opt1d,params,eqcons=[pn1.cons_func,fixed_location1d],
-                                                   bounds=lims,args=in_args,iprint=0) 
+    new_par = fmin_slsqp(shift_opt1d, params, eqcons=[pn1.cons_func, fixed_location1d],
+                                        bounds=lims, args=in_args, iprint=0, acc=1e-12) 
                          
     E = shift_opt1d(new_par,*in_args)    
     return E,new_par 

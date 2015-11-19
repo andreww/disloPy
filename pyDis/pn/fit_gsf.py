@@ -10,11 +10,12 @@ import scipy
 import re
 import matplotlib.pyplot as plt
 import sys
+sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.interpolate import RectBivariateSpline
 
-from ..atomic import atomistic_utils as util
+from pyDis.atomic import atomistic_utils as util
 
 def read_numerical_gsf(filename):
     gsf = []
@@ -71,7 +72,7 @@ def mirror(gsf, axis=(0, 1)):
 def spline_fit(num_gsf, a, b, angle=np.pi/2., two_planes=True):
     # extract coordinates of calculations, and gs-energies at each point
     # grid values are given in integer values -> need to convert to \AA
-    x_vals = get_axis(num_gsf,0,a)
+    x_vals = get_axis(num_gsf, 0, a)
     y_vals = get_axis(num_gsf,1,b)
    
     # import energies and convert to eV/\AA^{2}

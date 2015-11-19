@@ -7,11 +7,12 @@ from __future__ import print_function
 import numpy as np
 import sys
 import os
+sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from numpy.linalg import norm
 
-from ..atomic import crystal as cry
-from ..atomic import transmutation as mutate
+from pyDis.atomic import crystal as cry
+from pyDis.atomic import transmutation as mutate
 
 import gsf_setup as gsf
 

@@ -6,11 +6,12 @@ import sys
 import re
 import numpy as np
 import os
+sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from numpy.linalg import norm
 
-from ..atomic import crystal as cry
-from ..atomic import gulpUtils as gulp
+from pyDis.atomic import crystal as cry
+from pyDis.atomic import gulpUtils as gulp
 
 ### END OF IMPORT SECTION ###
 
