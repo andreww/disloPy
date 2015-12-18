@@ -33,20 +33,24 @@ def command_line_options():
     options.add_argument('-sn','--name',type=str,dest='sim_name',default='gsf',
                          help='Base name for GSF calculation input files')
     options.add_argument('-n','--num-layers',type=int,dest='n',default=2,
-                         help='Thickness of simulation slab in unit-cells')
+                         help='Thickness of simulation slab in unit-cells.')
     options.add_argument('-v','--vacuum',type=float,dest='vac',default=0.0,
-                         help='Thickness of the vacuum layer')
+                         help='Thickness of the vacuum layer.')
     options.add_argument('-g','--gulp',type=str,default='gulp',
-                         dest='gulpexec',help='Path to the GULP executable')
+                         dest='gulpexec',help='Path to the GULP executable.')
     options.add_argument('-t','--type',type=str,choices=['gline','gsurface'],
                          dest='simulation_type',default='gsurface',
                          help='Choose whether to calculate the PES of a gamma' +
                               ' line or a gamma surface.\n\nDefault is gamma ' +
-                              ' surface')
+                              ' surface.')
     options.add_argument('-d','--direction',nargs=3,type=float,dest='line_vec',
-                       default=np.array([1,0,0]),help='Direction of gamma line')
+                       default=np.array([1,0,0]),help='Direction of gamma line.')
     options.add_argument('-r','--resolution',type=float,dest='res',default=0.25,
                          help='Sampling resolution of the gamma line/surface')
+    options.add_argument('-f', '--dfix', type=float, dest='d_fix', default=5.0,
+                         help='Thickness of static region in vacuum-buffered slab.')
+    options.add_argument('-s', '--shift', type=float, dest='shift', default=0.0,
+                         help='Shifts origin of unit cell.')
                                     
     return options
     
@@ -60,7 +64,7 @@ def manual_options():
     pass
 
 def read_control(control_file):
-    '''Read the control file.
+    '''Read the control file. STILL NEED TO IMPLEMENT!
     '''
     
     lines = []
@@ -110,22 +114,29 @@ def main():
     unit_cell = gsf.cry.Crystal()
     system_info = gsf.gulp.parse_gulp(args.gulp_name, unit_cell)
     
+    # shift origin of cell
+    unit_cell.translate_cell(np.array([0., 0., -1*args.shift]), modulo=True)
+    
     # make the slab and construct the gamma surface/line
-    new_slab = gsf.make_slab(unit_cell,args.n,args.vac)
+    new_slab = gsf.make_slab(unit_cell, args.n, args.vac, d_fix=args.d_fix, free_atoms=[])
     if args.simulation_type == 'gsurface':
-        Nx,Ny = gsf.gs_sampling(new_slab.getLattice(),args.res)
+        increments = gsf.gs_sampling(new_slab.getLattice(), args.res)
         # need to fix next line to reflect changes to <gsf_setup.py>
-        write_fn = lambda outstream, slab, sys_info: gulp.write_gulp(
-                    outstream, slab, sys_info, defected=True, 
-                    add_constraints=False, relax_type=None) 
-        gsf.gamma_surface(new_slab,Nx,Ny,write_fn,args.sim_name,
-                                                     system_info)    
+        #write_fn = lambda outstream, slab, sys_info: gulp.write_gulp(
+        #            outstream, slab, sys_info, defected=True, 
+        #            add_constraints=False, relax_type=None) 
+        write_fn = gulp.write_gulp
+        gsf.gamma_surface(new_slab, increments, write_fn, system_info, suffix='gin',
+                                       basename=args.sim_name, vacuum=args.vac)    
         
         # run the calculations
-        for n in xrange(0,Nx+1):
-            for m in xrange(0,Ny+1):
+        for n in xrange(0, increments[0]+1):
+            for m in xrange(0, increments[1]+1):
+                print("Relaxing cell with generalized stacking fault vector" +
+                        " ({}, {})...".format(n, m), end="")
                 basename = '%s.%d.%d' % (args.sim_name,n,m)
-                gulp.run_gulp(args.gulpexec,basename)    
+                gulp.run_gulp(args.gulpexec, basename)   
+                print("complete.") 
     else:
         pass          
     

@@ -235,7 +235,7 @@ def mc_step(N,max_x,energy_function,lims,noopt,use_sym,b,spacing,K):
         try:
             new_par = fmin_slsqp(total_optimizable,params,eqcons=[cons_func],
                                   args=(N,max_x,energy_function,b,spacing,K),
-                                             bounds=lims,iprint=0, acc=1e-12)
+                                             bounds=lims,iprint=0, acc=1e-14)
                                    
             E = total_optimizable(new_par,N,max_x,energy_function,b,spacing,K)
         except RuntimeError:

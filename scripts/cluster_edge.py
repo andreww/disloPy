@@ -27,23 +27,22 @@ if (__name__ == "__main__"):
     Rmax = RII*SCALE
     print 'Enter name of output file: ',
     outName = raw_input()
-    print 'Enter x component of eta: ',
-    etax = float(raw_input())
-    print 'Enter y component of eta: ',
-    etay = float(raw_input())
+    print 'Enter x component of eta (<enter> for 0.): ',
+    try:
+        etax = float(raw_input())
+    except ValueError:
+        etax = 0.0
+    print 'Enter y component of eta (<enter> for 0.): ',
+    try:
+        etay = float(raw_input())
+    except ValueError:
+        etay = 0.0
     print 'Enter thickness (<enter> for 1): ',
     thickness = raw_input()
     try:
         thickness = int(thickness)
     except ValueError:
         thickness = 1
-        
-    #print 'Use force minimization (y/(n))?',
-    #force_min=raw_input()
-    #if 'y' in force_min.lower():
-    #    useforce = True
-    #else:
-    #    useforce = False
         
     #print 'Enter Sij: ',
     #Sij = float(raw_input())
@@ -52,7 +51,7 @@ if (__name__ == "__main__"):
     sysInfo = gulp.parse_gulp(gulpName,gulpStruc)
     
     ### TEMPORARY
-    #Cij = aniso.readCij('uo2')
+    #Cij = aniso.readCij('quartz_ffsioh')
     #uField = aniso.makeAnisoField(Cij)
     ### \TEMPORARY
     
@@ -67,15 +66,14 @@ if (__name__ == "__main__"):
     sysOut.close()
     
     eta = np.array([etax,etay])
-    #b = np.array([0.,L.norm(gulpStruc.getB()),0.])
-    b = np.array([0.0,0.0,L.norm(gulpStruc.getC())])
+    b = np.array([L.norm(gulpStruc.getB()),0.,0.])
     disBurgers = np.array([b])
     disCores = np.array([[0.,0.]]) 
     
     gulpCluster = rs.TwoRegionCluster(gulpStruc,eta,Rmax,RI,RII,thickness)    
-    #gulpCluster.applyField(df.isotropicEdgeField,disCores,disBurgers,Sij=0.30444,
-    #                                        branch=[0.,-1])  
-    gulpCluster.applyField(df.isotropicScrewField,disCores,disBurgers,Sij=1.684)
+    gulpCluster.applyField(df.isotropicEdgeField,disCores,disBurgers,Sij=0.14,
+                                            branch=[0.,-1])  
+    #gulpCluster.applyField(df.isotropicScrewField,disCores,disBurgers,Sij=1.684)
     ### TEMPORARY
     #gulpCluster.applyField(uField,disCores,disBurgers,0.08658,branch=[-1,0],THRESH=1.0)
     ### \TEMPORARY

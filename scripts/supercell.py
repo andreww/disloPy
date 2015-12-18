@@ -27,7 +27,7 @@ def main(argv):
     
     supercell = cry.superConstructor(base_struc, dimensions)
     
-    outstream = open(outname, 'w')
+    outstream = open(outname+'{}{}{}'.format(argv[2], argv[3], argv[4])+'.gin', 'w')
     gulp.write_gulp(outstream, supercell, sys_info, defected=False, relax=False)
 
 if __name__ == "__main__":

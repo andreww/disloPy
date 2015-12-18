@@ -50,8 +50,8 @@ def iterateEdgeRI(startRI,finalRI,dRI,base_name,gulpexec,E_atom):
         [newRI,newRII,tempRI,tempRII] = ce.newRegions(rIperf,rIAtoms,
                     rIIperf,rIIAtoms,currentRI)    
                     
-        ce.writeSPSections(newRI,newRII,sysInfo,'sp.%s.%d' % 
-                                        (base_name,currentRI),True)
+        ce.writeSPSections(newRI, newRII, sysInfo,'sp.%s.%d' % 
+                                        (base_name, currentRI), True)
                                         
         for reg in ['RI','RII','BOTH']:
             gulp.run_gulp(gulpexec,'sp.%s.%d.%s' % (base_name,currentRI,reg))
@@ -76,6 +76,69 @@ def iterateEdgeRI(startRI,finalRI,dRI,base_name,gulpexec,E_atom):
         
     outStream.close()
     return
+    
+def iterateIonicEdge(startRI,finalRI,dRI,base_name,gulpexec,E_atoms):
+    '''Iterate over values of RI in the cluster cell to find the energy function
+    E(r) for an edge dislocation.
+    '''
+
+    
+    # read system specific information required to run simulation
+    sysInfo = ce.readSystemInfo(base_name)
+
+    # extract relaxed atomic positions in dislocated cell
+    rIAtoms = cry.Basis()
+    rIIAtoms = cry.Basis()
+    gulp.extractRegions('dis.%s.grs' % base_name,rIAtoms,rIIAtoms)
+
+    # extract atoms in perfect cell (need to get rid of this)
+    rIperf = cry.Basis()
+    rIIperf = cry.Basis()
+    gulp.extractRegions('ndf.%s.grs' % base_name,rIperf,rIIperf)
+    currentRI = startRI
+    excess_energies = []
+    # iterate over radii
+    while currentRI >= finalRI:
+
+        print('Setting RI = %.1f...' % currentRI)
+        print('Calculating energy',end=' ')
+        [newRI,newRII,tempRI,tempRII] = ce.newRegions(rIperf,rIAtoms,
+                            rIIperf,rIIAtoms,currentRI)
+        ce.writeSPSections(newRI,newRII,sysInfo,'sp.%s.%d' %
+                                (base_name,currentRI),True)
+        for reg in ['RI','RII','BOTH']:
+            gulp.run_gulp(gulpexec,'sp.%s.%d.%s' %
+                             (base_name,currentRI,reg))
+        rIfile = ce.readOutputFile('sp.%s.%d.RI.gout' % (base_name,currentRI))
+        rIIfile = ce.readOutputFile('sp.%s.%d.RII.gout' % (base_name,currentRI))
+        bothFile = ce.readOutputFile('sp.%s.%d.BOTH.gout' % (base_name,currentRI))
+        ERI = float(re.search(latticeEnergy,rIfile).group('energy'))
+        ERII = float(re.search(latticeEnergy,rIIfile).group('energy'))
+        EBoth = float(re.search(latticeEnergy,bothFile).group('energy'))
+        total_E_RI = ERI + 0.5*(EBoth - (ERI+ERII))
+        E_perfect = 0.0
+        for atom in newRI:
+            E_perfect += E_atoms[atom.getSpecies()]
+        E_excess = total_E_RI - E_perfect
+        excess_energies.append([currentRI,E_excess])
+        currentRI -= dRI
+        print('Energy is %.6f eV' % E_excess)
+        
+    outStream = open(base_name + '.energies','w')
+    for r,E in excess_energies:
+        outStream.write('%d %.4f\n' % (r,E))
+    outStream.close()
+    return
+    
+def make_atom_dict():
+    new_dict = dict()
+    while True:
+        new_key = raw_input("Enter species (<enter> to exit): ")
+        if not new_key:
+            break
+        value = float(raw_input("Enter energy: "))
+        new_dict[new_key] = value
+    return new_dict
 
 def main(argv):
     '''Driver function for energy fitting.
@@ -148,7 +211,7 @@ def main(argv):
     fittedEnergies.close()
     
     delete = raw_input('Delete single point calculation input/output files: ')
-    if delete.lower() in 'yes':
+    if delete.lower() in 'yes' or not delete:
         os.system('rm -f sp.*')
     
     print('                     ####FINISHED####')
@@ -159,65 +222,8 @@ if __name__ == "__main__":
     
     
 ####### IN PROGRESS - IONIC DISLOCATIONS #######
+'''
 
-def make_atom_dict():
-    new_dict = dict()
-    while True:
-        new_key = raw_input("Enter species (111 to exit): ")
-        if new_key == '111':
-            break
-        value = float(raw_input("Enter energy: "))
-        new_dict[new_key] = value
-    return new_dict
 
-def iterateIonicEdge(startRI,finalRI,dRI,base_name,gulpexec,E_atoms):
-    '''Iterate over values of RI in the cluster cell to find the energy function
-    E(r) for an edge dislocation.
-    '''
-    
-    # read system specific information required to run simulation
-    sysInfo = ce.readSystemInfo(base_name)
 
-    # extract relaxed atomic positions in dislocated cell
-    rIAtoms = cry.Basis()
-    rIIAtoms = cry.Basis()
-    gulp.extractRegions('dis.%s.grs' % base_name,rIAtoms,rIIAtoms)
-
-    # extract atoms in perfect cell (need to get rid of this)
-    rIperf = cry.Basis()
-    rIIperf = cry.Basis()
-    gulp.extractRegions('ndf.%s.grs' % base_name,rIperf,rIIperf)
-    currentRI = startRI
-    excess_energies = []
-    # iterate over radii
-    while currentRI >= finalRI:
-
-        print('Setting RI = %.1f...' % currentRI)
-        print('Calculating energy',end=' ')
-        [newRI,newRII,tempRI,tempRII] = ce.newRegions(rIperf,rIAtoms,
-                            rIIperf,rIIAtoms,currentRI)
-        ce.writeSPSections(newRI,newRII,sysInfo,'sp.%s.%d' %
-                                (base_name,currentRI),True)
-        for reg in ['RI','RII','BOTH']:
-            gulp.run_gulp(gulpexec,'sp.%s.%d.%s' %
-                             (base_name,currentRI,reg))
-        rIfile = ce.readOutputFile('sp.%s.%d.RI.gout' % (base_name,currentRI))
-        rIIfile = ce.readOutputFile('sp.%s.%d.RII.gout' % (base_name,currentRI))
-        bothFile = ce.readOutputFile('sp.%s.%d.BOTH.gout' % (base_name,currentRI))
-        ERI = float(re.search(latticeEnergy,rIfile).group('energy'))
-        ERII = float(re.search(latticeEnergy,rIIfile).group('energy'))
-        EBoth = float(re.search(latticeEnergy,bothFile).group('energy'))
-        total_E_RI = ERI + 0.5*(EBoth - (ERI+ERII))
-        E_perfect = 0.0
-        for atom in newRI:
-            E_perfect += E_atoms[atom.getSpecies()]
-        E_excess = total_E_RI - E_perfect
-        excess_energies.append([currentRI,E_excess])
-        currentRI -= dRI
-        print('Energy is %.6f eV' % E_excess)
-    outStream = open(base_name + '.energies','w')
-    for r,E in excess_energies:
-        outStream.write('%d %.4f\n' % (r,E))
-    outStream.close()
-    return
-                                              
+'''                                           

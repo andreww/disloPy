@@ -14,6 +14,8 @@ energy_lines = {"gulp": re.compile(r"\n\s*Final energy\s+=\s+" +
                               "(?P<E>-?\d+\.\d+E\+\d+)\s*(?P<units>\w+)\s*\n")
                }
                
+get_gnorm = re.compile(r"Final Gnorm\s*=\s*(?P<gnorm>\d+\.\d+)")
+               
 def command_line_options():
     '''Parse command line options to control extraction of gamma surface.
     '''
@@ -61,16 +63,33 @@ def get_gsf_energy(energy_regex,base_name,suffix,i,j=None,indir=False):
     outfile = open(filename)
     output_lines = outfile.read()
     outfile.close()
-    matched_energies = re.finditer(energy_regex,output_lines)
+    matched_energies = re.findall(energy_regex, output_lines)
+    
+    # flags that we use to see if convergence has failed without resulting in
+    # a divergent energy (which would stop GULP).
+    flag_failure = ["Conditions for a minimum have not been satisfied",
+                    "Too many failed attempts to optimise"]
+    
+                    
     if not(matched_energies):
         #raise AttributeError("Calculation does not have an energy.")
         E = np.nan
-        return E,None
+        units = None       
     else:
-        for match in matched_energies:
-            E = float(match.group('E'))
-            units = match.group('units')
-        return E, units
+        if (flag_failure[0] in output_lines) or (flag_failure[1] in output_lines):
+            gnorm = float(get_gnorm.search(output_lines).group("gnorm"))
+        else:
+            gnorm = 0.
+            
+        if gnorm < 0.2:       
+            for match in matched_energies:
+                E = float(match[0])
+                units = match[1]
+        else:
+            E = np.nan
+            units = None
+        
+    return E, units
         
 def main():
     
@@ -118,10 +137,11 @@ def main():
                 E,units = get_gsf_energy(regex,args.base_name,args.suffix,i,j,indir=args.indir)
                 energies[i, j] = E
 
-        # get rid of nan values
+        # get rid of nan values -> Should implement this as a separate function
+        E_perfect = energies[0, 0]
         for i in xrange(args.x_max+1):
             for j in xrange(args.y_max+1):
-                if energies[i, j] != energies[i, j]:
+                if energies[i, j] != energies[i, j] or (energies[i, j] < E_perfect - 1.):
                     # average neighbouring energies, excluding nan values        
                     approx_energy = 0.
                     num_real = 0 # tracks number of adjacent non-NaNs
@@ -130,16 +150,23 @@ def main():
                                       (i, (j+1) % args.y_max),
                                       (i, (j-1) % args.y_max)]:
                         if energies[signature] !=  energies[signature]:
-                            continue
+                            pass
+                        elif energies[signature] < E_perfect - 1.:
+                            # energy is nonsense -> probably a sign of weird 
+                            # interatomic potentials.
+                            pass
                         else:
                             approx_energy += energies[signature]
                             num_real += 1
 
-                    if not num_real:
-                        raise Exception("Entry (%d, %d) has no real neighbours" 
-                                                                       % (x,y))
+                    if num_real == 0:
+                        #raise Exception("Entry (%d, %d) has no real neighbours" 
+                        #                                               % (i, j))
+                        print("Warning: no real neighbours.")
+                        energies[i, j] = -10000
                     else:
                         energies[i, j] = approx_energy/num_real
+                    print("({}, {}): {:.2f}".format(i, j, energies[i, j]))
 
                 outstream.write("%d %d %.4f\n" % (i,j,energies[i,j]))
                 

@@ -108,7 +108,7 @@ class Atom(object):
         self.__displacedCoordinates = (self.__displacedCoordinates 
                                                 / normalisationFactor )
         
-    def translateAtom(self,x,reset_disp=True):
+    def translateAtom(self, x, reset_disp=True, modulo=False):
         '''Translates atom along x, without enforcing any boundary conditions.
         Note that, by default, this routine resets the displaced coordinates to
         be equal to the new base coordinates (useful for proper setup of supercells).
@@ -116,11 +116,15 @@ class Atom(object):
         '''
 
         self.__coordinates = (self.__coordinates + x)
+        if modulo:
+            self.__coordinates = self.__coordinates % 1.
         if reset_disp:
             # print("Resetting displaced coordinates...")
             self.__displacedCoordinates = np.copy(self.__coordinates)
         else:
             self.__displacedCoordinates = (self.__displacedCoordinates + x)
+            if modulo:
+                self.__displacedCoordinates = self.__displacedCoordinates % 1.
         
     def getSpecies(self):
         return self.__species
@@ -384,7 +388,7 @@ class Basis(object):
         for atom in otherBasis:
             self.addAtom(atom)
 
-    def translate_cell(self,disp_vec, reset_disp=True):
+    def translate_cell(self, disp_vec, reset_disp=True, modulo=False):
         '''Translates all atoms in <cell> by <disp_vec>. Particularly useful
         for setting up stacking fault calculations, as <disp_vec> can be set
         to -<current_slipz>*cry.ei(3) to shift the cell so that the desired
@@ -393,7 +397,7 @@ class Basis(object):
         '''
         
         for atom in self:
-            atom.translateAtom(disp_vec, reset_disp)
+            atom.translateAtom(disp_vec, reset_disp, modulo)
         return    
         
     def applyField(self,fieldType,disCores,disBurgers,Sij=0):
