@@ -446,7 +446,7 @@ class PNSim(object):
                 outstream.write('Average Peierls stress = %.6f %s\n' %
                                                     (self.taup_av,units))
                                                     
-            outstream.write('Peierls barrier: %.3f eV\n' % self.wp_av)
+            outstream.write('Peierls barrier: %.3f eV/Ang\n' % self.wp_av)
             
         if self.prop('max_rho'):
             outstream.write('Maximum density: %.3f\n' % self.max_density)
