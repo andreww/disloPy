@@ -134,7 +134,7 @@ def mc_step2d(N,max_x,energy_function,lims,K,shift,constraints,use_sym,
     try:
         new_par = fmin_slsqp(total_optimizable2d, params, eqcons=constraints,
                         args=(N, max_x, energy_function, K, shift, b, spacing),
-                                              bounds=lims, iprint=0, acc=1e-14)
+                                              bounds=lims, iprint=0, acc=1e-16)
                                                                     
         E = total_optimizable2d(new_par,N,max_x,energy_function,K,shift,b,spacing)
     except RuntimeError:

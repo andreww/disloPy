@@ -222,7 +222,7 @@ def contained_in(element,open_set):
     else:
         return False
 
-def mc_step(N,max_x,energy_function,lims,noopt,use_sym,b,spacing,K):
+def mc_step(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K):
     if use_sym:
         params = gen_symmetric(N,spacing)
         N = 2*N

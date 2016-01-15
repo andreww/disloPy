@@ -52,7 +52,7 @@ def displace_disloc(params,n_funcs,max_x,energy_function,b=1.,spacing=1.,K=1,xc=
     lims = pn1.make_limits(n_funcs,max_x)
     
     new_par = fmin_slsqp(shift_opt1d, params, eqcons=[pn1.cons_func, fixed_location1d],
-                                        bounds=lims, args=in_args, iprint=0, acc=1e-14) 
+                                        bounds=lims, args=in_args, iprint=0, acc=1e-16) 
                          
     E = shift_opt1d(new_par,*in_args)    
     return E,new_par 
@@ -131,7 +131,7 @@ def displace_disloc2d(params,n_funcs,max_x,energy_function,K,b,spacing,
         
     r = spacing*np.arange(-max_x,max_x)
     u = pn1.u_field(r,A_b,x0_b,c_b,b)
-    rho = pn1.rho(u,r)
+    rho = pn1.rho(u, r)
     x_mean = pn1.center_of_mass(rho,r,b)
         
     constraints.append(fix_location2d)
@@ -151,9 +151,9 @@ def displace_disloc2d(params,n_funcs,max_x,energy_function,K,b,spacing,
 ### CALCULATING PEIERLS STRESS BY CALCULATING WORK DONE BY DISPLACING A 
 ### DISLOCATION
 
-def stress_energy(tau,rho,x_vals):
+def stress_energy(tau, rho, x_vals):
 
-   return -0.5*tau*(rho*(x_vals[1:]**2-x_vals[:-1]**2)).sum()
+    return -0.5*tau*(rho*(x_vals[1:]**2-x_vals[:-1]**2)).sum()\
 
 ### IN 1-D
 
@@ -181,11 +181,11 @@ def total_stressed(A,x0,c,n_funcs,max_x,energy_function,b,spacing,shift,tau,
     else:
         raise ValueError("%s is not a valid dislocation type." % acts_on)  
     
-    rho_vals = pn1.rho(u,r)
-    E_stress = stress_energy(tau,rho_vals,r)
+    rho_vals = pn1.rho(u, r)
+    E_stress = stress_energy(tau, rho_vals, r)
     return (Em + E_el + E_stress)
     
-def total_opt_stress(params,*args):
+def total_opt_stress(params, *args):
     n_funcs = args[0]
     max_x = args[1]
     energy_function = args[2]
@@ -252,14 +252,15 @@ def taup_2d(dis,max_x,gsf_func,K,b,spacing,disl_type,dtau=0.001,in_GPa=True):
     else:
         s_max = 100*approx_iss(gsf_func(0.,b/2),spacing)
         
-    stresses = np.arange(0.,s_max,dtau)
+    stresses = np.arange(0., s_max, dtau)
     
     # response to positive and negative stress may be different
     # see (Gouriet et al, 2014) in Modelling Simul. Mater. Sci.
     # Eng.
     tau_p_minus = None
     tau_p_plus = None
-    ux,uy = pn2.get_u2d(dis,b,spacing,max_x,disl_type)
+    ux, uy = pn2.get_u2d(dis,b,spacing,max_x,disl_type)
+    
     shift = max(2,int(b/spacing)) # distance a dislocation can move
     uxn = np.array([ux[(i-shift) % len(ux)] for i in xrange(len(ux))])
     uyn = np.array([uy[(i-shift) % len(uy)] for i in xrange(len(uy))])
@@ -269,13 +270,12 @@ def taup_2d(dis,max_x,gsf_func,K,b,spacing,disl_type,dtau=0.001,in_GPa=True):
     if disl_type.lower() == 'edge':
         d_max = abs(ux-uxn).sum() 
     else: 
-        d_max = abs(uy-uyn).sum()
-        
+        d_max = abs(uy-uyn).sum()    
     # do positive stress first    
     for s in stresses:
         Ed,new_par = stressed_dislocation(dis,len(dis)/3,max_x,gsf_func,K,b,
                                                spacing,disl_type,disl_type,s)
-        uxs,uys = pn2.get_u2d(new_par,b,spacing,max_x,disl_type)
+        uxs, uys = pn2.get_u2d(new_par,b,spacing,max_x,disl_type)
         d_current = abs(ux-uxs).sum() if disl_type=='edge' else \
                              abs(uy-uys).sum()
         
@@ -294,7 +294,7 @@ def taup_2d(dis,max_x,gsf_func,K,b,spacing,disl_type,dtau=0.001,in_GPa=True):
             tau_p_minus = -s
             break
                     
-    peierls_stresses = [tau_p_plus,tau_p_minus]
+    peierls_stresses = [tau_p_plus, tau_p_minus]
     peierls_stresses.sort()
     if in_GPa:
         # express Peierls stresses in GPa

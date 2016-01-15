@@ -247,18 +247,36 @@ class PNSim(object):
         self.write_output()
         
     def run_sim(self):
-        self.E,self.par = pn2.run_monte2d(self.control('n_iter'),self.control('n_funcs'),
-                                                        self.control('disl_type'),self.K,
-                                    max_x=self.control('max_x'),energy_function=self.gsf,
-                                 use_sym=self.control('use_sym'),b=self.struc('burgers'),
-                                                            spacing=self.struc('spacing'))
+        if self.control('dimensions') == 1:
+            #!!! Need to write code permitting 1D optimization. This may require
+            #!!! changing the way that gamma surfaces/lines are processed so that
+            #!!! a gamma line can be efficiently extracted from a calculated gamma
+            #!!! surface.
+            #self.E, self.par = pn1.run_monte()
+            pass
+        elif self.control('dimensions') == 2:
+            self.E, self.par = pn2.run_monte2d(
+                                               self.control('n_iter'),
+                                               self.control('n_funcs'),
+                                               self.control('disl_type'),
+                                               self.K, 
+                                               max_x=self.control('max_x'),
+                                               energy_function=self.gsf,
+                                               use_sym=self.control('use_sym'),
+                                               b=self.struc('burgers'),
+                                               spacing=self.struc('spacing')
+                                              )               
                                                             
         return
                                 
     def construct_gsf(self):
     
         gsf_grid = fg.read_numerical_gsf(self.control('gsf_file'))
-        base_func = fg.spline_fit(gsf_grid, self.surf('x_length'), self.surf('y_length'),
+        if self.control('dimensions') == 1:
+            base_func = fg.spline_fit1d(gsf_grid, self.surf('x_length'), self.surf('y_length'),
+                                                        angle=self.surf('angle'))
+        else: # 2-dimensional misfit function
+            base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), self.surf('y_length'),
                                                             angle=self.surf('angle'))
         self.gsf = fg.new_gsf(base_func,self.surf('map_ux'),self.surf('map_uy'))
         return
@@ -267,14 +285,23 @@ class PNSim(object):
     
         if self.control('plot') or self.prop('max_rho') or self.prop('width'):
             # need to extract misfit profile and dislocation density
-            self.ux,self.uy = pn2.get_u2d(self.par,self.struc('burgers'),
+            if self.control('dimensions') == 1:
+                self.ux = pn1.get_u1d(self.par, self.struc('burgers'), 
+                                   self.struc('spacing'), self.control('max_x'))  
+            elif self.control('dimensions') == 2:
+                self.ux, self.uy = pn2.get_u2d(self.par,self.struc('burgers'),
                                     self.struc('spacing'),self.control('max_x'),
                                                       self.control('disl_type'))
             r = self.struc('spacing')*np.arange(-self.control('max_x'),
                                                   self.control('max_x'))
             
             # create plot of dislocation density and misfit profile
-            if self.control('plot'):                
+            if self.control('plot'):   
+                if self.control('dimensions') == 1:
+                    self.fig, self.ax = pn1.plot_both(self.ux, self.struc('burgers'),
+                                                               self.struc('spacing'))
+                    plt.savefig(self.control('plot_name'))
+                    plt.close()             
                 if self.control('plot_both'):
                     self.fig,self.ax = pn1.plot_both(self.ux,r,self.struc('burgers'),
                                                                self.struc('spacing'))
@@ -291,11 +318,12 @@ class PNSim(object):
                     else: # screw
                         self.fig,self.ax = pn1.plot_both(self.uy,r,self.struc('burgers'),
                                                                self.struc('spacing'))
-                plt.savefig(self.control('plot_name'))
-                plt.close()
+                    plt.savefig(self.control('plot_name'))
+                    plt.close()
                 
             # calculate dislocation width and height
-            if self.control('disl_type') in 'edge':
+            if (self.control('disl_type') in 'edge' 
+                or self.control('dimensions') == 1):
                 self.rho = pn1.rho(self.ux,r)
             else: # screw
                 self.rho = pn1.rho(self.uy,r)
@@ -305,15 +333,22 @@ class PNSim(object):
         return
             
     def peierls(self):
-    
-        if self.stress('calculate_stress'):
+        '''Calculate the Peierls stress for the lowest-energy dislocation.
+        '''
+        
+        if not self.stress('calculate_stress'):
+            pass
+        elif self.control("dimensions") == 1:
+            #!!! implement 1D peierls stress calculation
+            pass
+        else: # two-dimensional
             self.taup,self.taup_av = pb.taup_2d(self.par,self.control('max_x'),self.gsf,
                                      self.K,self.struc('burgers'),self.struc('spacing'),
                                      self.control('disl_type'),dtau=self.stress('dtau'),
                                                            in_GPa=self.stress('use_GPa'))
                                                            
             # calculate average and direction-dependent Peierls barriers
-            self.wp_av = pb.peierls_barrier(self.taup_av,self.struc('burgers'),
+            self.wp_av = pb.peierls_barrier(self.taup_av, self.struc('burgers'),
                                                   in_GPa=self.stress('use_GPa'))
                                                   
             self.wp = [pb.peierls_barrier(taup,self.struc('burgers'),
@@ -446,7 +481,7 @@ class PNSim(object):
                 outstream.write('Average Peierls stress = %.6f %s\n' %
                                                     (self.taup_av,units))
                                                     
-            outstream.write('Peierls barrier: %.3f eV\n' % self.wp_av)
+            outstream.write('Peierls barrier: %.3f eV / ang.\n' % self.wp_av)
             
         if self.prop('max_rho'):
             outstream.write('Maximum density: %.3f\n' % self.max_density)

@@ -13,7 +13,7 @@ import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from mpl_toolkits.mplot3d import Axes3D
-from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import RectBivariateSpline, interp1d
 
 from pyDis.atomic import atomistic_utils as util
 
@@ -28,8 +28,14 @@ def read_numerical_gsf(filename):
             gsf.append([float(value) for value in data])
             
     return np.array(gsf)
+    
+def mirror1d(gsf):
+    '''Reflects a 1D gamma line about 0.5*a.
+    '''
+    
+    pass
 
-def mirror(gsf, axis=(0, 1)):
+def mirror2d(gsf, axis=(0, 1)):
     '''Reflects <gsf> about the provided symmetry <axis>. <axis> can 
     take the values 0 or 1. Can also provide axis = (0, 1) to mirror 
     about the x and y axes.
@@ -67,13 +73,38 @@ def mirror(gsf, axis=(0, 1)):
                     new_gsf[i, 2*nx-2-j, 2] = gsf[i, j, k]
 
     return new_gsf
-
     
-def spline_fit(num_gsf, a, b, angle=np.pi/2., two_planes=True):
+def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True):
+    '''Fits a bivariate spline to a numerical gsf energies along a line (ie.
+    fits a gamma line).
+    '''
+
+    # extract gsf vectors and energies from <num_gsf>
+    x_vals = num_gsf[:, 0]
+    E_vals = num_gsf[:, 1]
+    
+    # convert energies to eV/\AA^2
+    E_vals -= E_vals.min()
+    E_vals /= a*b*abs(np.sin(angle))
+    if two_planes:
+        E_vals /= 2.
+    
+    # fit gamma line and create periodic function
+    g_spline = interp1d(x_vals, E_vals, kind='cubic')
+
+    def gamma(x):        
+        return g_spline(x % a)  
+          
+    return gamma
+
+def spline_fit2d(num_gsf, a, b, angle=np.pi/2., two_planes=True):
     # extract coordinates of calculations, and gs-energies at each point
     # grid values are given in integer values -> need to convert to \AA
+    
+    #!!! Need to change function calls in other modules to accommodate 1D 
+    #!!! and 2D spline fits.
     x_vals = get_axis(num_gsf, 0, a)
-    y_vals = get_axis(num_gsf,1,b)
+    y_vals = get_axis(num_gsf, 1, b)
    
     # import energies and convert to eV/\AA^{2}
     E_vals = num_gsf[:,2].reshape((len(x_vals),len(y_vals)))
@@ -84,7 +115,7 @@ def spline_fit(num_gsf, a, b, angle=np.pi/2., two_planes=True):
         # if a vacuum layer is used.
         E_vals *= 0.5
     
-    g_spline = RectBivariateSpline(x_vals,y_vals,E_vals)
+    g_spline = RectBivariateSpline(x_vals, y_vals, E_vals)
     
     if int(scipy.__version__.split(".")[1]) < 14:
         def gamma(x,y):        
@@ -95,8 +126,8 @@ def spline_fit(num_gsf, a, b, angle=np.pi/2., two_planes=True):
                
     return gamma
 
-def get_axis(gsf_array,index,length):
-    values = set(gsf_array[:,index])
+def get_axis(gsf_array, index, length):
+    values = set(gsf_array[:, index])
     values = np.array([x for x in values])
     values *= length/float(values.max())
     return values
@@ -139,14 +170,37 @@ def create_lambda(in_str):
     remapped_coord = eval('lambda %s,%s: %s' % (x1,x2,func))
     return remapped_coord
     
-def new_gsf(gsf_calc,x_form,y_form):
+def new_gsf(gsf_calc, x_form, y_form):
 
     x_new = create_lambda(x_form)
     y_new = create_lambda(y_form)
     
-    transformed_gsf = remap_input(gsf_calc,x_new,y_new)
+    transformed_gsf = remap_input(gsf_calc, x_new, y_new)
     
     return transformed_gsf
+    
+def twoD_2_oneD(gsf_func, axis, const=0):
+    '''Extracts a specific gamma line from a calculated gamma surface. 
+    <axis> specifies the direction of the gamma line, while <const> gives 
+    the intersection of the gamma line with the constant axis. As the most common
+    usage of this will be to calculate displacement fields for pure edge (or 
+    screw) dislocations, <const> defaults to 0.
+    '''
+    
+    # check that the specified axis label is valid
+    if axis == 0 or axis == 1:
+        pass
+    else:
+        raise ValueError("{} is an invalid axis label.".format(axis))
+    
+    if axis:
+        def g(x):
+            return gsf_func(const, x)
+    else: # axis == 0
+        def g(x):
+            return gsf_func(x, const)
+    
+    return g
     
 # Plotting functions
 
