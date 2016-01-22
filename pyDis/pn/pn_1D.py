@@ -83,7 +83,7 @@ def u_field(x,A,x0,c,b,bc=0.5):
         u += 1/np.pi*(Ai*np.arctan((x-xi)/ci))
     return b*(u - bc)
     
-def get_u1d(parameters,b,spacing,N,bc=0.5):
+def get_u1d(parameters, b, spacing, N, bc=0.5):
     '''Calculate displacement field from a list of fit parameters
     '''
     
@@ -94,7 +94,7 @@ def get_u1d(parameters,b,spacing,N,bc=0.5):
     x0 = parameters[n_funcs:2*n_funcs]
     c = parameters[2*n_funcs:]
     
-    u = u_field(r,A,x0,c,b,bc)
+    u = u_field(r, A, x0, c, b, bc)
     
     return u
     

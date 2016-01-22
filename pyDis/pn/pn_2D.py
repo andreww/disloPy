@@ -225,15 +225,15 @@ def full_edge(params,*args):
     A_edge = A[:len(A)/2]
     return 1. - sum(A_edge)
     
-def get_u2d(params,b,spacing,N,disl_type):
+def get_u2d(params, b, spacing, N, disl_type):
     '''Calculate specified component of the displacement field from a list of 
     fit parameters. 
     ''' 
     
     if disl_type.lower() in 'edge':
-        shift = [0.5,0.]
+        shift = [0.5, 0.]
     elif disl_type.lower() in 'screw':
-        shift = [0.,0.5]
+        shift = [0., 0.5]
     else:
         raise ValueError("Specified dislocation type not supported.")
         
@@ -250,7 +250,7 @@ def get_u2d(params,b,spacing,N,disl_type):
     
     # calculate displacement fields
     r = spacing*np.arange(-N,N) # lattice planes
-    ux = pn1.u_field(r,Ax,x0x,cx,b,bc=shift[0])
-    uy = pn1.u_field(r,Ay,x0y,cy,b,bc=shift[1])
+    ux = pn1.u_field(r, Ax, x0x, cx, b, bc=shift[0])
+    uy = pn1.u_field(r, Ay, x0y, cy, b, bc=shift[1])
     
     return ux,uy

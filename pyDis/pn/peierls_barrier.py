@@ -160,8 +160,6 @@ def stress_energy(tau, rho, x_vals):
 #def stressed1d(A,x0#
 
 ### TWO-DIMENSIONAL GAMMA SURFACE
-
-
     
 def total_stressed(A,x0,c,n_funcs,max_x,energy_function,b,spacing,shift,tau,
                                                             acts_on,K=[1,1]):
@@ -237,7 +235,8 @@ def approx_iss(g_max,spacing):
     
     return float(int(iss*10)+1)/10
 
-def taup_2d(dis,max_x,gsf_func,K,b,spacing,disl_type,dtau=0.001,in_GPa=True):
+def taup_2d(dis_parameters, max_x, gsf_func, K, b, spacing, disl_type, dtau=0.001,
+                                                                      in_GPa=True):
     '''Calculate positive and negative Peierls stresses from optimized
     dislocation misfit profiles.
     '''
@@ -259,9 +258,9 @@ def taup_2d(dis,max_x,gsf_func,K,b,spacing,disl_type,dtau=0.001,in_GPa=True):
     # Eng.
     tau_p_minus = None
     tau_p_plus = None
-    ux, uy = pn2.get_u2d(dis,b,spacing,max_x,disl_type)
+    ux, uy = pn2.get_u2d(dis_parameters, b, spacing, max_x, disl_type)
     
-    shift = max(2,int(b/spacing)) # distance a dislocation can move
+    shift = max(10, int(b/spacing)) # distance a dislocation can move
     uxn = np.array([ux[(i-shift) % len(ux)] for i in xrange(len(ux))])
     uyn = np.array([uy[(i-shift) % len(uy)] for i in xrange(len(uy))])
     
@@ -273,9 +272,9 @@ def taup_2d(dis,max_x,gsf_func,K,b,spacing,disl_type,dtau=0.001,in_GPa=True):
         d_max = abs(uy-uyn).sum()    
     # do positive stress first    
     for s in stresses:
-        Ed,new_par = stressed_dislocation(dis,len(dis)/3,max_x,gsf_func,K,b,
-                                               spacing,disl_type,disl_type,s)
-        uxs, uys = pn2.get_u2d(new_par,b,spacing,max_x,disl_type)
+        Ed,new_par = stressed_dislocation(dis_parameters,len(dis_parameters)/3, 
+                        max_x, gsf_func, K, b, spacing, disl_type, disl_type, s)
+        uxs, uys = pn2.get_u2d(new_par, b, spacing, max_x, disl_type)
         d_current = abs(ux-uxs).sum() if disl_type=='edge' else \
                              abs(uy-uys).sum()
         
@@ -284,9 +283,9 @@ def taup_2d(dis,max_x,gsf_func,K,b,spacing,disl_type,dtau=0.001,in_GPa=True):
             break
     # apply negative stress
     for s in -stresses:
-        Ed,new_par = stressed_dislocation(dis,len(dis)/3,max_x,gsf_func,K,b,
-                                               spacing,disl_type,disl_type,s)
-        uxs,uys = pn2.get_u2d(new_par,b,spacing,max_x,disl_type)
+        Ed,new_par = stressed_dislocation(dis_parameters,len(dis_parameters)/3, 
+                        max_x, gsf_func, K, b, spacing, disl_type, disl_type, s)
+        uxs,uys = pn2.get_u2d(new_par, b, spacing, max_x, disl_type)
         d_current = abs(ux-uxs).sum() if disl_type=='edge' else \
                     abs(uy-uys).sum()
         
@@ -326,9 +325,25 @@ def sig_figs(value,n_figs):
     return float(x)
 
 
+#!!! IN PROGRESS: 1D version of the dislocation displacement routine
 
-
-
-
-
- 
+def taup1d(dis_parameters, max_x, gsf_func, K, b, spacing, disl_type, dtau=0.001,
+                                                                     in_GPa=True):
+    '''Gradually apply stress to a dislocation with 1 component of displacement
+    (although it need not be a pure edge or screw dislocation, see eg. 60 deg
+    dislocations in Si).  
+    '''
+    
+    # threshold for difference between stressed and unstressed dislocation. Used
+    # to detect dislocation motion.
+    threshold = 10.
+    
+    s_max = 100*approx_iss(gsf_func(b/2), spacing)    
+    stresses = np.arange(0., s_max, dtau)
+    
+    taup_minus, taup_plus = None, None
+    u = pn1.get_u1d(dis_parameters, b, spacing, N, bc=0.5)
+    
+    shift = max(10, int(b/spacing)) # distance a dislocation can move
+    
+    un = np.array([u[(i-shift) % len(u)] for i in xrange(len(u))])
