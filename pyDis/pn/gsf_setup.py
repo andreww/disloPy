@@ -160,7 +160,7 @@ def ceiling(real_number):
         else:
             return int(real_number)   
     
-def gs_sampling(lattice,resolution=0.25):
+def gs_sampling(lattice, resolution=0.25):
     '''Determine the number of samples along [100] and [010] required to 
     achieve specified resolution.
     '''
@@ -176,7 +176,7 @@ def gs_sampling(lattice,resolution=0.25):
     if Ny % 2 == 1:
         Ny = Ny + 1
         print("Incrementing Ny to make value even. New value is %d." % Ny)
-    return Nx,Ny
+    return Nx, Ny
     
 def gl_sampling(vector,lattice,resolution=0.25):
     '''Determine the number of samples along <vector> required to achieve
