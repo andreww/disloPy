@@ -107,7 +107,7 @@ def spline_fit2d(num_gsf, a, b, angle=np.pi/2., two_planes=True):
     y_vals = get_axis(num_gsf, 1, b)
    
     # import energies and convert to eV/\AA^{2}
-    E_vals = num_gsf[:,2].reshape((len(x_vals),len(y_vals)))
+    E_vals = num_gsf[:, 2].reshape((len(x_vals), len(y_vals)))
     E_vals -= E_vals.min()
     E_vals /= a*b*abs(np.sin(angle))
     if two_planes:
@@ -118,10 +118,10 @@ def spline_fit2d(num_gsf, a, b, angle=np.pi/2., two_planes=True):
     g_spline = RectBivariateSpline(x_vals, y_vals, E_vals)
     
     if int(scipy.__version__.split(".")[1]) < 14:
-        def gamma(x,y):        
+        def gamma(x, y):        
             return g_spline.ev(x % a, y % b)
     else:
-        def gamma(x,y):
+        def gamma(x, y):
             return g_spline(x % a, y % b, grid=False)
                
     return gamma
@@ -134,7 +134,7 @@ def get_axis(gsf_array, index, length):
     
 # ROUTINES TO TRANSFORM GAMMA SURFACE INTO COORDINATES WITH \xsi || y
     
-def remap_input(f_orig,x_new,y_new):
+def remap_input(f_orig, x_new, y_new):
     '''Remaps input to gamma surface <f_orig> to conform with the coordinate
     system used in PN modelling. For example, suppose we have computed a gamma 
     surface defined by vectors a1 = <100> and a2 = <010>, but have a burgers 
@@ -143,15 +143,15 @@ def remap_input(f_orig,x_new,y_new):
     y = (ux - uy)/sqrt(2).
  
     To generate a gamma surface function that returns the correct energy for
-    any given (ux,uy), we have
+    any given (ux, uy), we have
     
-    new_gsf = remap_input(old_gsf,lambda x,y: (x+y)/sqrt(2),
-                                    lambda x,y: (x-y)/sqrt())
+    new_gsf = remap_input(old_gsf, lambda x, y: (x+y)/sqrt(2),
+                                    lambda x, y: (x-y)/sqrt())
                                     
-    E = new_gsf(ux,uy) # gives gsf energy at ux,uy
+    E = new_gsf(ux, uy) # gives gsf energy at ux, uy
     '''
     
-    f_new = lambda x,y: f_orig(x_new(x,y),y_new(x,y))
+    f_new = lambda x, y: f_orig(x_new(x, y), y_new(x, y))
     return f_new
 
 def create_lambda(in_str):
@@ -161,13 +161,13 @@ def create_lambda(in_str):
 
     # extract the input function form
     map_format = re.compile('\s*function\s*:\s*\(' +
-            '(?P<x1>\w.*),(?P<x2>\w.*)\)\s*-\>\s*(?P<func>.*)\s*')
-    matched_form = re.search(map_format,in_str)
+            '(?P<x1>\w.*), (?P<x2>\w.*)\)\s*-\>\s*(?P<func>.*)\s*')
+    matched_form = re.search(map_format, in_str)
 
     x1 = matched_form.group('x1')
     x2 = matched_form.group('x2')
     func = matched_form.group('func')
-    remapped_coord = eval('lambda %s,%s: %s' % (x1,x2,func))
+    remapped_coord = eval('lambda %s, %s: %s' % (x1, x2, func))
     return remapped_coord
     
 def new_gsf(gsf_calc, x_form, y_form):
@@ -204,37 +204,37 @@ def twoD_2_oneD(gsf_func, axis, const=0):
     
 # Plotting functions
 
-def gamma_surface3d(X,Y,Z,xlabel,ylabel,zlabel,size):
+def gamma_surface3d(X, Y, Z, xlabel, ylabel, zlabel, size):
     '''Plots a gamma surface in 3D.
     '''
     
     fig = plt.figure(figsize=size)
     ax = fig.gca(projection='3d')
-    surf  = ax.plot_surface(X,Y,Z,rstride=1,cstride=1,linewidth=0.3,shade=True,alpha=1)
-    fig.colorbar(surf,shrink=0.7,aspect=12)
+    surf  = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, linewidth=0.3, shade=True, alpha=1)
+    fig.colorbar(surf, shrink=0.7, aspect=12)
     
-    ax.set_xlim(X.min(),X.max())
-    ax.set_ylim(Y.min(),Y.max())
-    ax.set_xlabel(xlabel,family='serif',size=12)
-    ax.set_ylabel(ylabel,family='serif',size=12)
-    ax.set_zlabel(zlabel,family='serif',size=12)
+    ax.set_xlim(X.min(), X.max())
+    ax.set_ylim(Y.min(), Y.max())
+    ax.set_xlabel(xlabel, family='serif', size=12)
+    ax.set_ylabel(ylabel, family='serif', size=12)
+    ax.set_zlabel(zlabel, family='serif', size=12)
        
     ax.tick_params(labelsize=8)
     ax.set_xticks([])
     ax.set_yticks([])
-    ax.view_init(elev=20.,azim=-15)
+    ax.view_init(elev=20., azim=-15)
     
     plt.tight_layout(pad=0.5)
     plt.show()
-    return fig,ax
+    return fig, ax
     
-def contour_plot(X,Y,Z,xlabel,ylabel,size):
+def contour_plot(X, Y, Z, xlabel, ylabel, size):
     '''Two dimensional contour plot of gamma surface height.
     '''
     
     fig = plt.figure(figsize=size)
     ax = plt.subplot()
-    cont = ax.contourf(X,Y,Z,100,cmap=plt.get_cmap("afmhot"))
+    cont = ax.contourf(X, Y, Z, 100, cmap=plt.get_cmap("afmhot"))
     ax.set_xticks([])
     ax.set_yticks([])
     fig.colorbar(cont)

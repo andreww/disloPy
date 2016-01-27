@@ -27,15 +27,15 @@ def command_line_options():
     '''
     
     options = argparse.ArgumentParser()
-    options.add_argument('-c','--control-file',type=str,dest='control',
-                    default='',help='File containing simulation parameters')
-    options.add_argument('-u','--unit-cell',type=str,dest='gulp_name',
+    options.add_argument('-c', '--control-file', type=str, dest='control',
+                    default='', help='File containing simulation parameters')
+    options.add_argument('-u', '--unit-cell', type=str, dest='gulp_name',
                          help='Name of GULP file containing the unit cell')
-    options.add_argument('-sn','--name',type=str,dest='sim_name',default='gsf',
+    options.add_argument('-sn', '--name', type=str, dest='sim_name', default='gsf',
                          help='Base name for GSF calculation input files')
-    options.add_argument('-n','--num-layers',type=int,dest='n',default=2,
+    options.add_argument('-n', '--num-layers', type=int, dest='n', default=2,
                          help='Thickness of simulation slab in unit-cells.')
-    options.add_argument('-v','--vacuum',type=float,dest='vac',default=0.0,
+    options.add_argument('-v', '--vacuum', type=float, dest='vac', default=0.0,
                          help='Thickness of the vacuum layer.')
     options.add_argument('-p' '--prog', type=str, dest='prog', default=None,
                          help='Name of atomistic program used. Options:\n' +
@@ -44,14 +44,14 @@ def command_line_options():
                                                 'CASTEP')
     options.add_argument('-exe', '--executable', type=str, dest='progexec', default=None,
                          help='Path to the executable for the atomistic code.')
-    options.add_argument('-t','--type',type=str,choices=['gline','gsurface'],
-                         dest='simulation_type',default='gsurface',
+    options.add_argument('-t', '--type', type=str, choices=['gline', 'gsurface'],
+                         dest='simulation_type', default='gsurface',
                          help='Choose whether to calculate the PES of a gamma' +
                               ' line or a gamma surface.\n\nDefault is gamma ' +
                               ' surface.')
-    options.add_argument('-d','--direction',nargs=3,type=float,dest='line_vec',
-                       default=np.array([1,0,0]),help='Direction of gamma line.')
-    options.add_argument('-r','--resolution',type=float,dest='res',default=0.25,
+    options.add_argument('-d', '--direction', nargs=3, type=float, dest='line_vec',
+                       default=np.array([1, 0, 0]), help='Direction of gamma line.')
+    options.add_argument('-r', '--resolution', type=float, dest='res', default=0.25,
                          help='Sampling resolution of the gamma line/surface')
     options.add_argument('-f', '--dfix', type=float, dest='d_fix', default=5.0,
                          help='Thickness of static region in vacuum-buffered slab.')
@@ -135,7 +135,7 @@ def main():
                 for m in xrange(0, increments[1]+1):
                     print("Relaxing cell with generalized stacking fault vector" +
                             " ({}, {})...".format(n, m), end="")
-                    basename = '%s.%d.%d' % (args.sim_name,n,m)
+                    basename = '%s.%d.%d' % (args.sim_name, n, m)
                     if 'gulp' == args.prog:
                         gulp.run_gulp(args.progexec, basename) 
                     elif 'qe' == args.prog.lower():
