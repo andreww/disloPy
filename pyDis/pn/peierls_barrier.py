@@ -260,7 +260,7 @@ def taup_2d(dis_parameters, max_x, gsf_func, K, b, spacing, disl_type, dtau=0.00
     tau_p_plus = None
     ux, uy = pn2.get_u2d(dis_parameters, b, spacing, max_x, disl_type)
     
-    shift = max(2, int(b/spacing)) # distance a dislocation can move
+    shift = max(1, int(b/spacing)) # distance a dislocation can move
     uxn = np.array([ux[(i-shift) % len(ux)] for i in xrange(len(ux))])
     uyn = np.array([uy[(i-shift) % len(uy)] for i in xrange(len(uy))])
     
