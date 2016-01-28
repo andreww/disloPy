@@ -158,10 +158,10 @@ def create_lambda(in_str):
     '''From a provided input string matching the specified format, constructs
     a lambda expression mapping coordinate systems to one another.
     '''
-
+    
     # extract the input function form
     map_format = re.compile('\s*function\s*:\s*\(' +
-            '(?P<x1>\w.*), (?P<x2>\w.*)\)\s*-\>\s*(?P<func>.*)\s*')
+            '(?P<x1>\w.*),\s*(?P<x2>\w.*)\)\s*-\>\s*(?P<func>.*)\s*')
     matched_form = re.search(map_format, in_str)
 
     x1 = matched_form.group('x1')

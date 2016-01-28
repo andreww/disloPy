@@ -260,7 +260,7 @@ def taup_2d(dis_parameters, max_x, gsf_func, K, b, spacing, disl_type, dtau=0.00
     tau_p_plus = None
     ux, uy = pn2.get_u2d(dis_parameters, b, spacing, max_x, disl_type)
     
-    shift = max(10, int(b/spacing)) # distance a dislocation can move
+    shift = max(2, int(b/spacing)) # distance a dislocation can move
     uxn = np.array([ux[(i-shift) % len(ux)] for i in xrange(len(ux))])
     uyn = np.array([uy[(i-shift) % len(uy)] for i in xrange(len(uy))])
     
@@ -281,7 +281,7 @@ def taup_2d(dis_parameters, max_x, gsf_func, K, b, spacing, disl_type, dtau=0.00
         if d_current > threshold*d_max:
             tau_p_plus = s
             break
-            
+        
     # apply negative stress
     for s in -stresses:
         Ed, new_par = stressed_dislocation(dis_parameters, len(dis_parameters)/3, 
@@ -345,6 +345,10 @@ def taup1d(dis_parameters, max_x, gsf_func, K, b, spacing, disl_type, dtau=0.001
     taup_minus, taup_plus = None, None
     u = pn1.get_u1d(dis_parameters, b, spacing, N, bc=0.5)
     
-    shift = max(10, int(b/spacing)) # distance a dislocation can move
+    shift = max(2, int(b/spacing)) # distance a dislocation can move
     
     un = np.array([u[(i-shift) % len(u)] for i in xrange(len(u))])
+    
+    # overlap between input dislocation and dislocation shifted along x
+    d_max = abs(u-un).sum()
+    

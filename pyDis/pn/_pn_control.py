@@ -242,7 +242,7 @@ class PNSim(object):
         
         # calculate Peierls stress and Peierls barrier, if requested
         self.peierls()
-        
+
         # write results to ouput
         self.write_output()
         
@@ -282,7 +282,7 @@ class PNSim(object):
         return
                             
     def post_processing(self):
-    
+        
         if self.control('plot') or self.prop('max_rho') or self.prop('width'):
             # need to extract misfit profile and dislocation density
             if self.control('dimensions') == 1:
@@ -361,8 +361,6 @@ class PNSim(object):
         '''Write the results of the PN calculation to the specified output file 
         (<control('output')>)
         '''
-
-        print(self.par)
         
         outstream = open(self.control('output'), 'w')
         

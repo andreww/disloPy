@@ -151,7 +151,8 @@ def main():
         # handle gamma surface
         for i in xrange(args.x_max+1):
             for j in xrange(args.y_max+1):
-                E, units = get_gsf_energy(regex, args.base_name, args.suffix, i, j, indir=args.indir)
+                E, units = get_gsf_energy(regex, args.base_name, args.suffix, i, j, 
+                                                                   indir=args.indir)
                 energies[i, j] = E
 
         # get rid of nan values -> Should implement this as a separate function
