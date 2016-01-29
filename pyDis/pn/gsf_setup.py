@@ -83,7 +83,7 @@ def make_slab(unit_cell, num_layers, vacuum=0.0, d_fix=5., free_atoms=[], axis=-
     
     return slab
     
-def write_gulp_slab(outStream,slab,disp_vec,system_info):
+def write_gulp_slab(outStream, slab, disp_vec, system_info):
     '''Routine to write a GULP output file for a slab calculation, with the 
     atoms satisfying x.e3 > 0.5 displaced by <disp_vec>.
     '''
@@ -93,7 +93,7 @@ def write_gulp_slab(outStream,slab,disp_vec,system_info):
     outStream.write('vectors\n')
     for vector in slab.getLattice():
         outStream.write('%.6f %.6f %.6f\n' % 
-                        (vector[0],vector[1],vector[2]))
+                        (vector[0], vector[1], vector[2]))
                         
     # add constraints to fix all cell vectors
     outStream.write('0 0 0 0 0 0\n')
@@ -102,12 +102,12 @@ def write_gulp_slab(outStream,slab,disp_vec,system_info):
     # displace atoms in the top half of the simulation cell, and write to file
     for atom in slab.getAtoms():
         if atom.getCoordinates()[-1] < 0.5:
-            atom.write(outStream,slab.getLattice(),defected=False,toCart=False,
+            atom.write(outStream, slab.getLattice(), defected=False, toCart=False,
                                                              add_constraints=True)
         else:
             x0 = atom.getCoordinates()
             atom.setDisplacedCoordinates((x0+disp_vec) % 1)
-            atom.write(outStream,slab.getLattice(),toCart=False,add_constraints=True)
+            atom.write(outStream, slab.getLattice(), toCart=False, add_constraints=True)
     
     # write the atomic charges and interatomic potentials to file            
     for line in system_info:
@@ -126,7 +126,7 @@ def insert_gsf(slab, disp_vec, vacuum=0.):
         disp_vec = np.array(disp_vec)
     elif len(disp_vec) == 2:
         temp = np.copy(disp_vec)
-        disp_vec = np.array([temp[0],temp[1],0.])
+        disp_vec = np.array([temp[0], temp[1], 0.])
     else:
         raise ValueError("<disp_vec> has invalid (%d) # of dimensions" % len(disp_vec))
 
@@ -160,7 +160,7 @@ def ceiling(real_number):
         else:
             return int(real_number)   
     
-def gs_sampling(lattice,resolution=0.25):
+def gs_sampling(lattice, resolution=0.25):
     '''Determine the number of samples along [100] and [010] required to 
     achieve specified resolution.
     '''
@@ -176,12 +176,14 @@ def gs_sampling(lattice,resolution=0.25):
     if Ny % 2 == 1:
         Ny = Ny + 1
         print("Incrementing Ny to make value even. New value is %d." % Ny)
-    return Nx,Ny
+    return Nx, Ny
     
-def gl_sampling(vector,lattice,resolution=0.25):
+def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1)):
     '''Determine the number of samples along <vector> required to achieve
     specified <resolution>.
     '''
+    
+    N = 
     
     # Make sure that N is an even integer
     N = int(N)
@@ -196,26 +198,20 @@ def gamma_line(slab, line_vec, N, outname, system_info):
     line oriented along <line_vec>, with a sampling density of <N>.
     '''
     
-    # Make sure that N is an even integer
-    N = int(N)
-    if N % 2 == 1:
-        N = N + 1
-        print("Incrementing N to make value even. New value is %d." % N)
-    
     # iterate over displacement vectors along the given Burgers vector direction
-    for n in range(1,N+1):
+    for n in range(1, N+1):
         # calculate displacement vector
         disp_vec = line_vec * n/float(N)
                
         # write cell parameters, coordinates, etc. to a GULP input file
-        outstream = open('gsf.%s.%d.gin' % (outname,n),'w')
+        outstream = open('gsf.%s.%d.gin' % (outname, n), 'w')
         write_slab(outstream, slab, disp_vec, system_info)    
         outStream.close()
         
     return  
 
 def gamma_surface(slab, increments, write_fn, sys_info, basename='gsf',
-                      suffix='in', limits=(1,1), vacuum=0., mkdir=False):
+                      suffix='in', limits=(1, 1), vacuum=0., mkdir=False):
     '''Sets up gamma surface calculation with a sampling density of <N> along
     [100] and <M> along [010]. 
     
@@ -223,24 +219,14 @@ def gamma_surface(slab, increments, write_fn, sys_info, basename='gsf',
     be even but, for transferability, we nevertheless check that this condition
     is met.
     '''
-    
-    # make sure that N and M are even integers
-    N = int(increments[0])
-    M = int(increments[1])
-    if N % 2 == 1:
-        N = N + 1
-        print("Incrementing N to make value even. New value is %d." % N)
-    if M % 2 == 1:
-        M = M + 1
-        print("Incrementing M to make value even. New value is %d." % M)
 
     # extract limits on x and y displacement vectors
     lim_x = float(limits[0])
     lim_y = float(limits[1])
         
     # iterate over displacement vectors in the gamma surface (ie. (001))
-    for n in range(0,N+1):
-        for m in range(0,M+1):
+    for n in range(0, N+1):
+        for m in range(0, M+1):
             gsf_name = '%s.%d.%d' % (basename, n, m)
             # insert vector into slab
             disp_vec = cry.ei(1)*n*lim_x/float(N) + cry.ei(2)*m*lim_y/float(M)
@@ -279,61 +265,3 @@ def proximity_constraint(atom, slab_thickness, d_fixed, axis, eps=1e-2):
         return True
     else:
         return False
-        
-''' ARCHIVE
-def make_slab(unit_cell,num_layers,vacuum=0.0,d_fix=5.,free_atoms=[]):
-    ###Makes a slab for GSF calculation, with <num_layers> atomic layers, a 
-    vacuum buffer of thickness <vacuum is added to the top, and <constraints>
-    (a list of functions testing specific constraints, such as proximity to the
-    buffer, atom type, etc.) are applied.###
-    
-    
-    # set up slab, without the vacuum layer
-    slab = cry.superConstructor(unit_cell,Nz=num_layers)
-    # total height of cell, including vacuum layer
-    old_height = norm(slab.getC()) 
-    new_height = old_height + vacuum
-    
-    # test to see if there is a vacuum layer, in which case a proximity
-    # constraint will be applied
-    if vacuum > 1e-10:
-        print('Non-zero vacuum buffer. Proximity constraint to be used ' +
-                  'with d_fix = %.1f.' % d_fix)
-        use_vacuum = True
-    else:
-        print('3D-periodic boundary conditions. Proximity constraints' +
-                                                   ' will not be applied.')
-        use_vacuum = False
-    
-    # apply constraints
-    for atom in slab.getAtoms():
-        # fix atom if it is within d_fix of the slab-vacuum interface, provided
-        # that vacuum thickness is non-zero -> notify user if this constraint is
-        # set
-        if use_vacuum:
-            near_interface = proximity_constraint(atom,old_height,d_fix)           
-        else:
-            near_interface = False
-            
-        if not near_interface:
-            if atom.getSpecies() in free_atoms:
-                # atom allowed to relax freely
-                pass
-            else:
-                # relax normal to the slip plane
-                atom.set_constraints(cry.ei(3,usetype=int))
-            
-    # add vacuum to the top of the slab
-    # begin by computing coordinates of all atoms in the vacuum-buffered slab
-    if use_vacuum:
-        for atom in slab:
-            coords = atom.getCoordinates()
-            new_z = coords[-1] * old_height/new_height
-            atom.setCoordinates(np.array([coords[0], coords[1], new_z]))
-            atom.setDisplacedCoordinates(np.array([coords[0], coords[1], new_z]))
-                                                                
-        # increase the height of the slab
-        slab.setC(slab.getC()*new_height/old_height)
-    
-    return slab
-'''
