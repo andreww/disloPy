@@ -199,8 +199,8 @@ def total_opt_stress(params, *args):
     x0 = params[n_funcs:2*n_funcs]
     c = params[2*n_funcs:]
     
-    E = total_stressed(A, x0, c, n_funcs, max_x, energy_function, b, spacing, shift, tau,
-                                                                      acts_on, K)
+    E = total_stressed(A, x0, c, n_funcs, max_x, energy_function, b, spacing, 
+                                                       shift, tau, acts_on, K)
     return E
     
     
@@ -352,3 +352,7 @@ def taup1d(dis_parameters, max_x, gsf_func, K, b, spacing, disl_type, dtau=0.001
     # overlap between input dislocation and dislocation shifted along x
     d_max = abs(u-un).sum()
     
+    # apply positive and negative stresses to the dislocation
+    for s in stresses:
+        Ed, new_par = stressed_dislocation(dis_parameters, len(dis_parameters)/3,
+                        max_x, gsf_func, K, b, spacing, disl_type, s)
