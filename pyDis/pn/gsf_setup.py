@@ -183,10 +183,10 @@ def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1)):
     specified <resolution>.
     '''
     
-    N = 
+    # need to rewrite for general <vector>
+    N = ceiling(norm(lattice.getA())/resolution)
     
     # Make sure that N is an even integer
-    N = int(N)
     if N % 2 == 1:
         N = N + 1
         print("Incrementing N to make value even. New value is %d." % N)
