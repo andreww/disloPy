@@ -220,6 +220,14 @@ def gamma_surface(slab, increments, write_fn, sys_info, basename='gsf',
     is met.
     '''
 
+    # FIXME: something odd with increments - assuming we mean a tuple
+    # of spacings, but should we acutally expect the caller to provide
+    # a resolution (in x and y) and work out the spacing (with gs_sampling)
+    # or expect the caller to have done this? For now:
+    N = int(increments[0])
+    M = int(increments[1])
+    # and don't check these are even. 
+
     # extract limits on x and y displacement vectors
     lim_x = float(limits[0])
     lim_y = float(limits[1])
