@@ -147,9 +147,9 @@ def main():
         else:
             pass
     elif args.simulation_type == 'gline':
-        increments = 
+        increments = None
         
-        gsf.gamma_line(new_slab
+        gsf.gamma_line(new_slab, args.res)
         
         if args.progexec != None:
             # run calculations
