@@ -160,13 +160,13 @@ def ceiling(real_number):
         else:
             return int(real_number)   
     
-def gs_sampling(lattice, resolution=0.25):
+def gs_sampling(lattice, resolution=0.25, limits=[1., 1.]):
     '''Determine the number of samples along [100] and [010] required to 
     achieve specified resolution.
     '''
     
-    Nx = ceiling(norm(lattice[0])/resolution)
-    Ny = ceiling(norm(lattice[1])/resolution)
+    Nx = ceiling(abs(limits[0])*norm(lattice[0])/resolution)
+    Ny = ceiling(abs(limits[1])*norm(lattice[1])/resolution)
     # make sure that Nx and Ny are even
     Nx = int(Nx)
     Ny = int(Ny)   
@@ -178,13 +178,13 @@ def gs_sampling(lattice, resolution=0.25):
         print("Incrementing Ny to make value even. New value is %d." % Ny)
     return Nx, Ny
     
-def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1)):
+def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1), limits=1.):
     '''Determine the number of samples along <vector> required to achieve
     specified <resolution>.
     '''
     
     # need to rewrite for general <vector>
-    N = ceiling(norm(lattice.getA())/resolution)
+    N = ceiling(abs(limits)*norm(lattice.getA())/resolution)
     
     # Make sure that N is an even integer
     if N % 2 == 1:
@@ -193,15 +193,17 @@ def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1)):
         
     return N
 
-def gamma_line(slab, line_vec, N, outname, system_info):
+def gamma_line(slab, line_vec, N, outname, system_info, limits=1.0, vacuum=0.,
+                                     basename='gsf', suffix='in', mkdir=False):
     '''Sets up GULP input files required to compute energies along a gamma
     line oriented along <line_vec>, with a sampling density of <N>.
     '''
     
     # iterate over displacement vectors along the given Burgers vector direction
     for n in range(1, N+1):
+        gsf_name = '%s.%d'.format(basename, n)
         # calculate displacement vector
-        disp_vec = line_vec * n/float(N)
+        disp_vec = line_vec * n/float(N)*limits
                
         # write cell parameters, coordinates, etc. to a GULP input file
         outstream = open('gsf.%s.%d.gin' % (outname, n), 'w')
@@ -211,7 +213,7 @@ def gamma_line(slab, line_vec, N, outname, system_info):
     return  
 
 def gamma_surface(slab, increments, write_fn, sys_info, basename='gsf',
-                      suffix='in', limits=(1, 1), vacuum=0., mkdir=False):
+            suffix='in', limits=(1, 1), vacuum=0., mkdir=False):
     '''Sets up gamma surface calculation with a sampling density of <N> along
     [100] and <M> along [010]. 
     
@@ -220,7 +222,8 @@ def gamma_surface(slab, increments, write_fn, sys_info, basename='gsf',
     is met.
     '''
 
-    # extract limits on x and y displacement vectors
+    # extract limits on x and y displacement vectors.
+    #!!! Need to generalise limits for sectors defined by non-orthogonal vectors.
     lim_x = float(limits[0])
     lim_y = float(limits[1])
         

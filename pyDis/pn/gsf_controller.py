@@ -57,6 +57,16 @@ def command_line_options():
                          help='Thickness of static region in vacuum-buffered slab.')
     options.add_argument('-s', '--shift', type=float, dest='shift', default=0.0,
                          help='Shifts origin of unit cell.')
+
+    # limit the gamma surface/line calculation to one sector of the slip plane.
+    # Only x and y limits are available through the command line and manual input.
+    # For all other limits (in particular by angle), use the input file (not yet
+    # implemented).
+
+    options.add_argument('-x', '--xmax', type=float, dest='max_x', default=1.0,
+                         help='Maximum displacement vector along x.')
+    options.add_argument('-y', '--ymax', type=float, dest='max_y', default=1.0,
+                         help='Maximum displacement vector along y.')
                                     
     return options
     
@@ -122,10 +132,11 @@ def main():
     # make the slab and construct the gamma surface/line
     new_slab = gsf.make_slab(unit_cell, args.n, args.vac, d_fix=args.d_fix, free_atoms=[])
     if args.simulation_type == 'gsurface':
-        increments = gsf.gs_sampling(new_slab.getLattice(), args.res)
+        limits = (args.max_x, args.max_y)
+        increments = gsf.gs_sampling(new_slab.getLattice(), args.res, limits)
             
         gsf.gamma_surface(new_slab, increments, write_fn, system_info, suffix='gin',
-                                       basename=args.sim_name, vacuum=args.vac)    
+                          limits=limits, basename=args.sim_name, vacuum=args.vac)    
         
         # run the calculations, if an executable has been provided. Otherwise,
         # assume that that the input files will be transferred to another machine
@@ -136,7 +147,7 @@ def main():
                     print("Relaxing cell with generalized stacking fault vector" +
                             " ({}, {})...".format(n, m), end="")
                     basename = '%s.%d.%d' % (args.sim_name, n, m)
-                    if 'gulp' == args.prog:
+                    if 'gulp' == args.prog.lower():
                         gulp.run_gulp(args.progexec, basename) 
                     elif 'qe' == args.prog.lower():
                         qe.run_qe(args.progexec, basename)
@@ -147,12 +158,24 @@ def main():
         else:
             pass
     elif args.simulation_type == 'gline':
-        increments = None
+        increments = gsf.gl_sampling(new_slab.getLattice(), args.res, args.max_x)
         
-        gsf.gamma_line(new_slab, args.res)
+        gsf.gamma_line(new_slab, args.res, write_fn, system_info, suffix='gin', 
+                     limits=args.max_x, basename=args.sim_name, vacuum=args.vac)
         
         if args.progexec != None:
             # run calculations
+            for n in xrange(0, increments+1):
+                print("Relaxing cell {}...".format(n), end="")
+            basename = '%s.%d'.format(args.sim_name, n)
+            if 'gulp' == args.prog.lower():
+                gulp.run_gulp(args.progexec, basename)
+            elif 'qe' == args.prog.lower():
+                qe.run_qe(args.progexec, basename)
+            elif 'castep' == args.prog.lower():
+                castep.run_castep(args.progexec, basename)
+
+            print("complete.")
         else:
             pass
     else:
