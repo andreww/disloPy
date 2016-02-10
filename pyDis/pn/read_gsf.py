@@ -34,6 +34,10 @@ def command_line_options():
                                   help="Output file for the gamma surface energies")
     options.add_argument("-s", "--suffix", type=str, dest="suffix", default="out",
                                 help="Suffix for ab initio/MM-FF output files")
+    options.add_argument("-d", "--dimensions", type=int, choices=[1, 2], default=2,
+                             dest='dim', help="Dimensionality of the stacking" +
+                          "fault function. 1D corresponds to a gamma-line, 2D to" +
+                                            " a gamma-surface.")
     options.add_argument("--indir", action="store_true", 
                          help="Each GSF point is in its own directory")
                                   
@@ -116,22 +120,6 @@ def main():
         options = command_line_options()
         args = options.parse_args()
         
-    # test to make sure that the number of increments along at least one axis
-    # has been specified
-    gamma_line = False
-    if (not args.x_max) and (not args.y_max):
-        # number of increments in both directions == 0
-        raise ValueError("Number of increments in at least one direction must" +
-                                                                      "be >= 1.")    
-    elif args.x_max and (not args.y_max):
-        gamma_line = True  
-        i_max = args.x_max
-    elif (not args.x_max) and args.y_max:
-        gamma_line = True
-        i_max = args.y_max
-    else: # gamma surface
-        pass
-        
     # determine which regular expression to use to match output energies
     try:
         regex = energy_lines[(args.program).lower()]
@@ -142,11 +130,26 @@ def main():
         
     outstream = open("%s" % args.out_name, "w")    
     
-    if gamma_line:
+    if args.dim == 1:
+        energies = np.zeros(args.x_max+1)
         # handle gamma line
         for x in xrange(i_max+1):
             E, units = get_gsf_energy(regex, args.base_name, args.suffix, i, indir=args.indir)
-    else:
+            energies[x] = E
+            
+        # remove any nan values -> should implement as a separate function.
+        E_perfect = energies[0]
+        for i in range(args.xmax+1):
+            if energies[i] != energies[i]:
+                # nan value; average values before and after
+                energies[i] = 0.5*(energies[(i-1) % (args.xmax+1)]
+                                   energies[(i+1) % (args.xmax+1)])
+                                   
+                if energies[i] != energies[i]:
+                    # gamma line not computed accurately; raise error
+                    raise ValueError("Too many NaN values.")
+            
+    else: # gamma surface
         energies = np.zeros((args.x_max+1, args.y_max+1))
         # handle gamma surface
         for i in xrange(args.x_max+1):

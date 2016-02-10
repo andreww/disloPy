@@ -65,7 +65,7 @@ def mirror2d(gsf, axis=(0, 1)):
                     new_gsf[2*nx-2-i, j, 1] = j
                     new_gsf[2*nx-2-i, j, 2] = gsf[i, j, 2]
             else: # axis == 1
-                if j == nx - 1:
+                if j == (nx - 1):
                     pass
                 else:
                     new_gsf[i, 2*nx-2-j, 0] = i

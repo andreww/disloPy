@@ -44,11 +44,12 @@ def replace_at_plane(slab_cell, impurity, plane=0.5, vacuum=0.,
     return to_substitute
 
 def insert_impurities(slab_cell, impurity, site_list, write_fn, sys_info, grid, 
-                          prefix='gsf', suffix='in', limits=(1,1), topdir=True,
-                                                                   mkdir=False):
+                          prefix='gsf', suffix='in', limits=(1,1), topdir=False,
+                                                mkdir=False, replace_all=False):
     '''Runs gamma surface calculations with impurities inserted at the atomic 
     sites enumerated in <site_list>. <topdir> determines whether or not a new 
-    directory is created for each possible impurity site.
+    directory is created for each possible impurity site. Defaults to replacing 
+    only the first atom in <site_list> (ie. <replace_all> ==  False
     '''
     
     for index in site_list:
@@ -81,6 +82,9 @@ def insert_impurities(slab_cell, impurity, site_list, write_fn, sys_info, grid,
 
         if topdir:
             os.chdir('..')
+            
+        if not replace_all:
+            break
 
     return
 
