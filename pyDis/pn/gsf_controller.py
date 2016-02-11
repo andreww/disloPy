@@ -132,10 +132,8 @@ def main():
     # make the slab and construct the gamma surface/line
     new_slab = gsf.make_slab(unit_cell, args.n, args.vac, d_fix=args.d_fix, free_atoms=[])
     if args.simulation_type == 'gsurface':
-        limits = (args.max_x, args.max_y)
-        increments = gsf.gs_sampling(new_slab.getLattice(), args.res, limits)
-            
-        gsf.gamma_surface(new_slab, increments, write_fn, system_info, suffix='gin',
+        limits = (args.max_x, args.max_y)          
+        gsf.gamma_surface(new_slab, args.res, write_fn, system_info, suffix='gin',
                           limits=limits, basename=args.sim_name, vacuum=args.vac)    
         
         # run the calculations, if an executable has been provided. Otherwise,

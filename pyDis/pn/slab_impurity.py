@@ -43,49 +43,32 @@ def replace_at_plane(slab_cell, impurity, plane=0.5, vacuum=0.,
 
     return to_substitute
 
-def insert_impurities(slab_cell, impurity, site_list, write_fn, sys_info, grid, 
-                          prefix='gsf', suffix='in', limits=(1,1), topdir=False,
-                                                mkdir=False, replace_all=False):
-    '''Runs gamma surface calculations with impurities inserted at the atomic 
-    sites enumerated in <site_list>. <topdir> determines whether or not a new 
-    directory is created for each possible impurity site. Defaults to replacing 
-    only the first atom in <site_list> (ie. <replace_all> ==  False
+def impure_faults(slab_cell, impurity, site, write_fn, sys_info, resolution, 
+                 prefix='gsf', suffix='in', dim=2, limits=(1,1), mkdir=False):
+    '''Runs gamma surface calculations with an impurity (or impurity cluster)
+    inserted at the specified atomic sites. <site> gives the index of the atom
+    to be replaced by the impurity 
     '''
+
+    slab_cell[site].switchOutputMode()
     
-    for index in site_list:
-        if topdir:
-            # create directory for impurity calculations
-            dir_name = '%s.%d' % (prefix, index)
-            os.mkdir('%s' % dir_name)
-            os.chdir(dir_name)
+    # calculate coordinates of the <impurity> atoms and insert them into the 
+    # slab
+    impurity.site_location(slab_cell[site])
+    if len(impurity) == 0:
+        # impurity contains no atoms => we are inserting a vacancy
+        pass
+    else:
+        for atom in impurity:
+            slab_cell.append(atom)
 
-        slab_cell[index].switchOutputMode()
-    
-        # calculate coordinates of the <impurity> atoms and insert them into the 
-        # slab
-        impurity.site_location(slab_cell[index])
-        if len(impurity) == 0:
-            # impurity contains no atoms => we are inserting a vacancy
-            pass
-        else:
-            for atom in impurity:
-                slab_cell.append(atom)
+    # create input files for generalised stacking fault calculations
+    gsf.gamma_surface(slab_cell, resolution, write_fn, sys_info, mkdir=mkdir,
+         basename='{}.{}'.format(prefix, index), suffix=suffix, limits=limits)
 
-        # create input files for generalised stacking fault calculations
-        gsf.gamma_surface(slab_cell, grid, write_fn, sys_info, mkdir=mkdir,
-            basename='%s.%d' % (prefix, index), suffix=suffix, limits=limits)
-
-        # return <index>th atom to slab and delete all impurity atoms
-        slab_cell[index].switchOutputMode()
-        for i in range(len(impurity)):
-            del slab_cell[-1]
-
-        if topdir:
-            os.chdir('..')
-            
-        if not replace_all:
-            break
+    # return <index>th atom to slab and delete all impurity atoms
+    slab_cell[site].switchOutputMode()
+    for i in range(len(impurity)):
+        del slab_cell[-1]
 
     return
-
-

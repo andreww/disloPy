@@ -18,63 +18,85 @@ from scipy.interpolate import RectBivariateSpline, interp1d
 from pyDis.atomic import atomistic_utils as util
 
 def read_numerical_gsf(filename):
+    '''Reads in a grid of energy values for a gamma line or gamma surface,
+    including the units in which those energies are expressed.
+    '''
+    
     gsf = []
+    units = None
     with open(filename) as gsf_file:
         for line in gsf_file:
+            unit_match = re.match('#\s+units\s+(?P<units>\w+)', line)
+            if unit_match:
+                units = unit_match.group('units')
             data = line.rstrip().split()
             if not(data): # empty line
                 continue
             # otherwise, format data
             gsf.append([float(value) for value in data])
             
-    return np.array(gsf)
+    # check that units were contained in file
+    if unit_match == None:
+        print("Warning: no energy units specified. Defaulting to eV")
+        units = 'ev'
+            
+    return np.array(gsf), units
     
-def mirror1d(gsf):
+def mirror1d(gline):
     '''Reflects a 1D gamma line about 0.5*a.
     '''
     
-    pass
+    n = len(gline)
+    newlength = 2*n-1
+    new_gl = np.zeros((newlength, 2))
+    
+    for i in range(n):
+        for j in (0, 1):
+            new_gl[i, j] = gline[i, j]
+            new_gl[newlength-1-i] = (newlength-1-i, gline[i])[j]
+            
+    return new_gl
 
-def mirror2d(gsf, axis=(0, 1)):
+def mirror2d(gsurf, axis=(0, 1)):
     '''Reflects <gsf> about the provided symmetry <axis>. <axis> can 
     take the values 0 or 1. Can also provide axis = (0, 1) to mirror 
     about the x and y axes.
     '''
 
     if util.isiter(axis):
-        temp_gsf = mirror(gsf, axis[0])
-        new_gsf = mirror(temp_gsf, axis[1])
-        return new_gsf
+        temp_gs = mirror2d(gsurf, axis[0])
+        new_gs = mirror2d(temp_gs, axis[1])
+        return new_gs
     # else
     if axis != 0 and axis != 1:
         raise ValueError("Invalid axis. Are you a Fortran programmer?")
-    grid_shape = list(np.shape(gsf))
+    grid_shape = list(np.shape(gsurf))
     nx = grid_shape[axis]
     grid_shape[axis] = 2*nx-1
-    new_gsf = np.zeros(grid_shape)
-    for i in range(np.shape(gsf)[0]):
-        for j in range(np.shape(gsf)[1]):
+    new_gs = np.zeros(grid_shape)
+    for i in range(np.shape(gsurf)[0]):
+        for j in range(np.shape(gsurf)[1]):
             for k in range(3):
-                new_gsf[i, j, k] = gsf[i, j, k]
+                new_gs[i, j, k] = gsurf[i, j, k]
             
             if axis == 0:
                 if i == nx-1:
                     pass
                 else:
-                    new_gsf[2*nx-2-i, j, 0] = 2*nx-2-i
-                    new_gsf[2*nx-2-i, j, 1] = j
-                    new_gsf[2*nx-2-i, j, 2] = gsf[i, j, 2]
+                    new_gs[2*nx-2-i, j, 0] = 2*nx-2-i
+                    new_gs[2*nx-2-i, j, 1] = j
+                    new_gs[2*nx-2-i, j, 2] = gsurf[i, j, 2]
             else: # axis == 1
                 if j == (nx - 1):
                     pass
                 else:
-                    new_gsf[i, 2*nx-2-j, 0] = i
-                    new_gsf[i, 2*nx-2-j, 1] = 2*nx-2-j
-                    new_gsf[i, 2*nx-2-j, 2] = gsf[i, j, k]
+                    new_gs[i, 2*nx-2-j, 0] = i
+                    new_gs[i, 2*nx-2-j, 1] = 2*nx-2-j
+                    new_gs[i, 2*nx-2-j, 2] = gsurf[i, j, k]
 
-    return new_gsf
+    return new_gs
     
-def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True):
+def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True, units='ev'):
     '''Fits a bivariate spline to a numerical gsf energies along a line (ie.
     fits a gamma line).
     '''
@@ -84,6 +106,10 @@ def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True):
     E_vals = num_gsf[:, 1]
     
     # convert energies to eV/\AA^2
+    if units.lower() == 'ev':
+        pass
+    elif units.lower() in 'rydberg':
+        E_vals *= 13.6057
     E_vals -= E_vals.min()
     E_vals /= a*b*abs(np.sin(angle))
     if two_planes:
@@ -98,8 +124,9 @@ def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True):
     return gamma
 
 def spline_fit2d(num_gsf, a, b, angle=np.pi/2., two_planes=True):
-    # extract coordinates of calculations, and gs-energies at each point
-    # grid values are given in integer values -> need to convert to \AA
+    '''extract coordinates of calculations, and gs-energies at each point
+    grid values are given in integer values -> need to convert to \AA
+    '''
     
     #!!! Need to change function calls in other modules to accommodate 1D 
     #!!! and 2D spline fits.

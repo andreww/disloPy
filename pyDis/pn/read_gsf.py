@@ -10,8 +10,10 @@ import numpy as np
 # dictionary containing regex to match final energies for a variety of codes
 energy_lines = {"gulp": re.compile(r"\n\s*Final energy\s+=\s+" +
                                   "(?P<E>-?\d+\.\d+)\s*(?P<units>\w+)\s*\n"),
-                "castep":re.compile(r"\n\s*BFGS:\s*Final\s+Enthalpy\s+=\s+" +
-                              "(?P<E>-?\d+\.\d+E\+\d+)\s*(?P<units>\w+)\s*\n")
+                "castep": re.compile(r"\n\s*BFGS:\s*Final\s+Enthalpy\s+=\s+" +
+                              "(?P<E>-?\d+\.\d+E\+\d+)\s*(?P<units>\w+)\s*\n"),
+                "qe": re.compile(r"\n\s*Final energy\s+=\s+(?P<E>-?\d+\.\d+)" +
+                                  "\s+(?P<units>\w+)\s*\n")
                }
                
 get_gnorm = re.compile(r"Final Gnorm\s*=\s*(?P<gnorm>\d+\.\d+)")
@@ -38,7 +40,7 @@ def command_line_options():
                              dest='dim', help="Dimensionality of the stacking" +
                           "fault function. 1D corresponds to a gamma-line, 2D to" +
                                             " a gamma-surface.")
-    options.add_argument("--indir", action="store_true", 
+    options.add_argument("--indir", action="store_true", default=False,
                          help="Each GSF point is in its own directory")
                                   
     return options
@@ -133,21 +135,26 @@ def main():
     if args.dim == 1:
         energies = np.zeros(args.x_max+1)
         # handle gamma line
-        for x in xrange(i_max+1):
+        for i in xrange(args.x_max+1):
             E, units = get_gsf_energy(regex, args.base_name, args.suffix, i, indir=args.indir)
-            energies[x] = E
+            energies[i] = E
+            
+        # record the units in which the cell energy is expressed
+        outstream.write("# units {}\n".format(units))
             
         # remove any nan values -> should implement as a separate function.
         E_perfect = energies[0]
-        for i in range(args.xmax+1):
+        for i in range(args.x_max+1):
             if energies[i] != energies[i]:
                 # nan value; average values before and after
-                energies[i] = 0.5*(energies[(i-1) % (args.xmax+1)]
-                                   energies[(i+1) % (args.xmax+1)])
+                energies[i] = 0.5*(energies[(i-1) % (args.x_max+1)]+
+                                   energies[(i+1) % (args.x_max+1)])
                                    
                 if energies[i] != energies[i]:
                     # gamma line not computed accurately; raise error
                     raise ValueError("Too many NaN values.")
+            
+            outstream.write("{} {:.6f}\n".format(i, energies[i]))
             
     else: # gamma surface
         energies = np.zeros((args.x_max+1, args.y_max+1))
@@ -158,6 +165,8 @@ def main():
                                                                    indir=args.indir)
                 energies[i, j] = E
 
+        # record energy units used
+        outstream.write("# units {}\n".format(units))
         # get rid of nan values -> Should implement this as a separate function
         E_perfect = energies[0, 0]
         for i in xrange(args.x_max+1):
@@ -189,7 +198,7 @@ def main():
                         energies[i, j] = approx_energy/num_real
                     print("({}, {}): {:.2f}".format(i, j, energies[i, j]))
 
-                outstream.write("%d %d %.4f\n" % (i, j, energies[i, j]))
+                outstream.write("{} {} {:.6f}\n" % (i, j, energies[i, j]))
                 
             # include a space between slices of constant x (for gnuplot)
             outstream.write("\n")

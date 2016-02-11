@@ -167,6 +167,7 @@ def gs_sampling(lattice, resolution=0.25, limits=[1., 1.]):
     
     Nx = ceiling(abs(limits[0])*norm(lattice[0])/resolution)
     Ny = ceiling(abs(limits[1])*norm(lattice[1])/resolution)
+    
     # make sure that Nx and Ny are even
     Nx = int(Nx)
     Ny = int(Ny)   
@@ -185,7 +186,7 @@ def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1), limits=1.):
     
     # need to rewrite for general <vector>
     N = ceiling(abs(limits)*norm(lattice.getA())/resolution)
-    
+    N = int(N)
     # Make sure that N is an even integer
     if N % 2 == 1:
         N = N + 1
@@ -212,7 +213,7 @@ def gamma_line(slab, line_vec, N, outname, system_info, limits=1.0, vacuum=0.,
         
     return  
 
-def gamma_surface(slab, increments, write_fn, sys_info, basename='gsf',
+def gamma_surface(slab, resolution, write_fn, sys_info, basename='gsf',
             suffix='in', limits=(1, 1), vacuum=0., mkdir=False):
     '''Sets up gamma surface calculation with a sampling density of <N> along
     [100] and <M> along [010]. 
@@ -221,18 +222,17 @@ def gamma_surface(slab, increments, write_fn, sys_info, basename='gsf',
     be even but, for transferability, we nevertheless check that this condition
     is met.
     '''
-
-    # extract limits on x and y displacement vectors.
-    #!!! Need to generalise limits for sectors defined by non-orthogonal vectors.
-    lim_x = float(limits[0])
-    lim_y = float(limits[1])
+    
+    # using <gs_sampling>, calculate the number of increments along x and y 
+    # required to give *at least* the specified <resolution>.
+    N, M = gs_sampling(slab, resolution, limits)
         
     # iterate over displacement vectors in the gamma surface (ie. (001))
     for n in range(0, N+1):
         for m in range(0, M+1):
             gsf_name = '%s.%d.%d' % (basename, n, m)
             # insert vector into slab
-            disp_vec = cry.ei(1)*n*lim_x/float(N) + cry.ei(2)*m*lim_y/float(M)
+            disp_vec = cry.ei(1)*n*limits[0]/float(N) + cry.ei(2)*m*limits[1]/float(N)
             insert_gsf(slab, disp_vec, vacuum=vacuum)
 
             # write to code appropriate output file

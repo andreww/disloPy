@@ -271,7 +271,7 @@ class PNSim(object):
                                 
     def construct_gsf(self):
     
-        gsf_grid = fg.read_numerical_gsf(self.control('gsf_file'))
+        gsf_grid, self.units = fg.read_numerical_gsf(self.control('gsf_file'))
         if self.control('dimensions') == 1:
             base_func = fg.spline_fit1d(gsf_grid, self.surf('x_length'), self.surf('y_length'),
                                                         angle=self.surf('angle'))
