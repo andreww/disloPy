@@ -76,6 +76,11 @@ def symmetrise(A, x0, c, spacing, normalize=False):
     x_mean = sum([ai*xi for ai, xi in zip(A, x0)])
     x0 = [(x-(x_mean-(x_mean % spacing))) for x in x0]
     return A, x0, c
+    
+def generate_input(N, spacing, use_sym=False):
+    '''Generate a trial set of parameters {Ai; xi; ci} for a 1D dislocation
+    distribution.
+    '''
 
 def u_field(x, A, x0, c, b, bc=0.5):
     u = 0.
@@ -222,7 +227,10 @@ def contained_in(element, open_set):
     else:
         return False
 
-def mc_step(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K):
+def mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K):
+    '''Single monte carlo step for dislocation structure.
+    '''
+    
     if use_sym:
         params = gen_symmetric(N, spacing)
         N = 2*N
@@ -257,7 +265,7 @@ def run_monte(n_iter, N, max_x=100, energy_function=test_gamma, noopt=False,
         if i % 100 == 0:
             print("Starting iteration {}...".format(i))
 
-        E, x_try = mc_step(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K)
+        E, x_try = mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K)
         is_valid = True
         
         for j, param in enumerate(x_try):

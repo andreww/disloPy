@@ -37,8 +37,8 @@ def generate_input(N, disl_type, spacing, use_sym=False):
     x1 = dis1[n_part:2*n_part]
     c1 = dis1[2*n_part:]
     
-    # generate starting parameters for the edge component (which we assume,
-    # for the moment, to satisfy ux(-inf) = ux(inf) = 0.0
+    # generate starting parameters for the component perpendicular to the burgers
+    # vector  
     c2 = pn1.generate_c(n_part) 
     A2 = opposing_partials(n_part)
     x2 = pn1.generate_x(n_part, abs(A2)/abs(A2).sum(), spacing)
@@ -129,6 +129,9 @@ def make_limits2d(n_funcs, max_x, disl_type):
     
 def mc_step2d(N, max_x, energy_function, lims, K, shift, constraints, use_sym,
                                                     disl_type, b, spacing):
+    '''Single monte-carlo step.
+    '''
+    
     params = generate_input(N, disl_type, spacing, use_sym)
     
     try:
