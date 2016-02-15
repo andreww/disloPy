@@ -179,9 +179,13 @@ def parse_castep(basename, unit_cell, path='./'):
     return sys_info
 
 def write_castep(outstream, cas_struc, sys_info, defected=True, to_cart=False,
-                                       add_constraints=False, relax_type=None):
+                      add_constraints=False, relax_type=None, impurities=None):
     '''Writes the information in <cas_struc> and <sys_info> to the specified 
-    output stream.
+    output stream. 
+    
+    #!!! Do we need some facility to change the calculation type (eg. from 
+    #!!! fixed-cell relaxation to a SCF calculation) without the user having
+    #!!! to edit the .param (.cell?) file directly?
     '''
 
     # begin by writing the cell block

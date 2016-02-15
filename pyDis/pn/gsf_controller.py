@@ -7,11 +7,17 @@ import argparse
 import subprocess
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
-import gsf_setup as gsf
-
+from pyDis.pn import gsf_setup as gsf
 from pyDis.atomic import gulpUtils as gulp
 from pyDis.atomic import qe_utils as qe
 from pyDis.atomic import castep_utils as castep
+from pyDis.atomic import crystal as cry
+from pyDis.atomic import atomistic_utils as atm
+
+### END IMPORT SECTION
+
+# list of atomic simulation codes currently supported by pyDis
+supported_codes = ('qe', 'gulp', 'castep')
 
 def command_line_options():
     '''Parse command line options to enable optional features and change
@@ -29,7 +35,7 @@ def command_line_options():
     options = argparse.ArgumentParser()
     options.add_argument('-c', '--control-file', type=str, dest='control',
                     default='', help='File containing simulation parameters')
-    options.add_argument('-u', '--unit-cell', type=str, dest='gulp_name',
+    options.add_argument('-u', '--unit-cell', type=str, dest='cell_name',
                          help='Name of GULP file containing the unit cell')
     options.add_argument('-sn', '--name', type=str, dest='sim_name', default='gsf',
                          help='Base name for GSF calculation input files')
@@ -50,11 +56,9 @@ def command_line_options():
                               ' line or a gamma surface.\n\nDefault is gamma ' +
                               ' surface.')
     options.add_argument('-d', '--direction', nargs=3, type=float, dest='line_vec',
-                       default=np.array([1, 0, 0]), help='Direction of gamma line.')
+                       default=cry.ei(1), help='Direction of gamma line.')
     options.add_argument('-r', '--resolution', type=float, dest='res', default=0.25,
                          help='Sampling resolution of the gamma line/surface')
-    options.add_argument('-f', '--dfix', type=float, dest='d_fix', default=5.0,
-                         help='Thickness of static region in vacuum-buffered slab.')
     options.add_argument('-s', '--shift', type=float, dest='shift', default=0.0,
                          help='Shifts origin of unit cell.')
 
@@ -67,6 +71,14 @@ def command_line_options():
                          help='Maximum displacement vector along x.')
     options.add_argument('-y', '--ymax', type=float, dest='max_y', default=1.0,
                          help='Maximum displacement vector along y.')
+                         
+                         
+    # list of contraints    
+    options.add_argument('-fx', '--dfix', type=float, dest='d_fix', default=5.0,
+                         help='Thickness of static region in vacuum-buffered slab.')
+    options.add_argument('-fr', '--free', type=str, nargs = '*', dest='free_atoms',  
+                help='List of atomic species allowed to relax without constraint.',
+                                                                    default=[])
                                     
     return options
     
@@ -89,6 +101,10 @@ def read_control(control_file):
         for line in f:
             if line:
                 lines.append(line)    
+                
+    options = dict()
+                
+    return options
 
 def main():
     '''Controller program.
@@ -110,31 +126,55 @@ def main():
             args = read_control(args.control)
         else:
             pass
-    
-    # extract unit cell and GULP run parameters from file <gulp_name>
-    unit_cell = gsf.cry.Crystal()
-    system_info = gsf.gulp.parse_gulp(args.gulp_name, unit_cell)
-    
-    # shift origin of cell
-    unit_cell.translate_cell(np.array([0., 0., -1*args.shift]), modulo=True)
-    
-    # select output mode appropriate for the atomistic calculator used
-    if 'gulp' == args.prog.lower():
-        write_fn = gulp.write_gulp
-    elif 'qe' == args.prog.lower()
-        write_fn = qe.write_qe
-    elif 'castep' == args.prog.lower():
-        write_fn = castep.write_castep
+            
+    # make sure that the atomic simulation code specified by the user is supported
+    if args.prog.lower() in supported_codes:
+        pass
     else:
         raise ValueError("{} is not a supported atomistic simulation code." +
                          "Supported codes are: GULP; QE; CASTEP.")
     
+    # extract unit cell and GULP run parameters from file <cell_name>
+    unit_cell = gsf.cry.Crystal()
+    if 'gulp' == args.prog.lower():
+        parse_fn = gulp.parse_gulp
+    elif 'qe' == args.prog.lower():
+        parse_fn = qe.parse_qe
+    elif 'castep' == args.prog.lower():
+        parse_fn = castep.parse_castep
+        
+    sys_info = parse_fn(args.cell_name, unit_cell)
+    
+    # if the calculation uses an ab initio solver, scale the k-point grid
+    atm.scale_kpoints(sys_info['cards']['K_POINTS'], np.array([1., 1., args.n]))
+    
+    # shift origin of cell
+    unit_cell.translate_cell(np.array([0., 0., -1*args.shift]), modulo=True)
+    
+    # select output mode appropriate for the atomistic calculator used, together
+    # with the correct suffix for the input files (may be better to let the 
+    # output functions determine the suffix?)
+    if 'gulp' == args.prog.lower():
+        write_fn = gulp.write_gulp
+        suffix = 'gin'
+        relax = 'conv'
+    elif 'qe' == args.prog.lower():
+        write_fn = qe.write_qe
+        suffix = 'in'
+        relax = 'relax'
+    elif 'castep' == args.prog.lower():
+        write_fn = castep.write_castep
+        suffix = 'cell'
+        relax = None
+    
     # make the slab and construct the gamma surface/line
-    new_slab = gsf.make_slab(unit_cell, args.n, args.vac, d_fix=args.d_fix, free_atoms=[])
+    new_slab = gsf.make_slab(unit_cell, args.n, args.vac, d_fix=args.d_fix, 
+                                                 free_atoms=args.free_atoms)
     if args.simulation_type == 'gsurface':
         limits = (args.max_x, args.max_y)          
-        gsf.gamma_surface(new_slab, args.res, write_fn, system_info, suffix='gin',
-                          limits=limits, basename=args.sim_name, vacuum=args.vac)    
+        gsf.gamma_surface(new_slab, args.res, write_fn, sys_info, suffix=suffix,
+                          limits=limits, basename=args.sim_name, vacuum=args.vac,
+                                                                    relax=relax)    
         
         # run the calculations, if an executable has been provided. Otherwise,
         # assume that that the input files will be transferred to another machine
@@ -155,11 +195,10 @@ def main():
                     print("complete.") 
         else:
             pass
-    elif args.simulation_type == 'gline':
-        increments = gsf.gl_sampling(new_slab.getLattice(), args.res, args.max_x)
-        
-        gsf.gamma_line(new_slab, args.res, write_fn, system_info, suffix='gin', 
-                     limits=args.max_x, basename=args.sim_name, vacuum=args.vac)
+    elif args.simulation_type == 'gline':      
+        gsf.gamma_line(new_slab, args.line_vec, args.res, write_fn, sys_info, 
+                       suffix=suffix, limits=args.max_x, basename=args.sim_name, 
+                                                   vacuum=args.vac, relax=relax)
         
         if args.progexec != None:
             # run calculations

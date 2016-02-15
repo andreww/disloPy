@@ -185,7 +185,7 @@ def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1), limits=1.):
     '''
     
     # need to rewrite for general <vector>
-    N = ceiling(abs(limits)*norm(lattice.getA())/resolution)
+    N = ceiling(abs(limits)*norm(lattice[0])/resolution)
     N = int(N)
     # Make sure that N is an even integer
     if N % 2 == 1:
@@ -194,27 +194,41 @@ def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1), limits=1.):
         
     return N
 
-def gamma_line(slab, line_vec, N, outname, system_info, limits=1.0, vacuum=0.,
-                                     basename='gsf', suffix='in', mkdir=False):
+def gamma_line(slab, line_vec, resolution, write_fn, sys_info, limits=1.0, 
+               vacuum=0., basename='gsf', suffix='in', mkdir=False, relax=None):
     '''Sets up GULP input files required to compute energies along a gamma
     line oriented along <line_vec>, with a sampling density of <N>.
     '''
     
+    N = gl_sampling(slab.getLattice(), resolution=resolution, vector=line_vec, 
+                                                                limits=limits)
+    
     # iterate over displacement vectors along the given Burgers vector direction
-    for n in range(1, N+1):
-        gsf_name = '%s.%d'.format(basename, n)
-        # calculate displacement vector
+    for n in range(0, N+1):
+        gsf_name = '{}.{}'.format(basename, n)
+        # calculate displacement vector and insert into slab
         disp_vec = line_vec * n/float(N)*limits
-               
-        # write cell parameters, coordinates, etc. to a GULP input file
-        outstream = open('gsf.%s.%d.gin' % (outname, n), 'w')
-        write_slab(outstream, slab, disp_vec, system_info)    
-        outStream.close()
+        insert_gsf(slab, disp_vec, vacuum=vacuum) 
+             
+        # create input file appropriate for the atomic simulation code used.
+        if mkdir: # make directory
+            if not os.path.exists(gsf_name):
+                os.mkdir(gsf_name)
+            outstream = open('{}/{}.{}'.format(gsf_name, gsf_name, suffix), 'w')
+        else: # use current directory   
+            outstream = open('{}.{}'.format(gsf_name, suffix), 'w')
+            
+        if relax != None:
+            write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
+                                        add_constraints=True, relax_type=relax)
+        else:
+            write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
+                                        add_constraints=True)
         
     return  
 
 def gamma_surface(slab, resolution, write_fn, sys_info, basename='gsf',
-            suffix='in', limits=(1, 1), vacuum=0., mkdir=False):
+            suffix='in', limits=(1, 1), vacuum=0., mkdir=False, relax=None):
     '''Sets up gamma surface calculation with a sampling density of <N> along
     [100] and <M> along [010]. 
     
@@ -239,12 +253,18 @@ def gamma_surface(slab, resolution, write_fn, sys_info, basename='gsf',
             if mkdir: # make directory
                 if not os.path.exists(gsf_name):
                     os.mkdir(gsf_name)
-                outstream = open('%s/%s.%s' % (gsf_name, gsf_name, suffix), 'w')
+                outstream = open('{}/{}.{}'.format(gsf_name, gsf_name, suffix), 'w')
             else: # use current directory   
-                outstream = open('%s.%s' % (gsf_name, suffix), 'w')
+                outstream = open('{}.{}'.format(gsf_name, suffix), 'w')
 
-            write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
-                                        add_constraints=True, relax_type=None)
+            # need to figure out a way to make the <relax_type> depend on the 
+            # atomic simulation code being used.
+            if relax != None:
+                write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
+                                        add_constraints=True, relax_type=relax)
+            else:
+                write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
+                                         add_constraints=True)
 
     return
 

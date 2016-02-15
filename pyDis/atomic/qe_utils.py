@@ -132,7 +132,7 @@ def extract_parameters(name_dict, card_dict):
     return sys_info
         
 def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
-                                 add_constraints=False, relax_type='scf'):
+                  add_constraints=False, relax_type='scf', impurities=None):
     '''Writes crystal structure contained in <qe_struc> to <outstream>.
     '''
     
