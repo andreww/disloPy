@@ -153,7 +153,7 @@ def displace_disloc2d(params, n_funcs, max_x, energy_function, K, b, spacing,
 
 def stress_energy(tau, rho, x_vals):
 
-    return -0.5*tau*(rho*(x_vals[1:]**2-x_vals[:-1]**2)).sum()\
+    return -0.5*tau*(rho*(x_vals[1:]**2-x_vals[:-1]**2)).sum()
 
 ### IN 1-D
 
