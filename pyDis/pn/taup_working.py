@@ -6,6 +6,7 @@ import pn_1D as pn1
 import pn_2D as pn2
 
 from scipy.optimize import fmin_slsqp
+import matplotlib.pyplot as plt
 
 atomic_to_GPa =  160.2176487 # convert from eV/Ang**3 to GPa
 
@@ -18,11 +19,11 @@ def stress_energy(tau, rho, x_vals):
 
     return -0.5*tau*(rho*(x_vals[1:]**2-x_vals[:-1]**2)).sum()    
 '''
-def stress_energy(tau, u, x_vals):
+def stress_energy(tau, rho, x_vals):
     '''Calculate total stress energy.
     '''
     
-    return -0.5*tau*u.sum()
+    return -0.5*tau*(rho*(x_vals[1:]**2-x_vals[:-1]**2)).sum()
     
 def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
                                            shift, tau, disl_type=None, dims=2):
@@ -44,7 +45,7 @@ def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing,
     
     # calculate elastic and misfit energies 
     E_el = el_func(A, x0, c, b, K)
-    Em = misfit_func(A, x0, c, max_x, energy_function, shift, b, spacing)
+    Em = misfit_func(A, x0, c, max_x, energy_function, b, spacing, shift)
     
     # calculate the component of the displacement field affected by the applied
     # stress, and the corresponding dislocation distribution.
@@ -66,8 +67,7 @@ def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing,
     rho_vals = pn1.rho(u, r)
     
     # calculate the stress energy
-    E_stress = stress_energy(tau, u, r)
-    
+    E_stress = stress_energy(tau, rho_vals, r)
     return (Em + E_el + E_stress)
    
 def total_opt_stress(params, *args):
@@ -131,22 +131,32 @@ def stressed_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
     
 # Calculate the response of a dislocation to an applied stress
 
-def approx_iss(g_max, spacing):
+def approx_iss2d(gfunc, b, disl_type):
     '''Return the smallest stress with only 1 decimal place that is larger than
     the ideal shear stress for the given gamma surface.
     '''
     
-    # work out whether to index or not. Weird bug in np.asarray() means that the
-    # type of asarray(<int>) + <int> is int.
-    if isinstance(g_max, np.ndarray) and not isinstance(g_max + 1, np.ndarray):
-        iss = g_max[0]/(0.5*spacing)
-    else:
-        iss = g_max/(0.5*spacing)  
+    if disl_type.lower() == 'edge':
+        gvalues = gfunc(np.linspace(0., b, 100), 0.)
+    elif disl_type.lower() == 'screw':
+        gvalues = gfunc(0., np.linspace(0., b, 100))
     
-    return float(int(iss*10)+1)/10
+    g_max = gvalues.max()
+    dist = b*np.where(gvalues == gvalues.max())[0][0]/100.
+    
+    return g_max/dist
 
+def approx_iss1d(gfunc, b):
+    '''Return the approximate value of the ideal shear strength.
+    '''
+    
+    gvalues = gfunc(np.linspace(0., b, 100))
+    g_max = gvalues.max()
+    dist = b*np.where(gvalues == gvalues.max())[0][0]/100.
+    return g_max/dist
+    
 def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None,
-                                                         dtau=0.001, in_GPa=True):
+                                                 dtau=0.001, in_GPa=True, thr=10.):
     '''Calculate positive and negative Peierls stresses from optimized
     dislocation misfit profiles.
     '''
@@ -154,20 +164,19 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # <threshold> is the amount by which the difference between a stressed 
     # dislocation and an unstressed dislocation must exceed the difference
     # between adjacent unstressed dislocations
-    threshold = 3*spacing
+    threshold = thr*spacing
     
     
     # construct list of stresses to apply, using the gamma surface as a guide 
     # for the maximum possible value
     if dims == 1:
-        s_max = 100*approx_iss(gsf_func(b/2.), spacing)
+        s_max = 100*approx_iss1d(gsf_func, b)
     elif dims == 2:
-        if disl_type.lower() == 'edge':
-            s_max = 100*approx_iss2d(gsf_func(b/2., 0.), spacing)
-        elif disl_type.lower() == 'screw':
-            s_max = 100*approx_iss2d(gsf_func(0., b/2.), spacing)
-        else:
+        if disl_type.lower() != 'edge' and disl_type.lower() != 'screw':
             raise ValueError("{} not a valid dislocation type.".format(acts_on)) 
+        else: # calculate maximum stress
+            s_max = 100*approx_iss2d(gsf_func, b, disl_type)
+            
     else:
         raise ValueError("Dislocation must be 1- or 2-dimensional.")
         
@@ -184,7 +193,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # note: may have to change this later for complicated misfit profiles,
     # but this seems to work for edge dislocations in UO2 
     #!!! SHOULD WE USE THE DISLOCATION DENSITY?!
-    shift = max(5, int(b/spacing)) # distance a dislocation can move
+    shift = max(5, int(float(b)/spacing)) # distance a dislocation can move
     if dims == 1:
         # get displacement field of unstressed dislocation, compare with 
         # shifted dislocation
@@ -201,11 +210,9 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     
     rho = pn1.rho(u, r)
     rhon = pn1.rho(un, r)
-    d_max = (rho*r[:-1]/rho.sum()).sum()
-    
-    #print(rho
+    d_max = (rho*r[1:]/rho.sum()).sum()
        
-    # apply stress to the dislocation, starting with the positive direction    
+    # apply stress to the dislocation, starting with the positive direction
     for s in stresses:
         Ed, new_par = stressed_dislocation(dis_parameters, len(dis_parameters)/3, 
                             max_x, gsf_func, K, b, spacing, s, disl_type,  dims)
@@ -221,13 +228,14 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
             else: # screw
                 us = uys
         
+        
         rhos = pn1.rho(us, r)
-        d_current = (rhos*r[:-1]/rhos.sum()).sum()
+        d_current = (rhos*r[1:]/rhos.sum()).sum()
         
         if abs(d_current-d_max) >= threshold:
             tau_p_plus = s
             break
-        
+
     # apply negative stress
     for s in -stresses:
         Ed, new_par = stressed_dislocation(dis_parameters, len(dis_parameters)/3, 
@@ -244,14 +252,14 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
                 us = uys
         
         rhos = pn1.rho(us, r)
-        d_current = (rhos*r[:-1]/rhos.sum()).sum()
+        d_current = (rhos*r[1:]/rhos.sum()).sum()
         
         if abs(d_current-d_max) >= threshold:
             tau_p_minus = -s
             break
-                    
+                   
     peierls_stresses = [tau_p_plus, tau_p_minus]
-    peierls_stresses.sort()
+    #peierls_stresses.sort()
     
     if in_GPa:
         # express Peierls stresses in GPa

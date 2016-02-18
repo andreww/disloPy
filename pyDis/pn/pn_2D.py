@@ -71,7 +71,7 @@ def elastic_energy2d(A, x0, c, b=1, K=[1, 1]):
     E = pn1.elastic_energy(A1, x01, c1, b, Ke) + pn1.elastic_energy(A2, x02, c2, b, Ks)
     return E
     
-def misfit_energy2d(A, x0, c, N, energy_function, shift, b, spacing, xc=0):
+def misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=0):
     '''Defaults shift corresponds to screw dislocation.
     
     0 <= xc <= 1
@@ -79,7 +79,7 @@ def misfit_energy2d(A, x0, c, N, energy_function, shift, b, spacing, xc=0):
     
     A1, x01, c1, A2, x02, c2 = unzip_parameters(A, x0, c)
     
-    r = spacing*(np.arange(-N, N))+xc
+    r = spacing*(np.arange(-N, N))
     ux = pn1.u_field(r, A1, x01, c1, b, bc=shift[0])
     uz = pn1.u_field(r, A2, x02, c2, b, bc=shift[1])
     Em = energy_function(ux, uz).sum()*spacing

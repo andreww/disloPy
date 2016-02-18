@@ -177,10 +177,10 @@ def elastic_energy(A, x0, c, b=1, K=1):
             E += Ai*Aj*np.log((xi-xj)**2+(ci+cj)**2)
     return -0.5*K*E*b**2
     
-def misfit_energy(A, x0, c, N, energy_function, b, spacing, xc=0.):
+def misfit_energy(A, x0, c, N, energy_function, b, spacing, shift=0.):
     
     Em = 0.
-    r = spacing*(np.arange(-N, N) + xc)
+    r = spacing*(np.arange(-N, N))
     u = u_field(r, A, x0, c, b)
     Em = energy_function(u).sum()*spacing
     return Em
