@@ -239,7 +239,7 @@ def gamma_surface(slab, resolution, write_fn, sys_info, basename='gsf',
     
     # using <gs_sampling>, calculate the number of increments along x and y 
     # required to give *at least* the specified <resolution>.
-    N, M = gs_sampling(slab, resolution, limits)
+    N, M = gs_sampling(slab.getLattice(), resolution, limits)
         
     # iterate over displacement vectors in the gamma surface (ie. (001))
     for n in range(0, N+1):
