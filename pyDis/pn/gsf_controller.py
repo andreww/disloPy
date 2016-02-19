@@ -162,7 +162,7 @@ def main():
     if 'gulp' == args.prog.lower():
         write_fn = gulp.write_gulp
         suffix = 'gin'
-        relax = 'conv'
+        relax = None
     elif 'qe' == args.prog.lower():
         write_fn = qe.write_qe
         suffix = 'in'

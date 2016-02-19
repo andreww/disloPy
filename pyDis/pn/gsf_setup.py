@@ -258,14 +258,8 @@ def gamma_surface(slab, resolution, write_fn, sys_info, basename='gsf',
             else: # use current directory   
                 outstream = open('{}.{}'.format(gsf_name, suffix), 'w')
 
-            # need to figure out a way to make the <relax_type> depend on the 
-            # atomic simulation code being used.
-            if relax != None:
-                write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
+            write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
                                         add_constraints=True, relax_type=relax)
-            else:
-                write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
-                                         add_constraints=True)
 
     return
 

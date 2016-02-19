@@ -138,10 +138,10 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
     
     # begin by writing namelists
     for block in namelists:
-        outstream.write(' %s\n' % block)
+        outstream.write(' {}\n'.format(block))
         for variable in sys_info['namelists'][block]:
             if variable == 'calculation':
-                outstream.write('    calculation = \'%s\'\n' % relax_type)
+                outstream.write('    calculation = \'{}\'\n'.format(relax_type))
             elif variable == 'nat':
                 outstream.write('    nat = %d\n' % len(qe_struc))
             else:
