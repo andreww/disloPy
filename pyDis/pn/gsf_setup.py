@@ -125,6 +125,7 @@ def insert_gsf(slab, disp_vec, vacuum=0.):
     if len(disp_vec) == 3:
         disp_vec = np.array(disp_vec)
     elif len(disp_vec) == 2:
+        print("Converting displacement vector in R^{2} into a vector in R^{3}")
         temp = np.copy(disp_vec)
         disp_vec = np.array([temp[0], temp[1], 0.])
     else:
@@ -246,7 +247,7 @@ def gamma_surface(slab, resolution, write_fn, sys_info, basename='gsf',
         for m in range(0, M+1):
             gsf_name = '%s.%d.%d' % (basename, n, m)
             # insert vector into slab
-            disp_vec = cry.ei(1)*n*limits[0]/float(N) + cry.ei(2)*m*limits[1]/float(N)
+            disp_vec = cry.ei(1)*n*limits[0]/float(N) + cry.ei(2)*m*limits[1]/float(M)
             insert_gsf(slab, disp_vec, vacuum=vacuum)
 
             # write to code appropriate output file

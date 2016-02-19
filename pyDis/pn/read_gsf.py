@@ -197,8 +197,8 @@ def main():
                     else:
                         energies[i, j] = approx_energy/num_real
                     print("({}, {}): {:.2f}".format(i, j, energies[i, j]))
-
-                outstream.write("{} {} {:.6f}\n" % (i, j, energies[i, j]))
+                print(energies[i, j])
+                outstream.write("{} {} {:.6f}\n" .format(i, j, energies[i, j]))
                 
             # include a space between slices of constant x (for gnuplot)
             outstream.write("\n")

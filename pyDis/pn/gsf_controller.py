@@ -135,18 +135,23 @@ def main():
                          "Supported codes are: GULP; QE; CASTEP.")
     
     # extract unit cell and GULP run parameters from file <cell_name>
+    ab_initio = False
     unit_cell = gsf.cry.Crystal()
     if 'gulp' == args.prog.lower():
         parse_fn = gulp.parse_gulp
     elif 'qe' == args.prog.lower():
         parse_fn = qe.parse_qe
+        ab_initio = True
     elif 'castep' == args.prog.lower():
         parse_fn = castep.parse_castep
+        ab_initio = True
         
     sys_info = parse_fn(args.cell_name, unit_cell)
     
     # if the calculation uses an ab initio solver, scale the k-point grid
-    atm.scale_kpoints(sys_info['cards']['K_POINTS'], np.array([1., 1., args.n]))
+    if ab_initio:
+        atm.scale_kpoints(sys_info['cards']['K_POINTS'], 
+                              np.array([1., 1., args.n]))
     
     # shift origin of cell
     unit_cell.translate_cell(np.array([0., 0., -1*args.shift]), modulo=True)
@@ -180,8 +185,10 @@ def main():
         # assume that that the input files will be transferred to another machine
         # and run by the user.
         if args.progexec != None:
-            for n in xrange(0, increments[0]+1):
-                for m in xrange(0, increments[1]+1):
+            # extract increments
+            N, M = gsf.gs_sampling(new_slab.getLattice(), args.res, limits)
+            for n in xrange(0, N+1):
+                for m in xrange(0, M+1):
                     print("Relaxing cell with generalized stacking fault vector" +
                             " ({}, {})...".format(n, m), end="")
                     basename = '%s.%d.%d' % (args.sim_name, n, m)
@@ -201,8 +208,11 @@ def main():
                                                    vacuum=args.vac, relax=relax)
         
         if args.progexec != None:
+            # extract limits
+            N = gl_sampling(new_slab.getLattice(), resolution=args.res, 
+                                 vector=args.line_vec, limits=args.max_x)
             # run calculations
-            for n in xrange(0, increments+1):
+            for n in xrange(0, N+1):
                 print("Relaxing cell {}...".format(n), end="")
             basename = '%s.%d'.format(args.sim_name, n)
             if 'gulp' == args.prog.lower():
