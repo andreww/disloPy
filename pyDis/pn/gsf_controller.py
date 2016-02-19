@@ -191,7 +191,7 @@ def main():
                 for m in xrange(0, M+1):
                     print("Relaxing cell with generalized stacking fault vector" +
                             " ({}, {})...".format(n, m), end="")
-                    basename = '%s.%d.%d' % (args.sim_name, n, m)
+                    basename = '{}.{}.{}'.format(args.sim_name, n, m)
                     if 'gulp' == args.prog.lower():
                         gulp.run_gulp(args.progexec, basename) 
                     elif 'qe' == args.prog.lower():
@@ -203,26 +203,26 @@ def main():
         else:
             pass
     elif args.simulation_type == 'gline':      
-        gsf.gamma_line(new_slab, args.line_vec, args.res, write_fn, sys_info, 
-                       suffix=suffix, limits=args.max_x, basename=args.sim_name, 
-                                                   vacuum=args.vac, relax=relax)
+        gsf.gamma_line(new_slab, np.array(args.line_vec), args.res, write_fn,  
+                           sys_info, suffix=suffix, limits=args.max_x,  
+                           basename=args.sim_name, vacuum=args.vac, relax=relax)
         
         if args.progexec != None:
             # extract limits
-            N = gl_sampling(new_slab.getLattice(), resolution=args.res, 
-                                 vector=args.line_vec, limits=args.max_x)
+            N = gsf.gl_sampling(new_slab.getLattice(), resolution=args.res, 
+                            vector=np.array(args.line_vec), limits=args.max_x)
             # run calculations
             for n in xrange(0, N+1):
                 print("Relaxing cell {}...".format(n), end="")
-            basename = '%s.%d'.format(args.sim_name, n)
-            if 'gulp' == args.prog.lower():
-                gulp.run_gulp(args.progexec, basename)
-            elif 'qe' == args.prog.lower():
-                qe.run_qe(args.progexec, basename)
-            elif 'castep' == args.prog.lower():
-                castep.run_castep(args.progexec, basename)
+                basename = '{}.{}'.format(args.sim_name, n)
+                if 'gulp' == args.prog.lower():
+                    gulp.run_gulp(args.progexec, basename)
+                elif 'qe' == args.prog.lower():
+                    qe.run_qe(args.progexec, basename)
+                elif 'castep' == args.prog.lower():
+                    castep.run_castep(args.progexec, basename)
 
-            print("complete.")
+                print("complete.")
         else:
             pass
     else:
