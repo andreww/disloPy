@@ -179,7 +179,7 @@ def parse_castep(basename, unit_cell, path='./'):
     return sys_info
 
 def write_castep(outstream, cas_struc, sys_info, defected=True, to_cart=False,
-                      add_constraints=False, relax_type=None, impurities=None):
+         add_constraints=False, relax_type=None, impurities=None, do_relax=None):
     '''Writes the information in <cas_struc> and <sys_info> to the specified 
     output stream. 
     

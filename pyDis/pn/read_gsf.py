@@ -15,7 +15,9 @@ energy_lines = {"gulp": re.compile(r"\n\s*Final energy\s+=\s+" +
                 "qe": re.compile(r"\n\s*Final energy\s+=\s+(?P<E>-?\d+\.\d+)" +
                                   "\s+(?P<units>\w+)\s*\n")
                }
-               
+
+# regex to match the gnorm of the completed (but not necessarily converged) 
+# structure output by a GULP calculation               
 get_gnorm = re.compile(r"Final Gnorm\s*=\s*(?P<gnorm>\d+\.\d+)")
                
 def command_line_options():
@@ -45,13 +47,15 @@ def command_line_options():
                                   
     return options
                
-def get_gsf_energy(energy_regex, base_name, suffix, i, j=None, indir=False):
+def get_gsf_energy(energy_regex, prog, base_name, suffix, i, j=None, indir=False):
     '''Extracts calculated energy from a generalized stacking fault calculation
     using the regular expression <energy_regex> corresponding to the code used
     to calculate the GSF energy.
 
     Set argument indir to True if mkdir was True in gsf_setup.
     '''
+    
+    acceptable_gnorm = 0.2
     
     name_format = '{}.{}'.format(base_name, i)
     if j is not None: # gamma surface, need x and y indices
@@ -62,27 +66,7 @@ def get_gsf_energy(energy_regex, base_name, suffix, i, j=None, indir=False):
         filename = '{}/{}.{}'.format(name_format, name_format, suffix)
     else:
         filename = '{}.{}'.format(name_format, suffix)
-        
-    ''' ARCHIVED 
-    if j is None:
-        name_format = '{}.{}'.format(base_name, i)
-    else:
-        name_format = '{}.{}.{}'.format(base_name, i, j)
-    
-    if indir:
-        # files are in directories named like the files.
-        if j is None: # gamma-line
-            filename = "%s.%d/%s.%d.%s" % (base_name, i, base_name, i, suffix)
-        else: # gamma surface
-            filename = "%s.%d.%d/%s.%d.%d.%s" % (base_name, i, j, base_name, i, j, suffix)
-    else:
-        # Files are in the current directory
-        if j is None: # gamma-line
-            filename = "%s.%d.%s" % (base_name, i, suffix)
-        else: # gamma surface
-            filename = "%s.%d.%d.%s" % (base_name, i, j, suffix)
-    '''
-    
+    print(filename)
     outfile = open(filename)
     output_lines = outfile.read()
     outfile.close()
@@ -90,8 +74,8 @@ def get_gsf_energy(energy_regex, base_name, suffix, i, j=None, indir=False):
     
     # flags that we use to see if convergence has failed without resulting in
     # a divergent energy (which would stop GULP).
-    flag_failure = ["Conditions for a minimum have not been satisfied",
-                    "Too many failed attempts to optimise"]
+    gulp_flag_failure = ["Conditions for a minimum have not been satisfied",
+                         "Too many failed attempts to optimise"]
     
                     
     if not(matched_energies):
@@ -99,18 +83,20 @@ def get_gsf_energy(energy_regex, base_name, suffix, i, j=None, indir=False):
         E = np.nan
         units = None       
     else:
-        if (flag_failure[0] in output_lines) or (flag_failure[1] in output_lines):
-            gnorm = float(get_gnorm.search(output_lines).group("gnorm"))
-        else:
-            gnorm = 0.
-            
-        if gnorm < 0.2:       
-            for match in matched_energies:
-                E = float(match[0])
-                units = match[1]
-        else:
-            E = np.nan
-            units = None
+        if prog.lower() == 'gulp':
+            if ((gulp_flag_failure[0] in output_lines) or 
+                (gulp_flag_failure[1] in output_lines)):
+                gnorm = float(get_gnorm.search(output_lines).group("gnorm"))
+            else:
+                gnorm = 0.
+                
+            if gnorm < acceptable_gnorm:       
+                for match in matched_energies:
+                    E = float(match[0])
+                    units = match[1]
+            else:
+                E = np.nan
+                units = None
         
     return E, units
         
@@ -128,15 +114,16 @@ def main():
     except KeyError:
         print("Invalid program name supplied. Implemented programs are: ")
         for prog in energy_lines.keys():
-            print("***%s***" % prog)
+            print("***{}***".format(prog))
         
-    outstream = open("%s" % args.out_name, "w")    
+    outstream = open("{}".format(args.out_name), "w")    
     
     if args.dim == 1:
         energies = np.zeros(args.x_max+1)
         # handle gamma line
         for i in xrange(args.x_max+1):
-            E, units = get_gsf_energy(regex, args.base_name, args.suffix, i, indir=args.indir)
+            E, units = get_gsf_energy(regex, args.program, args.base_name, 
+                                         args.suffix, i, indir=args.indir)
             energies[i] = E
             
         # record the units in which the cell energy is expressed
@@ -161,8 +148,8 @@ def main():
         # handle gamma surface
         for i in xrange(args.x_max+1):
             for j in xrange(args.y_max+1):
-                E, units = get_gsf_energy(regex, args.base_name, args.suffix, i, j, 
-                                                                   indir=args.indir)
+                E, units = get_gsf_energy(regex, args.program, args.base_name, 
+                                           args.suffix, i, j, indir=args.indir)
                 energies[i, j] = E
 
         # record energy units used
@@ -207,13 +194,3 @@ def main():
         
 if __name__ == "__main__":
     main()
-        
-                                                                       
-                                                                      
-                                                                      
-                                                                      
-                                                                      
-                                                                      
-                                                                      
-                                                                      
-

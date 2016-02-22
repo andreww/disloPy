@@ -330,9 +330,13 @@ atomLine = re.compile(r'([A-Z][a-z]?\d*)\s+(core|c|shel|s|bshe|bcor)' + \
 #                                                          '\s+-?\d+\.\d+\s*$')
 
 def preamble(outstream, maxiter=500, relax=True, relax_type='conv',
-                                                      polymer=False):
+                                          polymer=False, molq=False):
     '''Writes overall simulation parameters (relaxation algorithm, maximum 
     number of iterations, etc.) to <outstream>.
+    
+    #!!! Need to consider whether or not it is necessary to parse the preamble
+    #!!! of the original input file for additional keywords that may be required
+    #!!! to completely describe the interatomic potentials (eg. molq).
     '''
 
     # construct the control line  
@@ -343,6 +347,10 @@ def preamble(outstream, maxiter=500, relax=True, relax_type='conv',
             outstream.write('opti qok bfgs {}'.format(relax_type))
     else:
         outstream.write('qok ')
+    
+    if molq:
+        outstream.write(' molq')
+        
     if polymer:
         outstream.write(' eregion\n') # DO NOT TRY TO CALCULATE PROPERTIES
     else:
@@ -373,6 +381,8 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
     except IndexError:
         print("Class of <struc> not found.")
         sys.exit(1)
+        
+    #!!! write some code here to determine if we need to set molq = True 
 
     # write simulation cell geometry to file
     if struc_type in rod_classes:
@@ -481,7 +491,7 @@ def parse_gulp(filename, crystalStruc, path='./'):
                 temp = gulp_lines[i+1+j].split()
                 cellVector = np.array([float(temp[k]) for k in range(3)])
                 crystalStruc.setVector(cellVector, j)
-        elif line.strip() in 'cell': # NOTE: NOT YET IMPLEMENTED
+        elif line.strip() in 'cell':
             #different stuff
             cellParameters = gulp_lines[i+1].split()[:6]
             cellParameters = [float(a) for a in cellParameters]
