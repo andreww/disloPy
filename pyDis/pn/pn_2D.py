@@ -29,7 +29,7 @@ def generate_input(N, disl_type, spacing, use_sym=False):
    
     # generate starting parameters || b
     if use_sym:
-        dis1 = pn1.gen_symmetric(n_part/2, spacing)
+        dis1 = pn1.gen_symmetric(n_part, spacing)
     else:
         dis1 = pn1.gen_inparams(n_part, spacing)
     
@@ -71,7 +71,7 @@ def elastic_energy2d(A, x0, c, b=1, K=[1, 1]):
     E = pn1.elastic_energy(A1, x01, c1, b, Ke) + pn1.elastic_energy(A2, x02, c2, b, Ks)
     return E
     
-def misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=0):
+def misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=[0., 0.5]):
     '''Defaults shift corresponds to screw dislocation.
     
     0 <= xc <= 1

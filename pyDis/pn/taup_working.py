@@ -258,8 +258,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
             tau_p_minus = -s
             break
                    
-    peierls_stresses = [tau_p_plus, tau_p_minus]
-    #peierls_stresses.sort()
+    peierls_stresses = [tau_p_minus, tau_p_plus]
     
     if in_GPa:
         # express Peierls stresses in GPa

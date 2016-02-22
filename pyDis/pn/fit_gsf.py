@@ -15,7 +15,7 @@ sys.path.append('/home/richard/code_bases/dislocator2/')
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.interpolate import RectBivariateSpline, interp1d
 
-from pyDis.atomic import atomistic_utils as util
+from pyDis.atomic import atomistic_utils as atm
 
 def read_numerical_gsf(filename):
     '''Reads in a grid of energy values for a gamma line or gamma surface,
@@ -24,9 +24,11 @@ def read_numerical_gsf(filename):
     
     gsf = []
     units = None
+    units_line = re.compile('#\s+units\s+(?P<units>\w+)')
+
     with open(filename) as gsf_file:
         for line in gsf_file:
-            unit_match = re.match('#\s+units\s+(?P<units>\w+)', line)
+            unit_match = units_line.match(line)
             if unit_match:
                 units = unit_match.group('units')
             data = line.rstrip().split()
@@ -63,7 +65,7 @@ def mirror2d(gsurf, axis=(0, 1)):
     about the x and y axes.
     '''
 
-    if util.isiter(axis):
+    if atm.isiter(axis):
         temp_gs = mirror2d(gsurf, axis[0])
         new_gs = mirror2d(temp_gs, axis[1])
         return new_gs
@@ -194,7 +196,7 @@ def create_lambda(in_str):
     x1 = matched_form.group('x1')
     x2 = matched_form.group('x2')
     func = matched_form.group('func')
-    remapped_coord = eval('lambda %s, %s: %s' % (x1, x2, func))
+    remapped_coord = eval('lambda {}, {}: {}'.format(x1, x2, func))
     return remapped_coord
     
 def new_gsf(gsf_calc, x_form, y_form):
@@ -206,7 +208,7 @@ def new_gsf(gsf_calc, x_form, y_form):
     
     return transformed_gsf
     
-def twoD_2_oneD(gsf_func, axis, const=0):
+def projection(gsf_func, const=0, axis=0):
     '''Extracts a specific gamma line from a calculated gamma surface. 
     <axis> specifies the direction of the gamma line, while <const> gives 
     the intersection of the gamma line with the constant axis. As the most common
@@ -220,12 +222,12 @@ def twoD_2_oneD(gsf_func, axis, const=0):
     else:
         raise ValueError("{} is an invalid axis label.".format(axis))
     
-    if axis:
-        def g(x):
-            return gsf_func(const, x)
-    else: # axis == 0
-        def g(x):
-            return gsf_func(x, const)
+    if axis == 0:
+        g = lambda x: gsf_func(x, const)
+    elif axis == 1: 
+        g = lambda x: gsf_func(const, x)
+    else:
+        raise ValueError("{} is an invalid axis to project onto.".format(axis))
     
     return g
     

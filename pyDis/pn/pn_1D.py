@@ -52,12 +52,27 @@ def gen_inparams(n_funcs, spacing):
     return input_parameters
 
 def gen_symmetric(n_funcs, spacing):
-    # generate parameters for the asymmetric distribution
-    asymm_pars = gen_inparams(n_funcs, spacing)
-    A = [a/2. for a in asymm_pars[:n_funcs]]
-    x0 = [x for x in asymm_pars[n_funcs:2*n_funcs]]
-    c = [w for w in asymm_pars[2*n_funcs:]]
-    A, x0, c = symmetrise(A, x0, c, spacing)
+    '''generate parameters for the asymmetric distribution
+    '''
+
+    if n_funcs == 1:
+        sym_funcs = n_funcs
+    elif (n_funcs % 2) == 1:
+        raise ValueError("Number of functions must be 1 or even.")
+    else: # n_funcs even
+        sym_funcs = n_funcs/2
+
+    asymm_pars = gen_inparams(sym_funcs, spacing)
+    A = [a/2. for a in asymm_pars[:sym_funcs]]
+    x0 = [x for x in asymm_pars[sym_funcs:2*sym_funcs]]
+    c = [w for w in asymm_pars[2*sym_funcs:]]
+
+    # symmetrise generated input parameters
+    if n_funcs == 1:
+        # already symmetric
+        pass
+    else: # n_funcs even
+        A, x0, c = symmetrise(A, x0, c, spacing)
     return (A+x0+c)
         
 def symmetrise(A, x0, c, spacing, normalize=False):
@@ -233,10 +248,9 @@ def mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K):
     
     if use_sym:
         params = gen_symmetric(N, spacing)
-        N = 2*N
     else:
         params = gen_inparams(N, spacing)
-    
+
     if noopt:
         pass
     else:
@@ -252,14 +266,11 @@ def mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K):
 
     return E, new_par
         
-def run_monte(n_iter, N, max_x=100, energy_function=test_gamma, noopt=False,
-                                         use_sym=False, b=1., spacing=1., K=1):
+def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False,
+                                         use_sym=False, b=1., spacing=1.):
     Emin = 1e6
     x_opt = None
-    if use_sym:
-        lims = make_limits(2*N, max_x)
-    else:
-        lims = make_limits(N, max_x)
+    lims = make_limits(N, max_x)
     
     for i in xrange(n_iter):
         if i % 100 == 0:

@@ -9,7 +9,8 @@ import sys
 import pn_1D as pn1
 import pn_2D as pn2
 import fit_gsf as fg
-import peierls_barrier as pb
+#import peierls_barrier as pb
+import taup_working as pb
 
 def control_file(filename):
     '''Opens the control file <filename> for a PN simulation and constructs a 
@@ -19,6 +20,7 @@ def control_file(filename):
     
     sim_parameters = dict()
     lines = []
+    input_style = re.compile('\s+(?P<par>.+)\s*=\s*[\'"]?(?P<value>[^\'"]*)[\'"]?;')
 
     with open(filename) as f:
         for line in f:
@@ -33,9 +35,10 @@ def control_file(filename):
                 if '};;' in temp: # end of namelist
                     in_namelist = False
                     continue
+                elif not(temp.strip()):
+                    # empty line
+                    continue
                 # else
-                input_style = re.compile('\s+(?P<par>.+)\s*=\s*' +
-                                   '[\'"]?(?P<value>[^\'"]*)[\'"]?;')
                 inp = re.search(input_style, temp)
                 sim_parameters[card_name][inp.group('par').strip()] = \
                                                     inp.group('value')
@@ -59,7 +62,7 @@ def from_mapping(top_dict, namelist, card):
     input_value = top_dict[found_map.group('namelist')][found_map.group('val')]
     
     # evaluate function using the provided value
-    val = eval('(%s)(%s)' % (new_func, input_value))
+    val = eval('({})({})'.format(new_func, input_value))
     top_dict[namelist][card] = val
     return
 
@@ -147,12 +150,17 @@ def handle_pn_control(test_dict):
                    ('shear', {'default':None, 'type':float})
                   )
 
-    # cards for the <&surface> namelist
+    # cards for the <&surface> namelist. Where dimensions == 1 but the gsf 
+    # file is two-dimensional (ie. a gamma surface), <map_ux> corresponds to the 
+    # gamma line direction. If <dimensions> == 2, <map_ux> (<max_uy>) is the
+    # direction of the edge (screw) component of the displacement. 
     surf_cards = (('x_length', {'default':'map struc > a: x -> x', 'type':float}),
                   ('y_length', {'default':'map struc > b: x -> x', 'type':float}),
                   ('angle', {'default':np.pi/2, 'type':float}),
                   ('map_ux', {'default':'remap: (ux, uy) -> ux', 'type':str}),
-                  ('map_uy', {'default':'remap: (ux, uy) -> uy', 'type':str})
+                  ('map_uy', {'default':'remap: (ux, uy) -> uy', 'type':str}),
+                  ('gamma_shift', {'default':0., 'type':float}),
+                  ('use_axis', {'default':0, 'type':int})
                  )
 
     # cards for the <&properties> namelist
@@ -202,13 +210,13 @@ def print_control(control_dict, print_types=True):
     '''
     
     for key in control_dict:
-        print "### Namelist: %s ###\n" % (key.upper())
+        print "### Namelist: {} ###\n".format(key.upper())
         for key1 in control_dict[key]:
-            print "CARD: %s" % key1
-            print "VALUE: %s" % control_dict[key][key1]
+            print "CARD: {}".format(key1)
+            print "VALUE: {}".format(control_dict[key][key1])
             
             if print_types:
-                print "TYPE: %s\n" % type(control_dict[key][key1])
+                print "TYPE: {}\n".format(type(control_dict[key][key1]))
             else:
                 print "\n"
     
@@ -230,6 +238,12 @@ class PNSim(object):
 
         #energy coefficient
         self.K = pn1.energy_coefficients(self.struc('bulk'), self.struc('shear'))
+        if self.control('dimensions') == 1:
+            if self.control('disl_type').lower() == 'edge':
+                self.K = self.K[0]
+            else:
+                # for the moment, default to shear
+                self.K = self.K[1]
         
         # construct the gamma surface (gamma line in 1D - not implemented)
         self.construct_gsf()
@@ -248,12 +262,19 @@ class PNSim(object):
         
     def run_sim(self):
         if self.control('dimensions') == 1:
-            #!!! Need to write code permitting 1D optimization. This may require
-            #!!! changing the way that gamma surfaces/lines are processed so that
-            #!!! a gamma line can be efficiently extracted from a calculated gamma
-            #!!! surface.
-            #self.E, self.par = pn1.run_monte()
-            pass
+            #!!! could potentially merge reduce the code length here by making
+            #!!! <disl_type> a keyword argument in <run_monte2d> and creating
+            #!!! a dummy argument with the same name in <run_monte1d>.
+            self.E, self.par = pn1.run_monte1d(
+                                               self.control('n_iter'),
+                                               self.control('n_funcs'),
+                                               self.K,
+                                               max_x=self.control('max_x'),
+                                               energy_function=self.gsf,
+                                               use_sym=self.control('use_sym'),
+                                               b=self.struc('burgers'),
+                                               spacing=self.struc('spacing')
+                                              ) # Done Monte Carlo 1D
         elif self.control('dimensions') == 2:
             self.E, self.par = pn2.run_monte2d(
                                                self.control('n_iter'),
@@ -265,20 +286,31 @@ class PNSim(object):
                                                use_sym=self.control('use_sym'),
                                                b=self.struc('burgers'),
                                                spacing=self.struc('spacing')
-                                              )               
+                                              ) # Done Monte Carlo 2D              
                                                             
         return
                                 
     def construct_gsf(self):
     
         gsf_grid, self.units = fg.read_numerical_gsf(self.control('gsf_file'))
-        if self.control('dimensions') == 1:
-            base_func = fg.spline_fit1d(gsf_grid, self.surf('x_length'), self.surf('y_length'),
+
+        # determine which fitting function to use from the shape of <gsf_grid>
+        # original test was self.control("dimensions")
+        n_columns = np.shape(gsf_grid)[-1]
+        if n_columns == 2:
+            self.gsf = fg.spline_fit1d(gsf_grid, self.surf('x_length'), self.surf('y_length'),
                                                         angle=self.surf('angle'))
-        else: # 2-dimensional misfit function
+        elif n_columns == 3: # 2-dimensional misfit function
             base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), self.surf('y_length'),
                                                             angle=self.surf('angle'))
-        self.gsf = fg.new_gsf(base_func, self.surf('map_ux'), self.surf('map_uy'))
+            self.gsf = fg.new_gsf(base_func, self.surf('map_ux'), 
+                                             self.surf('map_uy'))
+            if self.control('dimensions') == 1: 
+                # project out the dislocation parallel component
+                self.gsf = fg.projection(self.gsf, self.surf('gamma_shift'),
+                                                   self.surf('use_axis'))
+        else:
+            raise ValueError("GSF grid has invalid number of dimensions")
         return
                             
     def post_processing(self):
@@ -292,17 +324,18 @@ class PNSim(object):
                 self.ux, self.uy = pn2.get_u2d(self.par, self.struc('burgers'),
                                     self.struc('spacing'), self.control('max_x'),
                                                       self.control('disl_type'))
+
             r = self.struc('spacing')*np.arange(-self.control('max_x'),
                                                   self.control('max_x'))
             
             # create plot of dislocation density and misfit profile
             if self.control('plot'):   
                 if self.control('dimensions') == 1:
-                    self.fig, self.ax = pn1.plot_both(self.ux, self.struc('burgers'),
+                    self.fig, self.ax = pn1.plot_both(self.ux, r, self.struc('burgers'),
                                                                self.struc('spacing'))
                     plt.savefig(self.control('plot_name'))
                     plt.close()             
-                if self.control('plot_both'):
+                elif self.control('plot_both'): # dimension == 2
                     self.fig, self.ax = pn1.plot_both(self.ux, r, self.struc('burgers'),
                                                                self.struc('spacing'))
                     plt.savefig('edge.' + self.control('plot_name'))
@@ -311,7 +344,7 @@ class PNSim(object):
                                                                self.struc('spacing'))
                     plt.savefig('screw.' + self.control('plot_name'))
                     plt.close()
-                else:
+                else: # dimensions == 2
                     if self.control('disl_type') in 'edge':
                         self.fig, self.ax = pn1.plot_both(self.ux, r, self.struc('burgers'),
                                                                self.struc('spacing'))
@@ -335,17 +368,14 @@ class PNSim(object):
     def peierls(self):
         '''Calculate the Peierls stress for the lowest-energy dislocation.
         '''
-        
+
         if not self.stress('calculate_stress'):
             pass
-        elif self.control("dimensions") == 1:
-            #!!! implement 1D peierls stress calculation
-            pass
-        else: # two-dimensional
-            self.taup, self.taup_av = pb.taup_2d(self.par, self.control('max_x'), self.gsf,
+        else:
+            self.taup, self.taup_av = pb.taup(self.par, self.control('max_x'), self.gsf,
                                      self.K, self.struc('burgers'), self.struc('spacing'),
-                                     self.control('disl_type'), dtau=self.stress('dtau'),
-                                                           in_GPa=self.stress('use_GPa'))
+                                     self.control('dimensions'), self.control('disl_type'),
+                                     dtau=self.stress('dtau'), in_GPa=self.stress('use_GPa'))
                                                            
             # calculate average and direction-dependent Peierls barriers
             self.wp_av = pb.peierls_barrier(self.taup_av, self.struc('burgers'),
@@ -381,79 +411,73 @@ class PNSim(object):
                                                     (2*self.control('max_x')+1))
         
         # energy coefficients -> only write relevant coefficient if 1D
-        if self.control('dimensions') == 2 or self.control('disl_type') in 'edge':
-            outstream.write('Edge energy coefficient: %.3f eV/ang.\n' % self.K[0])
-        if self.control('dimensions') == 2 or self.control('disl_type') in 'screw':
-            outstream.write('Screw energy coefficient: %.3f eV/ang.\n' % self.K[1])
+        if self.control('dimensions') == 2:
+            outstream.write('Edge energy coefficient: {:.3f} eV/ang.\n'.format(self.K[0]))
+            outstream.write('Screw energy coefficient: {:.3f} eV/ang.\n'.format(self.K[1]))
+        else: # dimensions == 1
+            outstream.write('Energy coefficient: {:.3f} eV/ang\n'.format(self.K))
             
         outstream.write('\n\n')
         
         # write fit parameters
         outstream.write('Fit parameters: \n')
         
-        if self.control('dimensions') == 2 or self.control('disl_type') in 'edge':
+        if self.control('dimensions') == 2:
             # write parameters for the edge component of displacement
             outstream.write('----X1----\n')
             
             outstream.write('A\n')
-            if self.control('dimensions') == 1:
-                for A in self.par[:self.control('n_funcs')]:
-                    outstream.write('%.3f ' % A)
-            else:
-                for A in self.par[:self.control('n_funcs')/2]:
-                    outstream.write('%.3f ' % A)
+            for A in self.par[:self.control('n_funcs')/2]:
+                outstream.write('%.3f ' % A)
             outstream.write('\n')
             
             outstream.write('x0\n')
-            if self.control('dimensions') == 1:
-                for x0 in self.par[self.control('n_funcs'):self.control('n_funcs')/2]:
-                    outstream.write('%.3f ' % x0)
-            else:
-                for x0 in self.par[self.control('n_funcs'):self.control('n_funcs')+
-                                                        self.control('n_funcs')/2]:
-                    outstream.write('%.3f ' % x0)
+            for x0 in self.par[self.control('n_funcs'):self.control('n_funcs')+
+                                                     self.control('n_funcs')/2]:
+                outstream.write('%.3f ' % x0)
             outstream.write('\n')
             
             outstream.write('c\n')
-            if self.control('dimensions') == 1:
-                for c in self.par[2*self.control('n_funcs'):]:
-                    outstream.write('%.3f ' % c)
-            else:
-                for c in self.par[2*self.control('n_funcs'):2*self.control('n_funcs')+
+            for c in self.par[2*self.control('n_funcs'):2*self.control('n_funcs')+
                                                         self.control('n_funcs')/2]:
-                    outstream.write('%.3f ' % c)
+                outstream.write('%.3f ' % c)
             outstream.write('\n')
-            
-        if self.control('dimensions') == 2 or self.control('disl_type') in 'screw':
+
             # write parameters for screw component of displacement
             outstream.write('----X2----\n')
             
             outstream.write('A\n')
-            if self.control('dimensions') == 1:
-                for A in self.par[:self.control('n_funcs')]:
-                    outstream.write('%.3f ' % A)
-            else:
-                for A in self.par[self.control('n_funcs')/2:self.control('n_funcs')]:
-                    outstream.write('%.3f ' % A)
+            for A in self.par[self.control('n_funcs')/2:self.control('n_funcs')]:
+                outstream.write('%.3f ' % A)
             outstream.write('\n')
             
             outstream.write('x0\n')
-            if self.control('dimensions') == 1:
-                for x0 in self.par[self.control('n_funcs'):self.control('n_funcs')/2]:
-                    outstream.write('%.3f ' % x0)
-            else:
-                for x0 in self.par[self.control('n_funcs')+self.control('n_funcs')/2:
+            for x0 in self.par[self.control('n_funcs')+self.control('n_funcs')/2:
                                                         2*self.control('n_funcs')]:
-                    outstream.write('%.3f ' % x0)
+                outstream.write('%.3f ' % x0)
             outstream.write('\n')
             
             outstream.write('c\n')
-            if self.control('dimensions') == 1:
-                for c in self.par[2*self.control('n_funcs'):]:
-                    outstream.write('%.3f ' % c)
-            else:
-                for c in self.par[2*self.control('n_funcs')+self.control('n_funcs')/2:]:
-                    outstream.write('%.3f ' % c)
+            for c in self.par[2*self.control('n_funcs')+self.control('n_funcs')/2:]:
+                outstream.write('%.3f ' % c)
+            outstream.write('\n')
+
+        elif self.control('dimensions') == 1:
+            outstream.write('----X----\n')
+
+            outstream.write('A\n')
+            for A in self.par[:self.control('n_funcs')]:
+                outstream.write('%.3f ' % A)
+            outstream.write('\n')
+            
+            outstream.write('x0\n')
+            for x0 in self.par[self.control('n_funcs'):2*self.control('n_funcs')]:
+                outstream.write('%.3f ' % x0)
+            outstream.write('\n')
+            
+            outstream.write('c\n')
+            for c in self.par[2*self.control('n_funcs'):]:
+                outstream.write('%.3f ' % c)
             outstream.write('\n')
         
         outstream.write('\n\n')
