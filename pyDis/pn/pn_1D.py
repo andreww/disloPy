@@ -193,16 +193,20 @@ def elastic_energy(A, x0, c, b=1, K=1):
     return -0.5*K*E*b**2
     
 def misfit_energy(A, x0, c, N, energy_function, b, spacing, shift=0.):
-    
-    Em = 0.
+
     r = spacing*(np.arange(-N, N))
     u = u_field(r, A, x0, c, b)
     Em = energy_function(u).sum()*spacing
     return Em
     
 def total_energy(A, x0, c, N, energy_function, b, spacing, K=1):
-    return (misfit_energy(A, x0, c, N, energy_function, b, spacing) +
-                                          elastic_energy(A, x0, c, b, K))
+    '''Return the total elastic and inelastic (ie. misfit) energy of the 
+    dislocation.
+    '''
+    
+    Em = misfit_energy(A, x0, c, N, energy_function, b, spacing)
+    E_elast = elastic_energy(A, x0, c, b, K)
+    return Em + E_elast
     
 def total_optimizable(params, *args):
     n_funcs = args[0]
@@ -258,7 +262,7 @@ def mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K):
             new_par = fmin_slsqp(total_optimizable, params, eqcons=[cons_func],
                                   args=(N, max_x, energy_function, b, spacing, K),
                                              bounds=lims, iprint=0, acc=1e-14)
-                                   
+                       
             E = total_optimizable(new_par, N, max_x, energy_function, b, spacing, K)
         except RuntimeError:
             new_par = None

@@ -198,18 +198,14 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         # get displacement field of unstressed dislocation, compare with 
         # shifted dislocation
         u = pn1.get_u1d(dis_parameters, b, spacing, max_x)
-        un = np.array([u[(i-shift) % len(u)] for i in xrange(len(u))])
     else: # dims == 2
         ux, uy = pn2.get_u2d(dis_parameters, b, spacing, max_x, disl_type)
         if disl_type.lower() == 'edge':
             u = ux
-            un = np.array([ux[(i-shift) % len(ux)] for i in xrange(len(ux))])
         else: # screw
             u = uy
-            un = np.array([uy[(i-shift) % len(uy)] for i in xrange(len(uy))])
     
     rho = pn1.rho(u, r)
-    rhon = pn1.rho(un, r)
     d_max = (rho*r[1:]/rho.sum()).sum()
        
     # apply stress to the dislocation, starting with the positive direction
@@ -227,8 +223,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
                 us = uxs
             else: # screw
                 us = uys
-        
-        
+                    
         rhos = pn1.rho(us, r)
         d_current = (rhos*r[1:]/rhos.sum()).sum()
         
@@ -259,6 +254,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
             break
                    
     peierls_stresses = [tau_p_minus, tau_p_plus]
+    peierls_stresses.sort()
     
     if in_GPa:
         # express Peierls stresses in GPa

@@ -154,6 +154,7 @@ def handle_pn_control(test_dict):
     # file is two-dimensional (ie. a gamma surface), <map_ux> corresponds to the 
     # gamma line direction. If <dimensions> == 2, <map_ux> (<max_uy>) is the
     # direction of the edge (screw) component of the displacement. 
+    #!!! Could replace <use_axis> functionality with <disl_type>. 
     surf_cards = (('x_length', {'default':'map struc > a: x -> x', 'type':float}),
                   ('y_length', {'default':'map struc > b: x -> x', 'type':float}),
                   ('angle', {'default':np.pi/2, 'type':float}),
@@ -303,14 +304,17 @@ class PNSim(object):
         elif n_columns == 3: # 2-dimensional misfit function
             base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), self.surf('y_length'),
                                                             angle=self.surf('angle'))
-            self.gsf = fg.new_gsf(base_func, self.surf('map_ux'), 
+            temp_gsf = fg.new_gsf(base_func, self.surf('map_ux'), 
                                              self.surf('map_uy'))
             if self.control('dimensions') == 1: 
                 # project out the dislocation parallel component
-                self.gsf = fg.projection(self.gsf, self.surf('gamma_shift'),
+                self.gsf = fg.projection(temp_gsf, self.surf('gamma_shift'),
                                                    self.surf('use_axis'))
+            else:
+                self.gsf = temp_gsf
         else:
             raise ValueError("GSF grid has invalid number of dimensions")
+
         return
                             
     def post_processing(self):

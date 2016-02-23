@@ -222,16 +222,28 @@ def projection(gsf_func, const=0, axis=0):
     else:
         raise ValueError("{} is an invalid axis label.".format(axis))
     
+    #!!! Note to self: because 2d spline fits require that both arguments have
+    #!!! the same length, we need to add an array to the <const> value. This
+    #!!! is a kludgey fix, and it would be nice to come up with a neater (an
+    #!!! more efficient) solution.
     if axis == 0:
-        g = lambda x: gsf_func(x, const)
+        def g(x):
+            if type(x) == float:
+                return gsf_func(x, const)
+            else:
+                return gsf_func(x, const+np.zeros(len(x)))
     elif axis == 1: 
-        g = lambda x: gsf_func(const, x)
+        def g(x):
+            if type(x) == float:
+                return gsf_func(const, x)
+            else:
+                return gsf_func(const+np.zeros(len(x)), x)
     else:
         raise ValueError("{} is an invalid axis to project onto.".format(axis))
     
     return g
     
-# Plotting functions
+### Plotting functions ###
 
 def gamma_surface3d(X, Y, Z, xlabel, ylabel, zlabel, size):
     '''Plots a gamma surface in 3D.
