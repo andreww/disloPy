@@ -9,8 +9,7 @@ import sys
 import pn_1D as pn1
 import pn_2D as pn2
 import fit_gsf as fg
-#import peierls_barrier as pb
-import taup_working as pb
+import peierls_barrier as pb
 
 def control_file(filename):
     '''Opens the control file <filename> for a PN simulation and constructs a 
@@ -141,7 +140,8 @@ def handle_pn_control(test_dict):
                      ('plot_both', {'default':False, 'type':to_bool})
                    )
 
-    # cards for the <&struc> namelist
+    # cards for the <&struc> namelist. Need to find some way to incorporate 
+    # anisotropic elasticity
     struc_cards = (('a', {'default':None, 'type':float}),
                    ('b', {'default':'map struc > a: x -> x', 'type':float}),
                    ('burgers', {'default':'map struc > a: x -> x', 'type':float}),
@@ -171,8 +171,9 @@ def handle_pn_control(test_dict):
     
     # cards for the <&stress> namelist
     stress_cards = (('calculate_stress', {'default':True, 'type':to_bool}),
-                    ('dtau', {'default':0.001, 'type':int}),
-                    ('use_GPa', {'default':True, 'type':int})
+                    ('dtau', {'default':0.0001, 'type':int}),
+                    ('use_GPa', {'default':True, 'type':int}),
+                    ('threshold', {'default':15., 'type':float})
                    )
     
     # list of valid namelists 
@@ -376,10 +377,19 @@ class PNSim(object):
         if not self.stress('calculate_stress'):
             pass
         else:
-            self.taup, self.taup_av = pb.taup(self.par, self.control('max_x'), self.gsf,
-                                     self.K, self.struc('burgers'), self.struc('spacing'),
-                                     self.control('dimensions'), self.control('disl_type'),
-                                     dtau=self.stress('dtau'), in_GPa=self.stress('use_GPa'))
+            self.taup, self.taup_av = pb.taup(
+                                              self.par, 
+                                              self.control('max_x'), 
+                                              self.gsf,
+                                              self.K, 
+                                              self.struc('burgers'), 
+                                              self.struc('spacing'),
+                                              self.control('dimensions'), 
+                                              self.control('disl_type'),
+                                              dtau=self.stress('dtau'), 
+                                              in_GPa=self.stress('use_GPa'),
+                                              thr=self.stress('threshold')
+                                             )
                                                            
             # calculate average and direction-dependent Peierls barriers
             self.wp_av = pb.peierls_barrier(self.taup_av, self.struc('burgers'),

@@ -11,9 +11,15 @@ def opposing_partials(N):
     '''Returns coefficients A[:] st. sum(A[:]) == 0
     '''
     
-    A_test = uniform(low=-1, high=1, size=N)
-    # shift A[:] so that it sums to 0.
-    A_test -= A_test.sum()/N
+    if N == 1:
+        # if only one partial dislocation is used for the component of the 
+        # displacement perpendicular to the dislocation, then it must be 
+        # identically zero everywhere; ie. A == 0.
+        A_test =np.array([0.])
+    else:
+        A_test = uniform(low=-1, high=1, size=N)
+        # shift A[:] so that it sums to 0.
+        A_test -= A_test.sum()/N
     return A_test
 
 def generate_input(N, disl_type, spacing, use_sym=False):
@@ -41,7 +47,8 @@ def generate_input(N, disl_type, spacing, use_sym=False):
     # vector  
     c2 = pn1.generate_c(n_part) 
     A2 = opposing_partials(n_part)
-    x2 = pn1.generate_x(n_part, abs(A2)/abs(A2).sum(), spacing)
+    x2 = pn1.generate_x(n_part, A2, spacing)
+    
     if disl_type.lower()  == 'edge':
         return list(A1) + list(A2) + list(x1) + list(x2) + list(c1) + list(c2)
     else: # screw dislocation
@@ -90,7 +97,7 @@ def total_energy2d(A, x0, c, N, energy_function, K, b, spacing, shift=[0., 0.5])
     '''Defaults to screw dislocation. K = [Ke, Ks]
     '''
     
-    Em = misfit_energy2d(A, x0, c, N, energy_function, shift, b, spacing)
+    Em = misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=shift)
     E_el = elastic_energy2d(A, x0, c, b, K)
     return Em + E_el
     
@@ -133,7 +140,7 @@ def mc_step2d(N, max_x, energy_function, lims, K, shift, constraints, use_sym,
     '''
     
     params = generate_input(N, disl_type, spacing, use_sym)
-    
+
     try:
         new_par = fmin_slsqp(total_optimizable2d, params, eqcons=constraints,
                         args=(N, max_x, energy_function, K, shift, b, spacing),
@@ -143,6 +150,7 @@ def mc_step2d(N, max_x, energy_function, lims, K, shift, constraints, use_sym,
     except RuntimeError:
         new_par = None
         E = np.inf
+
     return E, new_par
 
 def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
