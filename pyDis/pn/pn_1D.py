@@ -6,9 +6,16 @@ import numpy.random as rand
 from scipy.optimize import fmin_slsqp, curve_fit
 import matplotlib.pyplot as plt
 
+import sys
+sys.path.append('/home/richard/code_bases/dislocator2/')
+from pyDis.atomic import aniso
+
 # suppress divide by zero Runtime warnings
 import warnings
 warnings.simplefilter("ignore", RuntimeWarning)
+
+# conversion factor to take elastic properties from GPa to atomic units
+GPa_To_Atomic = 160.2176
 
 def simple_gamma(u):
     return 0.5*(1-np.cos(2*np.pi*u))
@@ -28,6 +35,38 @@ def energy_coefficients(K, G, using_atomic=False):
         Ks /= GPa_To_Atomic
         Ke /= GPa_To_Atomic
     
+    return [Ke, Ks]
+    
+def isotropic_K(K, G, using_atomic=False):
+    '''Calculate the shear and edge dislocation energy coefficient from the
+    isotropic bulk and shear moduli.
+    '''
+    
+
+    nu = (3*K-2*G)/(2*(3*K+G))
+    Ks = G/(4*np.pi)
+    Ke = Ks/(1-nu)
+    if using_atomic:
+        pass
+    else:
+        Ks /= GPa_To_Atomic
+        Ke /= GPa_To_Atomic
+    
+    return [Ke, Ks]
+    
+def isotropic_nu(nu, G, using_atomic=False):
+    '''Calculate the shear and edge dislocation energy coefficients from the
+    isotropic shear modulus and the Poisson's ratio.
+    '''
+    
+    GPa_To_
+    
+    return [Ke, Ks]
+def anisotropic_K(Cij, n, m, b, using_atomic=False):
+    '''Calculate the energy coefficient for a dislocation with burgers vector
+    <b> and sense vector (ie. -dislocation line vector) n <cross> m.
+    '''
+
     return [Ke, Ks]
 
 def generate_A(N):

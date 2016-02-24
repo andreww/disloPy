@@ -79,9 +79,11 @@ def get_gsf_energy(energy_regex, prog, base_name, suffix, i, j=None, indir=False
     
                     
     if not(matched_energies):
+        # match the unconverged energy, and see if the total force is below
+        # some acceptance threshold
         #raise AttributeError("Calculation does not have an energy.")
         E = np.nan
-        units = None       
+        units = None    
     else:
         if prog.lower() == 'gulp':
             if ((gulp_flag_failure[0] in output_lines) or 

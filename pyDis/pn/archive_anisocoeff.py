@@ -60,19 +60,6 @@ def solve_sextic(n,m,Cij):
     L = np.array([normalisation[i]*LTilde[i] for i in range(nEig)])
     return p,A,L
 
-def dyadic(vec):
-    n = len(vec)
-    dyad = np.zeros((n,n),dtype=complex)
-    for i in range(n):
-        for j in range(n):
-            dyad[i,j] = vec[i]*vec[j]
-    return dyad
-    
-def tensor_k(L):
-    K = np.zeros((3,3),dtype=complex)
-    for i in range(3):
-        K += dyadic(L[i])
-        K -= dyadic(L[i+3])
-    return (1j*K).real
+
 
 
