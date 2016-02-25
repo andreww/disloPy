@@ -10,6 +10,8 @@ import pn_1D as pn1
 import pn_2D as pn2
 import fit_gsf as fg
 import peierls_barrier as pb
+sys.path.append('/home/richard/code_bases/dislocator2/')
+from pyDis.atomic import aniso
 
 def control_file(filename):
     '''Opens the control file <filename> for a PN simulation and constructs a 
@@ -112,7 +114,7 @@ def to_bool(in_str):
     try:
         new_value = bool_vals[in_str]
     except KeyError:
-        raise ValueError("%s is not a boolean value." % in_str)
+        raise ValueError("{} is not a boolean value.".format(in_str))
         
     return new_value
     
@@ -122,7 +124,7 @@ def to_vector(in_str):
     '''
     
     new_vec = []
-    for x in re.finditer('\d+', in_str):
+    for x in re.finditer('-?\d+', in_str):
         new_vec.append(float(x.group()))
     
     return np.array(new_vec)
@@ -157,17 +159,17 @@ def handle_pn_control(test_dict):
                    ('b', {'default':'map struc > a: x -> x', 'type':float}),
                    ('burgers', {'default':'map struc > a: x -> x', 'type':float}),
                    ('spacing', {'default':'map struc > a: x -> x', 'type':float}),
-                   ('bulk', {'default':None, 'type':float}),
-                   ('shear', {'default':None, 'type':float})
                   )
                   
     # cards for the &elast namelist.
     elast_cards = (('bulk', {'default':None, 'type':float}),
                    ('shear', {'default':None, 'type':float}),
                    ('poisson', {'default':None, 'type':float}),
-                   ('cij_file', {'default':None, 'type':aniso.readCij}),
-                   ('n', {'default':'1 0 0', 'type':to_vector}),
-                   ('m', {'default':'0 1 0', 'type':to_vector})
+                   ('cij', {'default':None, 'type':aniso.readCij}),
+                   ('b_edge', {'default':np.array([1., 0., 0.]), 'type':to_vector}),
+                   ('b_screw', {'default':np.array([0., 0., 1.]), 'type':to_vector}),
+                   ('normal', {'default':np.array([0., 1., 0.]), 'type':to_vector}),
+                   ('in_gpa', {'default':True, 'type':to_bool})
                   )
 
     # cards for the <&surface> namelist. Where dimensions == 1 but the gsf 
@@ -191,7 +193,7 @@ def handle_pn_control(test_dict):
     
     # cards for the <&stress> namelist
     stress_cards = (('calculate_stress', {'default':True, 'type':to_bool}),
-                    ('dtau', {'default':0.0001, 'type':int}),
+                    ('dtau', {'default':0.0005, 'type':int}),
                     ('use_GPa', {'default':True, 'type':int}),
                     ('threshold', {'default':15., 'type':float})
                    )
@@ -201,15 +203,21 @@ def handle_pn_control(test_dict):
     # check that all namelists were in the control file and add them as keys
     # (with empty dicts as values) in the control dictionary
     for name in namelists:
-        try:
-            x = test_dict[name]
-        except KeyError:
+        if name not in test_dict.keys():
             test_dict[name] = dict()
-    
+        #try:
+        #    x = test_dict[name]
+        #except KeyError:
+        #    test_dict[name] = dict()
+
     # handle the input namelists, except for the elasticity namelist, which
     # requires special handling.
-    for i, cards in enumerate([control_cards, struc_cards, surf_cards, 
-                                    elast_cards, prop_cards, stress_cards]):
+    for i, cards in enumerate([control_cards, struc_cards, elast_cards, surf_cards, 
+                                                        prop_cards, stress_cards]):
+        if namelists[i] == 'elast':
+            # handle the elastic parameters later
+            continue
+        # else    
         for var in cards:
             try:
                 change_or_map(test_dict, namelists[i], var[0], var[1]['type'])
@@ -218,20 +226,37 @@ def handle_pn_control(test_dict):
                 # test to see if variable is "mission-critical" using None != None
                 if default_val == None:
                     raise ValueError("No value supplied for mission-critical" +
-                                                       " variable %s." % var[0])
+                                                 " variable {}.".format(var[0]))
                 else:
                     test_dict[namelists[i]][var[0]] = default_val
                     # if <default_val> is a mapping, needs to be evaluated
                     if type(default_val) == str and 'map' in default_val:
                         from_mapping(test_dict, namelists[i], var[0])
-                        
-    # extract elastic properties from control file, and make the decision 
-    # between isotropic and anisotropic elasticty. Start by extracting all 
-    # values from the <&elast> namelist
+                 
+    # extract values from the &elast namelist
     for var in elast_cards:
-        if var == None:
-            # set value to None
-            test_dict['elast'][var[0]] = None
+        try:
+            change_or_map(test_dict, 'elast', var[0], var[1]['type'])
+        except ValueError:
+            test_dict['elast'][var[0]] = var[1]['default']
+                                         
+    # test to make sure that all of the parameters required for one of isotropic
+    # or anisotropic elasticity have been supplied. Should we also test to see
+    # which function to use when calculating the energy coefficients?
+    if test_dict['elast']['cij'] != None:
+        # if an elastic constants tensor is given, use anisotropic elasticity
+        test_dict['elast']['coefficients'] = 'aniso'
+    elif test_dict['elast']['shear'] != None:
+        # test to see if another isotropic elastic property has been provided. 
+        # Preference poisson's ratio over bulk modulus, if both have been provided
+        if test_dict['elast']['poisson']  != None:
+            test_dict['elast']['coefficients'] = 'iso_nu'
+        elif test_dict['elast']['bulk'] != None:
+            test_dict['elast']['coefficients'] = 'iso_bulk'
+        else:
+            raise AttributeError("No elastic properties have been provided.")
+    else:
+        raise AttributeError("No elastic properties have been provided.")
             
     return
 
@@ -264,12 +289,28 @@ class PNSim(object):
         # functions to access values in namelists easily
         self.control = lambda card: self.sim['control'][card]
         self.struc = lambda card: self.sim['struc'][card]
+        self.elast = lambda card: self.sim['elast'][card]
         self.surf = lambda card: self.sim['surface'][card]
         self.prop = lambda card: self.sim['properties'][card]
         self.stress = lambda card: self.sim['stress'][card]
 
-        #energy coefficient
-        self.K = pn1.energy_coefficients(self.struc('bulk'), self.struc('shear'))
+        # calculate the energy coefficients
+        #self.K = pn1.energy_coefficients(self.struc('bulk'), self.struc('shear'))
+        #!!! will need to change this when I move the energy coefficient functions
+        #!!! from <pn_1D> into their own module.
+        if self.elast('coefficients') == 'aniso':
+            self.K = pn1.anisotropic_K(self.elast('cij'),
+                                       self.elast('b_edge'),
+                                       self.elast('b_screw'),
+                                       self.elast('normal')
+                                      )
+        elif self.elast('coefficients') == 'iso_nu':
+            self.K = pn1.isotropic_nu(self.elast('poisson'), self.elast('shear'))
+        elif self.elast('coefficients') == 'iso_bulk':
+            self.K = pn1.isotropic_K(self.elast('bulk'), self.elast('shear'))
+
+        # if restricting calculation to one component of displacement, extract
+        # the appropriate energy coefficient.    
         if self.control('dimensions') == 1:
             if self.control('disl_type').lower() == 'edge':
                 self.K = self.K[0]

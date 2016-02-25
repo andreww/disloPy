@@ -306,9 +306,10 @@ def scalar_k(K, b):
     e_coeff = 0.
     for i in range(3):
         for j in range(3):
-            e_coeff += b[i]*K[i, j]*b[j]
+            e_coeff += b[i]*K[i, j]*b[j]          
+    e_coeff /= (4*np.pi)
             
     # normalise to obtain the scalar energy coefficient K
-    e_coeff /= norm(b)**2
+    e_coeff /= lin.norm(b)**2
     return e_coeff
 
