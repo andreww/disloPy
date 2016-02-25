@@ -115,6 +115,17 @@ def to_bool(in_str):
         raise ValueError("%s is not a boolean value." % in_str)
         
     return new_value
+    
+def to_vector(in_str):
+    '''Converts <in_str>, which is a list of numbers, in an array with elements
+    of type float.
+    '''
+    
+    new_vec = []
+    for x in re.finditer('\d+', in_str):
+        new_vec.append(float(x.group()))
+    
+    return np.array(new_vec)
 
 def handle_pn_control(test_dict):
     '''handle each possible card in turn. If default value is <None>, the card is 
@@ -149,6 +160,15 @@ def handle_pn_control(test_dict):
                    ('bulk', {'default':None, 'type':float}),
                    ('shear', {'default':None, 'type':float})
                   )
+                  
+    # cards for the &elast namelist.
+    elast_cards = (('bulk', {'default':None, 'type':float}),
+                   ('shear', {'default':None, 'type':float}),
+                   ('poisson', {'default':None, 'type':float}),
+                   ('cij_file', {'default':None, 'type':aniso.readCij}),
+                   ('n', {'default':'1 0 0', 'type':to_vector}),
+                   ('m', {'default':'0 1 0', 'type':to_vector})
+                  )
 
     # cards for the <&surface> namelist. Where dimensions == 1 but the gsf 
     # file is two-dimensional (ie. a gamma surface), <map_ux> corresponds to the 
@@ -177,7 +197,7 @@ def handle_pn_control(test_dict):
                    )
     
     # list of valid namelists 
-    namelists = ['control', 'struc', 'surface', 'properties', 'stress']
+    namelists = ['control', 'struc', 'elast', 'surface', 'properties', 'stress']
     # check that all namelists were in the control file and add them as keys
     # (with empty dicts as values) in the control dictionary
     for name in namelists:
@@ -186,8 +206,10 @@ def handle_pn_control(test_dict):
         except KeyError:
             test_dict[name] = dict()
     
-    for i, cards in enumerate([control_cards, struc_cards, surf_cards, prop_cards,
-                                                                 stress_cards]):
+    # handle the input namelists, except for the elasticity namelist, which
+    # requires special handling.
+    for i, cards in enumerate([control_cards, struc_cards, surf_cards, 
+                                    elast_cards, prop_cards, stress_cards]):
         for var in cards:
             try:
                 change_or_map(test_dict, namelists[i], var[0], var[1]['type'])
@@ -202,6 +224,14 @@ def handle_pn_control(test_dict):
                     # if <default_val> is a mapping, needs to be evaluated
                     if type(default_val) == str and 'map' in default_val:
                         from_mapping(test_dict, namelists[i], var[0])
+                        
+    # extract elastic properties from control file, and make the decision 
+    # between isotropic and anisotropic elasticty. Start by extracting all 
+    # values from the <&elast> namelist
+    for var in elast_cards:
+        if var == None:
+            # set value to None
+            test_dict['elast'][var[0]] = None
             
     return
 
