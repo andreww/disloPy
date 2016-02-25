@@ -27,19 +27,6 @@ def test_gamma(u):
     
 ### SHOULD CREATE SEPARATE MODULE FOR ENERGY COEFFICIENT CALCULATIONS ###
     
-def energy_coefficients(K, G, using_atomic=False):
-    GPa_To_Atomic = 160.2176
-    nu = (3*K-2*G)/(2*(3*K+G))
-    Ks = G/(4*np.pi)
-    Ke = Ks/(1-nu)
-    if using_atomic:
-        pass
-    else:
-        Ks /= GPa_To_Atomic
-        Ke /= GPa_To_Atomic
-    
-    return [Ke, Ks]
-    
 def isotropic_K(K, G, using_atomic=False):
     '''Calculate the shear and edge dislocation energy coefficient from the
     isotropic bulk and shear moduli.

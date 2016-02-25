@@ -69,6 +69,10 @@ def unzip_parameters(A, x0, c):
     return A1, x01, c1, A2, x02, c2
 
 def elastic_energy2d(A, x0, c, b=1, K=[1, 1]):
+    '''Calculate the elastic energy for the 2D dislocation density distribution
+    defined by <A>, <x0>, and <c>.
+    '''
+    
     # K = [K_edge, K_shear]
     Ke = K[0]
     Ks = K[1]
