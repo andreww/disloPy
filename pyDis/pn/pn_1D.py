@@ -244,6 +244,7 @@ def make_limits(n_funcs, max_x):
     unbound = (-np.inf, np.inf)
     spatial_bounds = (-max_x/2., max_x/2.)
     non_negative = (0, 100.)
+    positive = (1e-4, 100.)
     
     A_bounds = [non_negative for i in xrange(n_funcs)]
     c_bounds = [non_negative for i in xrange(n_funcs)]

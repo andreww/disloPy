@@ -177,14 +177,12 @@ def handle_pn_control(test_dict):
     # file is two-dimensional (ie. a gamma surface), <map_ux> corresponds to the 
     # gamma line direction. If <dimensions> == 2, <map_ux> (<max_uy>) is the
     # direction of the edge (screw) component of the displacement. 
-    #!!! Could replace <use_axis> functionality with <disl_type>. 
     surf_cards = (('x_length', {'default':'map struc > a: x -> x', 'type':float}),
                   ('y_length', {'default':'map struc > b: x -> x', 'type':float}),
                   ('angle', {'default':np.pi/2, 'type':float}),
                   ('map_ux', {'default':'remap: (ux, uy) -> ux', 'type':str}),
                   ('map_uy', {'default':'remap: (ux, uy) -> uy', 'type':str}),
-                  ('gamma_shift', {'default':0., 'type':float}),
-                  ('use_axis', {'default':0, 'type':int})
+                  ('gamma_shift', {'default':0., 'type':float})
                  )
 
     # cards for the <&properties> namelist
@@ -233,7 +231,7 @@ def handle_pn_control(test_dict):
                     # if <default_val> is a mapping, needs to be evaluated
                     if type(default_val) == str and 'map' in default_val:
                         from_mapping(test_dict, namelists[i], var[0])
-                 
+                        
     # extract values from the &elast namelist
     for var in elast_cards:
         try:
@@ -380,8 +378,14 @@ class PNSim(object):
                                              self.surf('map_uy'))
             if self.control('dimensions') == 1: 
                 # project out the dislocation parallel component
+                # determine which axis to use (0/x if edge, 1/y if screw)
+                if self.control('disl_type') == 'edge':
+                    use_axis = 0
+                elif self.control('disl_type') == 'screw':
+                    use_axis = 1
+                    
                 self.gsf = fg.projection(temp_gsf, self.surf('gamma_shift'),
-                                                   self.surf('use_axis'))
+                                                                   use_axis)
             else:
                 self.gsf = temp_gsf
         else:

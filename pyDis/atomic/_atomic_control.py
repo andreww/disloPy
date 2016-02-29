@@ -79,7 +79,7 @@ def handle_atomistic_control(test_dict):
     # is being used to calculate the displacement fields.
     field_cards = (('field_type',{'default':None,'type':str}),
                     ('nfields',{'default':1,'type':int}),
-                    ('elasticity',{'default':0.5,'type':float}),
+                    ('elasticity',{'default':np.nan,'type':float}),
                     ('cij_file',{'default':None,'type':str})
                    )
                      
