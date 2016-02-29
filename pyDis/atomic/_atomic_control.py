@@ -153,8 +153,9 @@ def handle_fields(field_file):
     return burgers_vectors,dis_locations
     
 class AtomisticSim(object):
-    # handles the control file for multipole-SC and cluster based dislocation 
-    # simulations in <pyDis>
+    '''handles the control file for multipole-SC and cluster based dislocation 
+    simulations in <pyDis>.
+    '''
     
     def __init__(self,filename):
         self.sim = control_file(filename)

@@ -6,11 +6,12 @@ import matplotlib.pyplot as plt
 import sys
 
 # PN modules from pyDis package
-import pn_1D as pn1
-import pn_2D as pn2
-import fit_gsf as fg
-import peierls_barrier as pb
 sys.path.append('/home/richard/code_bases/dislocator2/')
+from pyDis.pn import pn_1D as pn1
+from pyDis.pn import pn_2D as pn2
+from pyDis.pn import fit_gsf as fg
+from pyDis.pn import peierls_barrier as pb
+from pyDis.pn import energy_coeff as coeff
 from pyDis.atomic import aniso
 
 def control_file(filename):
@@ -147,7 +148,7 @@ def handle_pn_control(test_dict):
                      ('max_x', {'default':100, 'type':int}),
                      ('n_funcs', {'default':6, 'type':int}),
                      ('disl_type', {'default':None, 'type':str}),
-                     ('use_sym', {'default':False, 'type':to_bool}),
+                     ('use_sym', {'default':True, 'type':to_bool}),
                      ('plot', {'default':False, 'type':to_bool}),
                      ('plot_name', {'default':'pn_plot.tif', 'type':str}),
                      ('plot_both', {'default':False, 'type':to_bool})
@@ -298,15 +299,15 @@ class PNSim(object):
         #!!! will need to change this when I move the energy coefficient functions
         #!!! from <pn_1D> into their own module.
         if self.elast('coefficients') == 'aniso':
-            self.K = pn1.anisotropic_K(self.elast('cij'),
-                                       self.elast('b_edge'),
-                                       self.elast('b_screw'),
-                                       self.elast('normal')
-                                      )
+            self.K = coeff.anisotropic_K(self.elast('cij'),
+                                         self.elast('b_edge'),
+                                         self.elast('b_screw'),
+                                         self.elast('normal')
+                                        )
         elif self.elast('coefficients') == 'iso_nu':
-            self.K = pn1.isotropic_nu(self.elast('poisson'), self.elast('shear'))
+            self.K = coeff.isotropic_nu(self.elast('poisson'), self.elast('shear'))
         elif self.elast('coefficients') == 'iso_bulk':
-            self.K = pn1.isotropic_K(self.elast('bulk'), self.elast('shear'))
+            self.K = coeff.isotropic_K(self.elast('bulk'), self.elast('shear'))
 
         # if restricting calculation to one component of displacement, extract
         # the appropriate energy coefficient.    

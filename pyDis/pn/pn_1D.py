@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import numpy as np
 import numpy.random as rand
@@ -6,10 +7,6 @@ from numpy.linalg import norm
 
 from scipy.optimize import fmin_slsqp, curve_fit
 import matplotlib.pyplot as plt
-
-import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
-from pyDis.atomic import aniso
 
 # suppress divide by zero Runtime warnings
 import warnings
@@ -24,60 +21,22 @@ def simple_gamma(u):
 def test_gamma(u):
     a = 0.5*(1-np.cos(2*np.pi*u))
     return 1/0.14*(a-0.5*(np.exp(1.09*a)-1))
-    
-### SHOULD CREATE SEPARATE MODULE FOR ENERGY COEFFICIENT CALCULATIONS ###
-    
-def isotropic_K(K, G, using_atomic=False):
-    '''Calculate the shear and edge dislocation energy coefficient from the
-    isotropic bulk and shear moduli.
-    '''
-    
-    # calculate the isotropic Poisson's ratio for the material
-    nu = (3*K-2*G)/(2*(3*K+G))
-    return isotropic_nu(nu, G, using_atomic=using_atomic)
-    
-def isotropic_nu(nu, G, using_atomic=False):
-    '''Calculate the shear and edge dislocation energy coefficients from the
-    isotropic shear modulus and the Poisson's ratio.
-    '''
-    
-    Ks = G/(4*np.pi)
-    Ke = Ks/(1-nu)
-    if using_atomic:
-        pass
-    else:
-        Ks /= GPa_To_Atomic
-        Ke /= GPa_To_Atomic
-
-    return [Ke, Ks]
-    
-def anisotropic_K(Cij, b_edge, b_screw, normal, using_atomic=True):
-    '''Calculate the energy coefficient for a dislocation with burgers vector
-    <b> and sense vector (ie. -dislocation line vector) n <cross> m. As readCij
-    outputs the elastic constants in atomic units, defaults to <using_atomic>.
-    '''
-    
-    # use unit vectors in the direction of the burgers vector and the normal
-    # to the slip plane (ie. <b_edge> and <normal>) when solving the sextic 
-    # eigenvalue problem.
-    p, A, L = aniso.solve_sextic(Cij, b_edge/norm(b_edge), normal/norm(normal))
-    energy_tensor = aniso.tensor_k(L)
-    
-    # calculate the scalar edge and screw energy coefficients
-    Ke = aniso.scalar_k(energy_tensor, b_edge)
-    Ks = aniso.scalar_k(energy_tensor, b_screw)
-
-    return [Ke, Ks]
 
 def generate_A(N):
     A = rand.uniform(size=N)
     A /= A.sum()
     return A
     
-def generate_x(N, A, spacing, sigma=3.):
-    x = rand.normal(0., sigma, N)
-    x_mean = (A*x).sum()
-    return (x-(x_mean-(x_mean % spacing)))
+def generate_x(N, A, spacing, sigma=1.):
+    '''Generates midpoints for N dislocations. If N == 1, we simply locate the
+    dislocation at the origin.
+    '''
+    if N == 1:
+        return np.zeros(1)
+    else:
+        x = rand.normal(0., sigma, N)
+        x_mean = (A*x).sum()
+        return (x-(x_mean-(x_mean % spacing)))
     
 def generate_c(N):
     c = rand.lognormal(-2, 2, N)
@@ -90,32 +49,51 @@ def gen_inparams(n_funcs, spacing):
     input_parameters = list(A)+list(x0)+list(c)
     return input_parameters
 
-def gen_symmetric(n_funcs, spacing):
-    '''generate parameters for the asymmetric distribution
+def gen_symmetric(n_funcs, spacing, scale=1.):
+    '''Generates <n_funcs> partial dislocations that are symmetric about the 
+    origin. <scale> exists so that the A parameters can be scaled when <n_funcs>
+    is odd and > 1 (so that sum(A) == 1).
     '''
 
     if n_funcs == 1:
-        sym_funcs = n_funcs
-    elif (n_funcs % 2) == 1:
-        raise ValueError("Number of functions must be 1 or even.")
-    else: # n_funcs even
+        return gen_inparams(n_funcs, spacing)
+    elif n_funcs % 2 == 0: # ie. even
         sym_funcs = n_funcs/2
-
-    asymm_pars = gen_inparams(sym_funcs, spacing)
-    A = [a/2. for a in asymm_pars[:sym_funcs]]
-    x0 = [x for x in asymm_pars[sym_funcs:2*sym_funcs]]
-    c = [w for w in asymm_pars[2*sym_funcs:]]
-
-    # symmetrise generated input parameters
-    if n_funcs == 1:
-        # already symmetric
-        pass
-    else: # n_funcs even
+        
+        # generate a starting set of asymmetric parameters
+        asymm_pars = gen_inparams(sym_funcs, spacing)
+        A = [a/2.*scale for a in asymm_pars[:sym_funcs]]
+        x0 = [x for x in asymm_pars[sym_funcs:2*sym_funcs]]
+        c = [w for w in asymm_pars[2*sym_funcs:]]
+        
+        # symmetrise parameters
         A, x0, c = symmetrise(A, x0, c, spacing)
+    else: # n_funcs % 2 == 1 and n_funcs > 1
+        # generate the central dislocation
+        A1 = [rand.uniform(0.1, 0.9)]
+        x01 = [0.]
+        c1 = list(generate_c(1))
+        
+        # generate a symmetric distribution of dislocation about the central
+        # dislocation, scale so that the integrated Burgers vector density is
+        # correct.
+        sympar = gen_symmetric(n_funcs-1, spacing, scale=1-A1[0])        
+        A2 = sympar[:n_funcs-1]
+        x02 = sympar[n_funcs-1:2*(n_funcs-1)]
+        c2 = sympar[2*(n_funcs-1):]
+        
+        # combine the central and flanking dislocations
+        A = A1 + A2
+        x0 = x01 + x02
+        c = c1 + c2
+    
     return (A+x0+c)
         
 def symmetrise(A, x0, c, spacing, normalize=False):
-    # make symmetric
+    '''Convert the asymmetric input parameters into a set of dislocations with 
+    a total dislocation density distribution that is symmetric about the origin.
+    '''
+    
     A = A + A
     c = c + c
     x0 = x0 + [-x for x in x0]
@@ -192,8 +170,8 @@ def plot_rho(ax, rho, x, colour='b', width=1., a_val=0.40):
     return rho_disc
     
 def plot_u(ax, u, x, colour='r', shape='s', linestyle='-.'):
-    u_disc = ax.plot(x, u, '%s%s' % (colour, shape), label='$u(r)$')
-    ax.plot(x, u, '%s%s' % (colour, linestyle))
+    u_disc = ax.plot(x, u, '{}{}'.format(colour, shape), label='$u(r)$')
+    ax.plot(x, u, '{}{}'.format(colour, linestyle))
     return u_disc 
     
 def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True):
@@ -264,8 +242,8 @@ def total_optimizable(params, *args):
     
 def make_limits(n_funcs, max_x):
     unbound = (-np.inf, np.inf)
-    spatial_bounds = (-max_x, max_x)
-    non_negative = (0, np.inf)
+    spatial_bounds = (-max_x/2., max_x/2.)
+    non_negative = (0, 100.)
     
     A_bounds = [non_negative for i in xrange(n_funcs)]
     c_bounds = [non_negative for i in xrange(n_funcs)]
