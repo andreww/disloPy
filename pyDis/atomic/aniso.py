@@ -94,7 +94,7 @@ def stroh_element(a, b, j, k, Cij):
     element = 0
     for i in range(3):
         for l in range(3):
-            element += a[i]*Cijkl(i, j, k, l, Cij)*b[i]
+            element += a[i]*Cijkl(i, j, k, l, Cij)*b[l]
     
     return element
     
