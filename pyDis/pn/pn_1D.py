@@ -257,12 +257,6 @@ def cons_func(inparams, *args):
     n_funcs = args[0]
     A = inparams[:n_funcs]
     return 1.-sum(A)
-    
-def contained_in(element, open_set):
-    if element > open_set[0] and element < open_set[1]:
-        return True
-    else:
-        return False
 
 def mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K):
     '''Single monte carlo step for dislocation structure.
@@ -299,17 +293,57 @@ def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False
             print("Starting iteration {}...".format(i))
 
         E, x_try = mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K)
-        is_valid = True
+        is_valid = check_parameters1d(x_try, N, lims)
         
+        '''
+        is_valid = True
         for j, param in enumerate(x_try):
             if contained_in(param, lims[j]):
                 continue
             else:
                 is_valid = False
                 break
+        '''
                 
         if is_valid and (E < Emin):
             Emin = E
             x_opt = x_try[:]
             
     return Emin, x_opt
+    
+def check_parameters1d(x_try, n_funcs, limits):
+    '''Checks that the x0 and c parameters in x_try for a particular dislocation
+    density distribution are near to their limits. This is used to detect 
+    unstable solutions.
+    '''
+    
+    dist = 1e-1
+    
+    # extract parameters and limits
+    A0 = x_try[:n_funcs]
+    limits_A = limits[0]
+    x0 = x_try[n_funcs:2*n_funcs]
+    limits_x = limits[n_funcs]
+    c0 = x_try[2*n_funcs:]
+    limits_c = limits[2*n_funcs]
+    
+    # check that none of the x0 have reached the bounds of the spatial region
+    # to which dislocations are constrained.
+    for x in x0:
+        if abs(x-limits_x[0]) < dist or abs(x-limits_x[-1]) < dist:
+            return False
+            
+    # check c parameters. 
+    for c in c0:
+        if abs(c-limits_c[-1]) < dist:
+            return False
+        elif c < limits_c[0]:
+            return False
+    
+    return True
+
+def contained_in(element, open_set):
+    if element > open_set[0] and element < open_set[1]:
+        return True
+    else:
+        return False    

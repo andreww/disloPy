@@ -98,7 +98,8 @@ def misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=[0., 0.5]):
     return Em
     
 def total_energy2d(A, x0, c, N, energy_function, K, b, spacing, shift=[0., 0.5]):
-    '''Defaults to screw dislocation. K = [Ke, Ks]
+    '''Calculates the total energy of the 2D dislocationd density distribution
+    defined by <A>, <x0>, and <c>. Defaults to screw dislocation: K = [Ke, Ks]
     '''
     
     Em = misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=shift)
@@ -106,6 +107,10 @@ def total_energy2d(A, x0, c, N, energy_function, K, b, spacing, shift=[0., 0.5])
     return Em + E_el
     
 def total_optimizable2d(params, *args):
+    '''A form of the total energy functional that can be used with the slsqp
+    function from scipy.optimize.
+    '''
+    
     n_funcs = args[0]
     N = args[1]
     energy_function = args[2]
@@ -122,13 +127,17 @@ def total_optimizable2d(params, *args):
     return total_energy2d(A, x0, c, N, energy_function, K, b, spacing, shift)
     
 def make_limits2d(n_funcs, max_x, disl_type):
+    '''Construct limits on the fit parameters for the misfit profile.
+    '''
+    
     unbound = (-np.inf, np.inf)
-    spatial_bounds = (-max_x, max_x)
+    spatial_bounds = (-max_x/2., max_x/2.)
     non_negative = (0, np.inf)
+    positive = (1e-4, 100.)
     
     A_1 = [non_negative for i in xrange(n_funcs/2)]
     A_0 = [unbound for i in xrange(n_funcs/2)]
-    c_bounds = [non_negative for i in xrange(n_funcs)]
+    c_bounds = [positive for i in xrange(n_funcs)]
     x_bounds = [spatial_bounds for i in xrange(n_funcs)]
     
     if disl_type in 'edge':
@@ -156,40 +165,6 @@ def mc_step2d(N, max_x, energy_function, lims, K, shift, constraints, use_sym,
         E = np.inf
 
     return E, new_par
-
-def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
-                                                   use_sym=False, b=1, spacing=1):
-                                                              
-    # generate limits and constraints
-    if not energy_function:
-        raise ValueError("Energy function must be defined")
-
-    constraints, shift = supported_dislocation(disl_type)              
-    lims = make_limits2d(N, max_x, disl_type) 
-    
-    # run monte carlo simulation -> initialise optimimum parameters and 
-    # minimum energy to suitable dummy values
-    Emin = 1e6
-    x_opt = None
-    for i in xrange(n_iter):
-        if i % 100 == 0:
-            print("Starting iteration {}...".format(i))
-        E, x_try = mc_step2d(N, max_x, energy_function, lims, K, shift, constraints,
-                                                  use_sym, disl_type, b, spacing)
-        is_valid = True
-        
-        for j, param in enumerate(x_try):
-            if pn1.contained_in(param, lims[j]):
-                continue
-            else:
-                is_valid = False
-                break
-
-        if is_valid and (E < Emin):
-            Emin = E
-            x_opt = np.copy(x_try)
-            
-    return Emin, x_opt
     
 def supported_dislocation(disl_type):
     '''Check that <disl_type> is a supported dislocation type and return 
@@ -210,8 +185,7 @@ def supported_dislocation(disl_type):
             shift = [0., 0.5] 
            
         return constraints, shift
-    
-    
+      
 ### CONSTRAINTS ON THE A[:] COEFFICIENTS FOR A SCREW DISLOCATION
 
 def full_screw(params, *args):
@@ -269,3 +243,84 @@ def get_u2d(params, b, spacing, N, disl_type):
     uy = pn1.u_field(r, Ay, x0y, cy, b, bc=shift[1])
     
     return ux, uy
+    
+def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
+                                                   use_sym=False, b=1, spacing=1):
+                                                              
+    # generate limits and constraints
+    if not energy_function:
+        raise ValueError("Energy function must be defined")
+
+    constraints, shift = supported_dislocation(disl_type)              
+    lims = make_limits2d(N, max_x, disl_type) 
+    
+    # run monte carlo simulation -> initialise optimimum parameters and 
+    # minimum energy to suitable dummy values
+    Emin = 1e6
+    x_opt = None
+    for i in xrange(n_iter):
+        if i % 100 == 0:
+            print("Starting iteration {}...".format(i))
+        E, x_try = mc_step2d(N, max_x, energy_function, lims, K, shift, constraints,
+                                                  use_sym, disl_type, b, spacing)
+        is_valid = check_parameters2d(x_try, N, lims, disl_type)
+        
+        '''
+        is_valid = True
+        for j, param in enumerate(x_try):
+            if pn1.contained_in(param, lims[j]):
+                continue
+            else:
+                is_valid = False
+                break
+        '''
+        
+        if is_valid and (E < Emin):
+            Emin = E
+            x_opt = np.copy(x_try)
+            
+    return Emin, x_opt
+    
+def check_parameters2d(x_try, n_funcs, limits, disl_type):
+    '''Same as the check_parameters function in <pn_1D>, except for two 
+    components of displacement.
+    '''
+    
+    dist = 1e-1
+    
+    # extract edge and screw components
+    Aboth = x_try[:n_funcs]
+    x0both = x_try[n_funcs:2*n_funcs]
+    limits_x = limits[n_funcs]
+    cboth = x_try[2*n_funcs:]
+    limits_c = limits[2*n_funcs]
+    
+    A1, x01, c1, A2, x02, c2 = unzip_parameters(Aboth, x0both, cboth)
+    
+      
+    # check that none of the x0 have reached the bounds of the spatial region
+    # to which dislocations are constrained.
+    for x in (list(x01)+list(x02)):
+        if abs(x-limits_x[0]) < dist or abs(x-limits_x[-1]) < dist:
+            return False
+            
+    # check c parameters. 
+    for c in list(c1)+list(c2):
+        if abs(c-limits_c[-1]) < dist:
+            return False
+        elif c < limits_c[0]:
+            return False
+           
+    # Check that the component of disregistry perpendicular to the Burgers vector
+    # does not have large values for the coefficients A
+    A_max = 10.
+    if disl_type == 'edge':
+        A_perp = A2
+    else:
+        A_perp = A1
+        
+    for A in A_perp:
+        if abs(A) > A_max:
+            return False
+    
+    return True
