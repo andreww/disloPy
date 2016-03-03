@@ -310,6 +310,8 @@ class PNSim(object):
         # if restricting calculation to one component of displacement, extract
         # the appropriate energy coefficient.    
         if self.control('dimensions') == 1:
+            # store a copy of the edge and screw energy coefficients
+            self.K_store = self.K
             if self.control('disl_type').lower() == 'edge':
                 self.K = self.K[0]
             else:
@@ -504,7 +506,8 @@ class PNSim(object):
             outstream.write('Edge energy coefficient: {:.3f} eV/ang.\n'.format(self.K[0]))
             outstream.write('Screw energy coefficient: {:.3f} eV/ang.\n'.format(self.K[1]))
         else: # dimensions == 1
-            outstream.write('Energy coefficient: {:.3f} eV/ang\n'.format(self.K))
+            outstream.write('Edge energy coefficient: {:.3f} eV/ang.\n'.format(self.K_store[0]))
+            outstream.write('Screw energy coefficient: {:.3f} eV/ang.\n'.format(self.K_store[1]))
             
         outstream.write('\n\n')
         
