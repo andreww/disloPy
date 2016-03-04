@@ -164,7 +164,7 @@ def plot_rho(ax, rho, x, colour='b', width=1., a_val=0.40):
     '''Width should usually be equal to the spacing between atomic planes.
     '''
     
-    rho_disc = ax.bar(x[1:], rho, width, color=colour, align='center', alpha=a_val,  
+    rho_disc = ax.bar(x[:-1], rho, width, color=colour, align='center', alpha=a_val,  
                                              edgecolor=colour, label=r'$\rho(r)$')
     #plt.plot(x[1:], rho, '%sD' % colour)
     return rho_disc

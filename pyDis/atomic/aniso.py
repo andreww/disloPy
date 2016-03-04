@@ -8,8 +8,9 @@ import numpy as np
 import cmath
 import numpy.linalg as lin
 import sys
+sys.path.append('/home/richard/code_bases/dislocator2/')
 
-import crystal as cry
+from pyDis.atomic import crystal as cry
 
 CONV_EV_TO_GPA = 160.2176487
 
@@ -179,7 +180,7 @@ def solve_sextic(Cij, n=cry.ei(1), m=cry.ei(2)):
     
     return p, A, L
    
-def makeAnisoField(Cij):
+def makeAnisoField(Cij, m=, n=):
     '''Given an elastic constants matrix <Cij>, defines a function 
     <uAniso> that returns the displacement at <x> for a dislocation
     with Burgers vector <b>.
