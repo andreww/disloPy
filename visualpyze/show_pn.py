@@ -55,7 +55,7 @@ def integrate_field(x, rho, r, elasticfield):
     # add displacement fields of all partials together
     displace = np.zeros(3)
     for xi, partial in zip(r, rho):
-        xi = np.array([xi+dx/2., 0., 0.])
+        xi = np.array([xi, 0., 0.])
         displace += partial*elasticfield(x, xi)*dx
         
     return displace
@@ -66,12 +66,12 @@ def inelastic_displacement(x, u, r, disl_type):
     '''
     # 
     # only displace atoms above the glide plane
-    if x[1] <= 0:
+    if x[1] >= 0:
         return np.zeros(3)
 
     # if atom's x coordinate is > r_{i} and < r_{i+1}, displace the 
     # atom by amount u_{i}
-    node = np.where(r <= x[0])[0].max()
+    node = np.where(r < x[0])[0].max()
     disp_amount = u[node]
     
     # construct inelastic displacement vector appropriate to the 
@@ -102,7 +102,6 @@ def pn_displacement(x, r, edgefield=None, screwfield=None, uedge=None,
             
         # calculate inelastic displacement
         inelast_e = inelastic_displacement(x, uedge, r, 'edge')
-        #inelast_e = np.zeros(3)
     else:
         inelast_e = np.zeros(3)
 
