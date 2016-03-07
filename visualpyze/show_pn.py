@@ -7,6 +7,7 @@ from __future__ import print_function
 import numpy as np
 import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
+import matplotlib.pyplot as plt
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import aniso as an
@@ -24,9 +25,9 @@ def densify(rho, r, dx=0.1):
     
     # sample the dislocation distribution
     for i, x in enumerate(r_dense):
-        low_density_index = np.where(r > x)[0].max()
+        low_density_index = np.where(r > x)[0].min()
         rho_dense[i] = rho[low_density_index]
-        
+   
     return r_dense, rho_dense
     
 def restrict_rho(rho, r, threshold_ratio=1e-2):
@@ -54,7 +55,7 @@ def integrate_field(x, rho, r, elasticfield):
     # add displacement fields of all partials together
     displace = np.zeros(3)
     for xi, partial in zip(r, rho):
-        xi = np.array([xi, 0., x[-1]])
+        xi = np.array([xi+dx/2., 0., 0.])
         displace += partial*elasticfield(x, xi)*dx
         
     return displace
@@ -70,7 +71,7 @@ def inelastic_displacement(x, u, r, disl_type):
 
     # if atom's x coordinate is > r_{i} and < r_{i+1}, displace the 
     # atom by amount u_{i}
-    node = np.where(x[0] > r)[0].max()
+    node = np.where(r <= x[0])[0].max()
     disp_amount = u[node]
     
     # construct inelastic displacement vector appropriate to the 
@@ -101,6 +102,7 @@ def pn_displacement(x, r, edgefield=None, screwfield=None, uedge=None,
             
         # calculate inelastic displacement
         inelast_e = inelastic_displacement(x, uedge, r, 'edge')
+        #inelast_e = np.zeros(3)
     else:
         inelast_e = np.zeros(3)
 
@@ -121,19 +123,20 @@ def pn_displacement(x, r, edgefield=None, screwfield=None, uedge=None,
     # calculate dislocation density
     if uedge != None:
         rho_e = pn1.rho(uedge, r)
-        rd_e, rhod_e = densify(rho_e, r[1:])
-        # filter
-        rbig_e, rhobig_e = restrict_rho(rhod_e, rd_e)
-        elast_e = integrate_field(x, rhobig_e, rbig_e, edgefield)
+        #rd_e, rhod_e = densify(rho_e, r[1:])
+        
+        # restrict integration to region with substantial dislocation density
+        rsig_e, rhosig_e = restrict_rho(rho_e, r)
+        elast_e = integrate_field(x, rhosig_e, rsig_e, edgefield)
     else:
         elast_e = np.zeros(3)
 
     if uscrew != None:
         rho_s = pn1.rho(uscrew, r)
-        rd_s, rhod_s = densify(rho_s, r[1:])
+        #rd_s, rhod_s = densify(rho_s, r[1:], r[1]-r[0])
         # filter
-        rbig_s, rhobig_s = restrict_rho(rhod_s, rd_s)
-        elast_s = integrate_field(x, rhobig_s, rbig_s, screwfield)
+        rsig_s, rhosig_s = restrict_rho(rhod_s, rd_s)
+        elast_s = integrate_field(x, rhosig_s, rsig_s, screwfield)
     else:
         elast_s = np.zeros(3)
         
