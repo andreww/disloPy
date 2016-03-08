@@ -180,7 +180,7 @@ def solve_sextic(Cij, n=cry.ei(1), m=cry.ei(2)):
     
     return p, A, L
    
-def makeAnisoField(Cij, m=, n=):
+def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
     '''Given an elastic constants matrix <Cij>, defines a function 
     <uAniso> that returns the displacement at <x> for a dislocation
     with Burgers vector <b>.

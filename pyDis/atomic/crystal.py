@@ -6,14 +6,14 @@ import numpy.linalg as L
 
 # Define helper functions
 
-def ei(i,usetype=float):
+def ei(i, usetype=float):
     '''Constructs orthonormal basis vector with i-th element = 1.
     '''
-    ei = np.zeros(3,dtype=usetype)
+    ei = np.zeros(3, dtype=usetype)
     ei[i-1] = 1
     return ei
     
-def fracToCart(fracCoords,cellVectors):
+def fracToCart(fracCoords, cellVectors):
     '''Converts the atoms in a basis to have Cartesian coordinates.
     DOES NOT OVERWRITE ORIGINAL DATA.
     '''
@@ -23,14 +23,14 @@ def fracToCart(fracCoords,cellVectors):
         newCoords += fracCoords[i] * np.copy(cellVectors[i])
     return newCoords
     
-def cartToFrac(cartCoords,cellVectors):
+def cartToFrac(cartCoords, cellVectors):
     '''Converts cartesian coordinates to atomic coordinates. 
     Generalise later.
     '''
     newCoords = np.zeros(3)
     for i in range(3):
-        numer = np.dot(cartCoords,cellVectors[i])
-        denom = np.dot(cellVectors[i],cellVectors[i])
+        numer = np.dot(cartCoords, cellVectors[i])
+        denom = np.dot(cellVectors[i], cellVectors[i])
         newCoords[i] = numer/denom
     return newCoords
     
@@ -48,27 +48,31 @@ class Atom(object):
     atom in the basis. Provides functionality for rotating.
     '''
     
-    def __init__(self,atomicSymbol,coordinates=np.zeros(3)):
+    def __init__(self, atomicSymbol, coordinates=np.zeros(3)):
         # Assume atomicSymbol correct, allows for more general names
         self.__species = atomicSymbol
         self.__coordinates = np.copy(coordinates)
+        
         # displaced coordinates stores any displacement due to an elastic
         # field. Initialise to u(x,y,z) = 0 for all x,y,z, but can modify.
         # Used so that edge dislocation core energies can be defined properly.
         self.__displacedCoordinates = np.copy(coordinates)
+        
         # member variable .__write tells us whether to write atom to output.
         # <True> for most applications, but may be <False> when inserting 
         # impurities.
         self.__write = True
+        
         # set constraints -> defaults to free optimization
-        self._constraints = np.ones(3,dtype=int)
+        self._constraints = np.ones(3, dtype=int)
         self.has_constraints = False
+        
         # index is a dummy which can be used if weird indices need to be assigned
         # to atoms (see eg. the format for constraints in CASTEP)        
         self.index = None
         return
     
-    def set_constraints(self,new_constraint):
+    def set_constraints(self, new_constraint):
         '''Sets optimization constraints, defaulting to optimize freely.
         '''
         
@@ -79,22 +83,22 @@ class Atom(object):
         return np.copy(self._constraints)
         
     def __str__(self):
-        return '%s %.3f %.3f %.3f' % (self.__species,self.__coordinates[0],
-                                    self.__coordinates[1],self.__coordinates[2])
+        return '%s %.3f %.3f %.3f' % (self.__species, self.__coordinates[0],
+                                    self.__coordinates[1], self.__coordinates[2])
         
-    def rotate(self,ax=np.array([1,0,0]),theta=0.0):
+    def rotate(self, ax=np.array([1, 0, 0]), theta=0.0):
         # See above, but for atoms. May define a new function in the 
         # namespace of this module to handle the actual rotating.
         # CURRENTLY DUMMY
         pass
         
-    def setSpecies(self,newSpecies):
+    def setSpecies(self, newSpecies):
         self.__species = newSpecies
         
-    def setCoordinates(self,newCoordinates):
+    def setCoordinates(self, newCoordinates):
         self.__coordinates = np.copy(newCoordinates)
         
-    def setDisplacedCoordinates(self,newCoordinates):
+    def setDisplacedCoordinates(self, newCoordinates):
         self.__displacedCoordinates = np.copy(newCoordinates)
         
     def normaliseCoordinates(self, cellA=1, cellB=1, cellC=1):
@@ -102,7 +106,7 @@ class Atom(object):
         given factors. Useful for setting up supercell calculations.
         '''
 
-        normalisationFactor = np.array([float(cellA),float(cellB),
+        normalisationFactor = np.array([float(cellA), float(cellB),
                                         float(cellC)])
         self.__coordinates = self.__coordinates/normalisationFactor
         self.__displacedCoordinates = (self.__displacedCoordinates 
@@ -150,7 +154,7 @@ class Atom(object):
                                     
     def copy(self):
         # copy over everything but the displacement field
-        new_atom = Atom(self.getSpecies(),self.getCoordinates())
+        new_atom = Atom(self.getSpecies(), self.getCoordinates())
         # ...then copy the displaced coordinates
         new_atom.setDisplacedCoordinates(self.getDisplacedCoordinates())
         # check to see if atom is writable to output
@@ -160,7 +164,7 @@ class Atom(object):
             new_atom.switchOutputMode()      
         return new_atom
         
-    def write(self,write_function,defected=True,add_constraints=False):
+    def write(self, write_function, defected=True, add_constraints=False):
         '''Writes the coordinates of an atom to <write_function>, which is 
         typicall either the print function or an I/O stream.
         '''
@@ -178,12 +182,13 @@ class Atom(object):
         else:
             coords = self.getCoordinates()
             
-        write_function(atomFormat % (self.getSpecies(),coords[0],coords[1],coords[2]))
-
+        write_function(atomFormat % (self.getSpecies(), coords[0], coords[1],
+                                                            coords[2]))
+                                                            
         # add constraints, if necessary
         if add_constraints:
-            write_function(' %d %d %d\n' % (self._constraints[0],self._constraints[1],
-                                                                      self._constraints[2]))
+            write_function(' %d %d %d\n' % (self._constraints[0], self._constraints[1],
+                                                                 self._constraints[2]))
         else:
             write_function('\n')
                                                                      
@@ -195,19 +200,19 @@ class Lattice(object):
     functionality for coordinate transforms, etc.
     '''
     
-    def __init__(self,x=ei(1),y=ei(2),z=ei(3)):
+    def __init__(self, x=ei(1), y=ei(2), z=ei(3)):
         # <x>, <y>, <z> are 3*1 np arrays. If no arguments are given,
         # set all lattice vectors to zero.
         self.__a = np.copy(x)
         self.__b = np.copy(y)
         self.__c = np.copy(z)
         
-    def rotate(self,ax=np.array([0,0,1]),theta=0.0):
+    def rotate(self, ax=np.array([0, 0, 1]), theta=0.0):
         # rotates around <ax> (a numpy array) by <theta> (in degrees).
         # Currently just a Dummy function
         pass
         
-    def scale(self,scaleFactor):
+    def scale(self, scaleFactor):
         # scales all lattice vectors by <scaleVector>. Useful for 
         # isostructural materials
         self.__a = scaleFactor*self.__a
@@ -259,21 +264,21 @@ class Lattice(object):
             # add actual exception later.
             
     def getLattice(self):
-        return np.array([self.getA(),self.getB(),self.getC()])
+        return np.array([self.getA(), self.getB(), self.getC()])
         
     def copy(self):
         '''Copy constructor for the <Lattice> class.
         '''
-        return Lattice(self.getA(),self.getB(),self.getC())
+        return Lattice(self.getA(), self.getB(), self.getC())
         
-    def writeLattice(self,write_function):
+    def writeLattice(self, write_function):
         if write_function == print:
             end = ''
         else:
             end = '\n'
-        write_function('%.4f %.4f %.4f%s' % (self.__a[0],self.__a[1],self.__a[2],end))
-        write_function('%.4f %.4f %.4f%s' % (self.__b[0],self.__b[1],self.__b[2],end))
-        write_function('%.4f %.4f %.4f%s' % (self.__c[0],self.__c[1],self.__c[2],end))
+        write_function('%.4f %.4f %.4f%s' % (self.__a[0], self.__a[1], self.__a[2], end))
+        write_function('%.4f %.4f %.4f%s' % (self.__b[0], self.__b[1], self.__b[2], end))
+        write_function('%.4f %.4f %.4f%s' % (self.__c[0], self.__c[1], self.__c[2], end))
         
     def setLattice(self, otherLattice):
         '''Sets <self> equal to some <otherLattice>.
@@ -299,7 +304,7 @@ class Basis(object):
         
         self.__init__()
         
-    def addAtom(self,newAtom):
+    def addAtom(self, newAtom):
         '''Appends the <Atom> object <newAtom> to the basis.
         '''
         self._atoms.append(newAtom.copy())
@@ -308,7 +313,7 @@ class Basis(object):
     def getAtoms(self):
         return self._atoms
         
-    def removeAtom(self,i):
+    def removeAtom(self, i):
         '''Removes i-th atom.
         '''
         del self._atoms[i]
@@ -329,7 +334,7 @@ class Basis(object):
                 basisString += ('\n' + str(atom))
         return basisString
 
-    def __getitem__(self,key):
+    def __getitem__(self, key):
         '''Note that if key is a slice, the returned object will only have copies
         of atoms in its range, rather than references. In contrast, if key is an
         integer then it will return the object self._atoms[key].
@@ -376,7 +381,7 @@ class Basis(object):
             tempBasis.addAtom(atom)
         return tempBasis
         
-    def setBasis(self,otherBasis):
+    def setBasis(self, otherBasis):
         '''Sets basis equal to input basis. Although unnecessary for working
         with bases, this function is needed to define a robust copy 
         constructor for the <Crystal> class.
@@ -400,13 +405,13 @@ class Basis(object):
             atom.translateAtom(disp_vec, reset_disp, modulo)
         return    
         
-    def applyField(self,fieldType,disCores,disBurgers,Sij=0):
+    def applyField(self, fieldType, disCores, disBurgers, Sij=0):
         '''Total displacement due to many dislocations.
         '''
         for atom in self:
-            self.totalDisplacement(fieldType,atom,disCores,disBurgers,Sij)
+            self.totalDisplacement(fieldType, atom, disCores, disBurgers, Sij)
             
-    def totalDisplacement(self,u,atom,disCores,disBurgers,Sij=0):
+    def totalDisplacement(self, u, atom, disCores, disBurgers, Sij=0):
         '''Sums the displacements at x due to each dislocation in <disCores>, with
         Burgers vectors given in <disBurgers> and <Sij> are the relevant elasticity
         parameters.
@@ -419,9 +424,9 @@ class Basis(object):
         x = atom.getCoordinates() 
         
         # apply displacements due to each dislocation                              
-        uT = np.array([0.,0.,0.])
+        uT = np.array([0., 0., 0.])
         for i in range(len(disCores)):
-            uT += u(x,disBurgers[i],disCores[i],Sij)
+            uT += u(x, disBurgers[i], disCores[i], Sij)
             
         # Apply displacement to atomic coordinates
         x += uT
@@ -433,7 +438,7 @@ class Basis(object):
         '''
 
         for atom in self:
-            atom.write(outstream.write,defected,add_constraints)
+            atom.write(outstream.write, defected, add_constraints)
 
         return
         
@@ -441,8 +446,8 @@ class Crystal(Basis, Lattice):
     '''Crystal is defined as a lattice with a basis.
     '''
     
-    def __init__(self,a=ei(1),b=ei(2),c=ei(3)):
-        Lattice.__init__(self,a,b,c)
+    def __init__(self, a=ei(1), b=ei(2), c=ei(3)):
+        Lattice.__init__(self, a, b, c)
         Basis.__init__(self)
         
     def copy(self):
@@ -455,7 +460,7 @@ class Crystal(Basis, Lattice):
         newCrystal.setLattice(self)
         return newCrystal
         
-    def applyField(self,fieldType,disCores,disBurgers,Sij=0):
+    def applyField(self, fieldType, disCores, disBurgers, Sij=0):
         '''Total displacement due to many dislocations. Use the first two 
         rings of quadrupoles around the central quadrupole (ie. periodic images
         out to m=n=2), which leads to mostly converged field values. Unlike for
@@ -472,16 +477,16 @@ class Crystal(Basis, Lattice):
                 for b in disBurgers:
                     newBurgers.append(b)
                 for x in disCores:
-                    newX = np.array([x[0]+n,x[1]+m])
+                    newX = np.array([x[0]+n, x[1]+m])
                     newCores.append(newX.copy())
                 
         newBurgers = np.array(newBurgers)
         newCores = np.array(newCores)
         
         for atom in self:
-            self.totalDisplacement(fieldType,atom,newCores,newBurgers,Sij)
+            self.totalDisplacement(fieldType, atom, newCores, newBurgers, Sij)
         
-    def totalDisplacement(self,u,atom,disCores,disBurgers,Sij=0):
+    def totalDisplacement(self, u, atom, disCores, disBurgers, Sij=0):
         '''Sums the displacements at x due to each dislocation in <disCores>, with
         Burgers vectors given in <disBurgers> and <Sij> are the relevant elasticity
         parameters. Normalises displacements by ratio of sidelengths to Burgers vector
@@ -493,16 +498,16 @@ class Crystal(Basis, Lattice):
             print('not match. Exiting...')
             sys.exit(1)
             
-        cartCoords = fracToCart(atom.getCoordinates(),self.getLattice()) 
+        cartCoords = fracToCart(atom.getCoordinates(), self.getLattice()) 
                                      
-        uT = np.array([0.,0.,0.])
+        uT = np.array([0., 0., 0.])
         for i in range(len(disCores)):
             # Must convert the dislocation core locations to cartesian 
             # coordinates. Note that dislocation core locations are given
             # in terms of the crystallographic directions.
             disCoresCart = (disCores[i][0]*self.getA()
                             + disCores[i][1]*self.getB())[:2]
-            uT += u(cartCoords,disBurgers[i],disCoresCart,Sij)
+            uT += u(cartCoords, disBurgers[i], disCoresCart, Sij)
             
         # Apply displacement to atomic coordinates
         cartCoords += uT
@@ -525,7 +530,7 @@ def superConstructor(baseCell, dims=np.ones(3), reset_disp=False):
     
     #superCell = Crystal(superA,superB,superC)
     # Let's try to make this work for subclasses of <Crystal> (eg. CastepCrystal)
-    superCell = type(baseCell)(superA,superB,superC)
+    superCell = type(baseCell)(superA, superB, superC)
     
     # Define the incremental displacement lengths
     dx = 1./dims[0]
@@ -540,7 +545,7 @@ def superConstructor(baseCell, dims=np.ones(3), reset_disp=False):
                 for k in range(int(dims[2])):
                     superAtom = basisAtom.copy()
                     superAtom.normaliseCoordinates(dims[0], dims[1], dims[2])
-                    superAtom.translateAtom(np.array([i*dx,j*dy,k*dz]), reset_disp)
+                    superAtom.translateAtom(np.array([i*dx, j*dy, k*dz]), reset_disp)
                     superCell.addAtom(superAtom)                    
                                                                                                                                                          
     return superCell 

@@ -9,9 +9,12 @@ their own modules. If you want to implement a minor helper function, this is the
 module to do it in.
 '''
 
-from __future__ import print_function,division
+from __future__ import print_function, division
 
-import crystal as cry
+import sys
+sys.path.append('/home/richard/code_bases/dislocator2/')
+
+from pyDis.atomic import crystal as cry
 
 def read_file(filename,path='./', return_str=False):
     '''Reads a file and prepares it for parsing. Has the option to return the
@@ -82,3 +85,29 @@ def isiter(x):
     except TypeError:
         return False
 
+def write_xyz(input_crystal, filename, defected=False, description='xyz file',
+                                                            to_cart=False):
+    '''Writes the atoms in <input_basis> to the specified .xyz file. 
+    '''
+    
+    xyz_file = open(filename, 'w')
+    xyz_file.write('{}\n'.format(len(input_crystal)))
+    xyz_file.write('{}\n'.format(description))
+    
+    for atom in input_crystal:
+        # write coordinates in deformed crystal if <defected> is True
+        if defected:
+            x = atom.getDisplacedCoordinates()
+        else:
+            x = atom.getCoordinates()
+            
+        # convert to Cartesian coordinates if <to_cart> is True. This is of 
+        # particular relevance when the <input_crystal> is 3D periodic, in which
+        # case the atomic coordinates are likely expressed in fractional coordinates
+        if to_cart:
+            x = cry.fracToCart(x, input_crystal.getLattice())
+        
+        xyz_file.write('{} {:.6f} {:.6f} {:.6f}\n'.format(atom.getSpecies(), x[0],
+                                                                       x[1], x[2]))    
+        
+    xyz_file.close()

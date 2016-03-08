@@ -37,7 +37,7 @@ def make_slab(unit_cell, num_layers, vacuum=0.0, d_fix=5., free_atoms=[], axis=-
     # constraint will be applied
     if vacuum > 1e-10:
         print('Non-zero vacuum buffer. Proximity constraint to be used ' +
-                  'with d_fix = %.1f.' % d_fix)
+                  'with d_fix = {.1f}.'.format(d_fix))
         use_vacuum = True
     else:
         print('3D-periodic boundary conditions. Proximity constraints' +
@@ -92,8 +92,8 @@ def write_gulp_slab(outStream, slab, disp_vec, system_info):
     outStream.write('opti\n')
     outStream.write('vectors\n')
     for vector in slab.getLattice():
-        outStream.write('%.6f %.6f %.6f\n' % 
-                        (vector[0], vector[1], vector[2]))
+        outStream.write('{:.6f} {:.6f} {:.6f}\n'.format(vector[0], vector[1],
+                                                                   vector[2]))
                         
     # add constraints to fix all cell vectors
     outStream.write('0 0 0 0 0 0\n')
@@ -174,10 +174,10 @@ def gs_sampling(lattice, resolution=0.25, limits=[1., 1.]):
     Ny = int(Ny)   
     if Nx % 2 == 1:
         Nx = Nx + 1
-        print("Incrementing Nx to make value even. New value is %d." % Nx)
+        print("Incrementing Nx to make value even. New value is {}.".format(Nx))
     if Ny % 2 == 1:
         Ny = Ny + 1
-        print("Incrementing Ny to make value even. New value is %d." % Ny)
+        print("Incrementing Ny to make value even. New value is {}.".format(Ny))
     return Nx, Ny
     
 def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1), limits=1.):
@@ -191,7 +191,7 @@ def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1), limits=1.):
     # Make sure that N is an even integer
     if N % 2 == 1:
         N = N + 1
-        print("Incrementing N to make value even. New value is %d." % N)
+        print("Incrementing N to make value even. New value is {}.".format(N))
         
     return N
 
@@ -219,12 +219,8 @@ def gamma_line(slab, line_vec, resolution, write_fn, sys_info, limits=1.0,
         else: # use current directory   
             outstream = open('{}.{}'.format(gsf_name, suffix), 'w')
             
-        if relax != None:
-            write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
-                                        add_constraints=True, relax_type=relax)
-        else:
-            write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
-                                        add_constraints=True)
+        write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
+                                   add_constraints=True, relax_type=relax)
         
     return  
 
@@ -245,7 +241,7 @@ def gamma_surface(slab, resolution, write_fn, sys_info, basename='gsf',
     # iterate over displacement vectors in the gamma surface (ie. (001))
     for n in range(0, N+1):
         for m in range(0, M+1):
-            gsf_name = '%s.%d.%d' % (basename, n, m)
+            gsf_name = '{}.{}.{}'.format(basename, n, m)
             # insert vector into slab
             disp_vec = cry.ei(1)*n*limits[0]/float(N) + cry.ei(2)*m*limits[1]/float(M)
             insert_gsf(slab, disp_vec, vacuum=vacuum)

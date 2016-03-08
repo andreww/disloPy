@@ -203,6 +203,7 @@ def main():
         else:
             pass
     elif args.simulation_type == 'gline':      
+        print(args.line_vec)
         gsf.gamma_line(new_slab, np.array(args.line_vec), args.res, write_fn,  
                            sys_info, suffix=suffix, limits=args.max_x,  
                            basename=args.sim_name, vacuum=args.vac, relax=relax)

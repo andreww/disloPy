@@ -71,7 +71,7 @@ def inelastic_displacement(x, u, r, disl_type):
 
     # if atom's x coordinate is > r_{i} and < r_{i+1}, displace the 
     # atom by amount u_{i}
-    node = np.where(r < x[0])[0].max()
+    node = np.where(r <= x[0])[0].max()
     disp_amount = u[node]
     
     # construct inelastic displacement vector appropriate to the 
@@ -126,7 +126,7 @@ def pn_displacement(x, r, edgefield=None, screwfield=None, uedge=None,
         
         # restrict integration to region with substantial dislocation density
         rsig_e, rhosig_e = restrict_rho(rho_e, r)
-        elast_e = integrate_field(x, rhosig_e, rsig_e, edgefield)
+        elast_e = integrate_field(x+inelast, rhosig_e, rsig_e, edgefield)
     else:
         elast_e = np.zeros(3)
 
@@ -135,7 +135,7 @@ def pn_displacement(x, r, edgefield=None, screwfield=None, uedge=None,
         #rd_s, rhod_s = densify(rho_s, r[1:], r[1]-r[0])
         # filter
         rsig_s, rhosig_s = restrict_rho(rhod_s, rd_s)
-        elast_s = integrate_field(x, rhosig_s, rsig_s, screwfield)
+        elast_s = integrate_field(x+inelast, rhosig_s, rsig_s, screwfield)
     else:
         elast_s = np.zeros(3)
         

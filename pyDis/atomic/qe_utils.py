@@ -141,7 +141,11 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
         outstream.write(' {}\n'.format(block))
         for variable in sys_info['namelists'][block]:
             if variable == 'calculation':
-                outstream.write('    calculation = \'{}\'\n'.format(relax_type))
+                if relax_type != None:
+                    outstream.write('    calculation = \'{}\'\n'.format(relax_type))
+                else:
+                    print("No calculation type specified; defaulting to scf")
+                    outstream.write('    calculation = \'scf\'\n')
             elif variable == 'nat':
                 outstream.write('    nat = %d\n' % len(qe_struc))
             else:
