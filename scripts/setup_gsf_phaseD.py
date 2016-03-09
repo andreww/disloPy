@@ -10,7 +10,7 @@ from pyDis.pn import  gsf_setup as gsf
 path_to_phased = './'
 sc_length = 6 # Number of unit cells along z
               # must be an even number in this case.
-spacing = (8, 8) # Number of points in a and b
+resolution = 0.33 # Spacing of points in x and y
 
 phaseD = cas.CastepCrystal()
 sys_info = cas.parse_castep('phaseD.cell', phaseD,
@@ -20,6 +20,6 @@ phaseD.translate_cell(0.02*cry.ei(3))
 slab = gsf.make_slab(phaseD,sc_length, free_atoms=['Mg', 'O', 'H'])
 atm.scale_kpoints(sys_info['mp_kgrid'],np.array([1,1,sc_length]))
 
-gsf.gamma_surface(slab,spacing,cas.write_castep,sys_info,
+gsf.gamma_surface(slab,resolution,cas.write_castep,sys_info,
                    basename='gsf_phaseD',suffix='cell', limits=(0.5, 0.5),
                    mkdir=True)
