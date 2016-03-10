@@ -164,9 +164,10 @@ def plot_rho(ax, rho, x, colour='b', width=1., a_val=0.40):
     '''Width should usually be equal to the spacing between atomic planes.
     '''
     
-    rho_disc = ax.bar(x[:-1], rho, width, color=colour, align='center', alpha=a_val,  
-                                             edgecolor=colour, label=r'$\rho(r)$')
-    #plt.plot(x[1:], rho, '%sD' % colour)
+    #rho_disc = ax.bar(x[:-1], rho, width, color=colour, align='center', alpha=a_val,  
+    #                                         edgecolor=colour, label=r'$\rho(r)$')
+    rho_disc = ax.plot(x[:-1], rho, '{}D'.format(colour), label=r'$\rho(r)$')
+    ax.plot(x[:-1], rho, '{}{}'.format(colour, '-.'))
     return rho_disc
     
 def plot_u(ax, u, x, colour='r', shape='s', linestyle='-.'):
@@ -190,7 +191,9 @@ def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True):
     # that point) of 1. ie. divide by ||b||/spacing, since ||b|| = height*spacing
     rho_vals /= b/spacing
     
-    rho_disc = plot_rho(ax, rho_vals, x, colour=rho_col, width=spacing)
+    mid_dist = (x[1]-x[0])/2.
+    
+    rho_disc = plot_rho(ax, rho_vals, x+mid_dist, colour=rho_col, width=spacing)
     plt.xlim(-30*spacing, 30*spacing)
     plt.ylim(0, 1.05)
     plt.tick_params(axis='y', which='both', left='off', right='off',

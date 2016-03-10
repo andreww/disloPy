@@ -66,7 +66,7 @@ def get_gsf_energy(energy_regex, prog, base_name, suffix, i, j=None, indir=False
         filename = '{}/{}.{}'.format(name_format, name_format, suffix)
     else:
         filename = '{}.{}'.format(name_format, suffix)
-    print(filename)
+
     outfile = open(filename)
     output_lines = outfile.read()
     outfile.close()
@@ -141,9 +141,14 @@ def main():
                                    
                 if energies[i] != energies[i]:
                     # gamma line not computed accurately; raise error
-                    raise ValueError("Too many NaN values.")
-            
-            outstream.write("{} {:.6f}\n".format(i, energies[i]))
+                    # raise ValueError("Too many NaN values.")
+                    #!!! Temporarily removed for 1D -> going to try simply
+                    #!!! ignoring that point on the gamma line.
+                    pass
+                else:
+                    outstream.write("{} {:.6f}\n".format(i, energies[i]))
+            else:
+                outstream.write("{} {:.6f}\n".format(i, energies[i]))
             
     else: # gamma surface
         energies = np.zeros((args.x_max+1, args.y_max+1))

@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import aniso as an
+from pyDis.atomic import atomistic_utils as atm
 from pyDis.pn import pn_1D as pn1
 from pyDis.pn import pn_2D as pn2
 
@@ -141,3 +142,32 @@ def pn_displacement(x, r, edgefield=None, screwfield=None, uedge=None,
         
     elast = elast_e + elast_s
     return elast + inelast
+    
+def pn_core(input_crystal, r, xyzname, edgefield=None, screwfield=None, uedge=None,
+             uscrew=None, normal_shift=0., display_radius=None):
+    '''Displaces all atoms in the <input_crystal> by an amount specified by 
+    an input Peierls-Nabarro solution, and outputs the result to a .xyz file. 
+    <normal> is the shift that should be applied to the coordinates of all
+    atoms (along the glide plane normal).
+    '''
+    
+    # construct shift vector
+    shift = np.array([0., normal_shift, 0.])
+           
+    for atom in input_crystal:
+        x = atom.getCoordinates()
+        x += shift
+        
+        # calculate the displacement due to the presence of finite dislocation
+        # density
+        dx = pn_displacement(x, r, edgefield=edgefield, screwfield=screwfield,
+                                                   uedge=uedge, uscrew=uscrew)
+        atom.setDisplacedCoordinates(x + dx)
+        
+    atm.write_xyz(input_crystal, xyzname, defected=True, r=display_radius)
+    return
+        
+        
+        
+        
+        

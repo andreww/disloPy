@@ -13,6 +13,8 @@ from __future__ import print_function, division
 
 import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
+from numpy.linalg import norm
+import numpy as np
 
 from pyDis.atomic import crystal as cry
 
@@ -86,15 +88,22 @@ def isiter(x):
         return False
 
 def write_xyz(input_crystal, filename, defected=False, description='xyz file',
-                                                            to_cart=False):
+                                                       to_cart=False, r=np.inf):
     '''Writes the atoms in <input_basis> to the specified .xyz file. 
     '''
     
-    xyz_file = open(filename, 'w')
-    xyz_file.write('{}\n'.format(len(input_crystal)))
-    xyz_file.write('{}\n'.format(description))
+
+    xyz_lines = ''
+    natoms = 0
     
     for atom in input_crystal:
+        # check that atom is to be written to output
+        if norm(atom.getDisplacedCoordinates()[:-1]) > r:
+            continue
+        
+        #else
+        natoms += 1
+            
         # write coordinates in deformed crystal if <defected> is True
         if defected:
             x = atom.getDisplacedCoordinates()
@@ -107,7 +116,12 @@ def write_xyz(input_crystal, filename, defected=False, description='xyz file',
         if to_cart:
             x = cry.fracToCart(x, input_crystal.getLattice())
         
-        xyz_file.write('{} {:.6f} {:.6f} {:.6f}\n'.format(atom.getSpecies(), x[0],
-                                                                       x[1], x[2]))    
+        xyz_lines += '{} {:.6f} {:.6f} {:.6f}\n'.format(atom.getSpecies(), x[0],
+                                                                     x[1], x[2])
+                                                                     
+    xyz_file = open(filename, 'w')
+    xyz_file.write('{}\n'.format(natoms))
+    xyz_file.write('{}\n'.format(description))
+    xyz_file.write(xyz_lines)
         
     xyz_file.close()
