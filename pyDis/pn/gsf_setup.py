@@ -185,8 +185,14 @@ def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1), limits=1.):
     specified <resolution>.
     '''
     
-    # need to rewrite for general <vector>
-    N = ceiling(abs(limits)*norm(lattice[0])/resolution)
+
+    # transform Burgers vector in cartesian coordinates
+    burgers = np.zeros(3)
+    for i in range(3):
+        burgers = vector[i] * lattice[i]
+
+    # get minimum number of samples required for desired resolution   
+    N = ceiling(abs(limits)*norm(burgers)/resolution)
     N = int(N)
     # Make sure that N is an even integer
     if N % 2 == 1:
