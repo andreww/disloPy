@@ -189,7 +189,7 @@ def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1), limits=1.):
     # transform Burgers vector in cartesian coordinates
     burgers = np.zeros(3)
     for i in range(3):
-        burgers = vector[i] * lattice[i]
+        burgers += vector[i] * lattice[i]
 
     # get minimum number of samples required for desired resolution   
     N = ceiling(abs(limits)*norm(burgers)/resolution)
@@ -198,7 +198,7 @@ def gl_sampling(lattice, resolution=0.25, vector=cry.ei(1), limits=1.):
     if N % 2 == 1:
         N = N + 1
         print("Incrementing N to make value even. New value is {}.".format(N))
-        
+    
     return N
 
 def gamma_line(slab, line_vec, resolution, write_fn, sys_info, limits=1.0, 

@@ -151,7 +151,8 @@ def handle_pn_control(test_dict):
                      ('use_sym', {'default':True, 'type':to_bool}),
                      ('plot', {'default':False, 'type':to_bool}),
                      ('plot_name', {'default':'pn_plot.tif', 'type':str}),
-                     ('plot_both', {'default':False, 'type':to_bool})
+                     ('plot_both', {'default':False, 'type':to_bool}),
+                     ('noisy', {'default': False, 'type': to_bool})
                    )
 
     # cards for the <&struc> namelist. Need to find some way to incorporate 
@@ -346,7 +347,8 @@ class PNSim(object):
                                                energy_function=self.gsf,
                                                use_sym=self.control('use_sym'),
                                                b=self.struc('burgers'),
-                                               spacing=self.struc('spacing')
+                                               spacing=self.struc('spacing'),
+                                               noisy=self.control('noisy')
                                               ) # Done Monte Carlo 1D
         elif self.control('dimensions') == 2:
             self.E, self.par = pn2.run_monte2d(
@@ -358,7 +360,8 @@ class PNSim(object):
                                                energy_function=self.gsf,
                                                use_sym=self.control('use_sym'),
                                                b=self.struc('burgers'),
-                                               spacing=self.struc('spacing')
+                                               spacing=self.struc('spacing'),
+                                               noisy=self.control('noisy')
                                               ) # Done Monte Carlo 2D              
                                                             
         return

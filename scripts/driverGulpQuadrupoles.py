@@ -7,7 +7,7 @@ import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from pyDis.atomic import crystal as cry
-from pyDis.atomic import disField as df
+from pyDis.atomic import fields as df
 from pyDis.atomic import gulpUtils as gulp
 
 import numpy as np
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     #disCores = np.array([core1+np.array([0.5,0.]),core1+np.array([0.5,0.5])])
     ######
                 
-    superGulp.applyField(df.anisotropicScrewField,disCores,disBurgers,Sij=sij)
+    superGulp.applyField(df.anisotropicScrewField, disCores, disBurgers, Sij=sij)
     moduloCoords(superGulp)
                 
     relaxType = 'conv'

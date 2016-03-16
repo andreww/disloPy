@@ -4,21 +4,24 @@ from __future__ import print_function,division
 import numpy as np
 import re
 import sys
+sys.path.append('/home/richard/code_bases/dislocator2/')
 import numpy.linalg as L
 
 ## temporary path definition -> will generalise later
 #sys.path.append('/home/richard/code_bases/pyDis_pn/') 
 
-# need to shift the relevant functions to a simulation method-agnostic module                        
-from ../pn._pn_control import control_file,from_mapping,change_type,change_or_map, \ 
-                            print_control   
+#!!! need to shift the relevant functions to a simulation method-agnostic module  
+from pyDis.pn._pn_control import control_file, from_mapping, change_type, to_bool,
+                                            change_or_map, print_control   
                             
 # import modules required to set up and run a dislocation simulation
-import gulpUtils as gulp
-import crystal as cry
-import rodSetup as rod
-import disField as fields
-import aniso
+from pyDis.atomic import gulpUtils as gulp
+from pyDis.atomic import qe_utils as qe
+from pyDis.atomic import castep_utils as castep
+from pyDis.atomic import crystal as cry
+from pyDis.atomic import rodSetup as rod
+from pyDis.atomic import fields
+from pyDis.atomic import aniso
 
 def vector(vec_str):
     '''Converts a string of the form "[x1,x2,...,xn]" to a numpy array.
@@ -57,6 +60,52 @@ def handle_atomistic_control(test_dict):
     '''
     
     # cards for the <&control> namelist
+    #!!! Should we accommodate array-based jobs?
+    control_cards = (('unit_cell', {'default': None, 'type': str}),
+                     ('calc_type', {'default': None, 'type': str}),
+                     ('program', {'default': None, 'type': str}),
+                     ('run_sim', {'default': False, 'type': to_bool}),
+                     ('simulation_name', {'default': 'dis', 'type': str}),
+                     ('suffix', {'default': 'in', 'type': str}),
+                     ('executable', {'default': None, 'type': str})
+                    )
+    
+    # cards for the <&elast> namelist               
+    elast_cards = (('burgers', {'default': cry.ei(3), 'type': vector}),
+                   ('bulk', {'default': None, 'type': float}),
+                   ('shear' {'default': None, 'type': float}),
+                   ('possion', {'default': None, 'type': float}),
+                   ('in_gpa', {'default': True, 'type': to_bool}),
+                  )
+                  
+    # Now move on to namelists that specify parameters for specific simulation
+    # types
+    # cards for the <&multipole> namelist
+    multipole_cards = (('core_file', {'default': 'dis.cores', 'type': str}),
+                       ('xlength', {'default': 1, 'type': int}),
+                       ('ylength', {'default': 1, 'type': int}),
+                      )
+                      
+    # cards for the <&cluster> namelist. One thing to remember is that while the
+    # isotropic solution for the displacement field of edge dislocation given
+    # in Hirth and Lothe places the branch cut along the negative y-axis, the 
+    # Stroh sextic theory (ie. anisotropic solution) places it along the negative
+    # x-axis
+    cluster_cards = (('centre', {'default': np.zeros(2), 'type': vector}),
+                     ('r1', {'default': None, 'type': float}),
+                     ('r2', {'default': None, 'type': float}),
+                     ('scale', {'default': 1.1, 'type': float}),
+                     ('branch_cut', {'default': [0, -1], 'type': vector}),
+                     ('thickness', {'default': 1, 'type': int})
+                    )
+    
+    # cards for the <&energy> namelist, which determines how the core energy is
+    # calculated                
+    energy_cards = (('rcore', {'default': 10., 'type': float),
+                   )
+    
+    #!!! REMOVE FROM HERE...
+    # cards for the <&control> namelist
     control_cards = (('unit_cell',{'default':None,'type':str}),
                      ('path',{'default':'./','type':str}),
                      ('calc_type',{'default':None,'type':str}),
@@ -82,6 +131,7 @@ def handle_atomistic_control(test_dict):
                     ('elasticity',{'default':np.nan,'type':float}),
                     ('cij_file',{'default':None,'type':str})
                    )
+    #!!! ...TO HERE.
                      
     namelists = ['control','geometry','fields']
     # that all namelists in control file
@@ -167,42 +217,24 @@ class AtomisticSim(object):
         self.fields = lambda card: self.sim['fields'][card]
         
         # construct displacement fields
-        self.burgers_vectors,self.core_locations = handle_fields(filename,
+        self.burgers_vectors, self.core_locations = handle_fields(filename,
                                                         self.fields('nfields'))
         
         # If generating displacement fields for an anisotropic medium using the
         # Stroh theory, read in .cij file and construct the appropriate 
         # field function
         
-    def make_common_input(self):
-        '''Performs setup tasks common to both the multipole-SC and cluster 
-        methods.
-        '''
-
-        self.gulp_struc = cry.Crystal()
-        self.sys_info = gulp.parse_gulp(self.control('unit_cell'), gulp_struc,
-                                                     path=self.control('path'))
-        
-    def make_cluster_input(self):
-        '''Perform setup tasks specific to the cluster-based calculation.
-        '''
-        
-        # write file containing system parameters
-        sys_out = open(self.control('sim_name') + '%d.%d.sysInfo' % 
-                             (self.geometry('RI'),self.geometry('RII')),'w')
-                             
-        sys_out.write('pcell\n')
-        sys_out.write('%.5f 0\n' % (self.thickness*L.norm(gulp_struc.getC())))
-        for line in self.sys_info:
-            sys_out.write(line + '\n')
-        sys_out.close()
-        
-        self.b = self.make_burgers()
-        
+    def construct_cluster(self):
         return
         
-    def make_burgers(self):
-        self.
+    def construct_multipole(self):
+        return
+        
+    def run_simulation(self):
+        return
+        
+    def core_energy(self):
+        return
         
 def main(filename):
     new_simulation = AtomisticSim(filename)

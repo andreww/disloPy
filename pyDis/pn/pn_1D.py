@@ -286,7 +286,7 @@ def mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K):
     return E, new_par
         
 def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False,
-                                         use_sym=False, b=1., spacing=1.):
+                                   use_sym=False, b=1., spacing=1., noisy=False):
     Emin = 1e6
     x_opt = None
     lims = make_limits(N, max_x)
@@ -297,20 +297,15 @@ def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False
 
         E, x_try = mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K)
         is_valid = check_parameters1d(x_try, N, lims)
-        
-        '''
-        is_valid = True
-        for j, param in enumerate(x_try):
-            if contained_in(param, lims[j]):
-                continue
-            else:
-                is_valid = False
-                break
-        '''
-                
+          
         if is_valid and (E < Emin):
             Emin = E
             x_opt = x_try[:]
+            
+            # if noisy mode has been selected, print current best solution
+            if noisy:
+                print("Current best solution: ".format(x_opt))
+                print("Energy: {:.6f}\n".format(Emin))
             
     return Emin, x_opt
     

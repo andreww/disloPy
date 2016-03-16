@@ -7,7 +7,7 @@ import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from pyDis.atomic import crystal as cry
-from pyDis.atomic import disField as df
+from pyDis.atomic import fields as df
 from pyDis.atomic import gulpUtils as gulp
 
 import numpy as np

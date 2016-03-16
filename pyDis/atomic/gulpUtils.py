@@ -689,8 +689,8 @@ def run_gulp(gulp_exec, basename):
     <basename>.gin -> <basename>.gout.
     '''
 
-    gin = open('%s.gin' % basename)
-    gout = open('%s.gout' % basename, 'w')
+    gin = open('{}.gin'.format(basename))
+    gout = open('{}.gout'.format(basename), 'w')
     subprocess.call(gulp_exec, stdin=gin, stdout=gout)
 
     gin.close()

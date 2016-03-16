@@ -245,7 +245,7 @@ def get_u2d(params, b, spacing, N, disl_type):
     return ux, uy
     
 def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
-                                                   use_sym=False, b=1, spacing=1):
+                                use_sym=False, b=1, spacing=1, noisy=False):
                                                               
     # generate limits and constraints
     if not energy_function:
@@ -278,6 +278,11 @@ def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
         if is_valid and (E < Emin):
             Emin = E
             x_opt = np.copy(x_try)
+            
+            # if noisy mode has been requested, print current best solution
+            if noisy:
+                print("Current best solution: {}".format(x_opt))
+                print("Energy: {:.6f}\n".format(Emin))
             
     return Emin, x_opt
     

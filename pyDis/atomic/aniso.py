@@ -179,6 +179,8 @@ def solve_sextic(Cij, n=cry.ei(1), m=cry.ei(2)):
     L = np.array([normalisation[i]*LTilde[i] for i in range(nEig)])
     
     return p, A, L
+
+#!!! should move these into <fields.py>
    
 def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
     '''Given an elastic constants matrix <Cij>, defines a function 

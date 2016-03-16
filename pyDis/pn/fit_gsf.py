@@ -31,6 +31,8 @@ def read_numerical_gsf(filename):
             unit_match = units_line.match(line)
             if unit_match:
                 units = unit_match.group('units')
+                continue
+                
             data = line.rstrip().split()
             if not(data): # empty line
                 continue

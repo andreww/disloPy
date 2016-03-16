@@ -7,7 +7,7 @@ import numpy.linalg as L
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import rodSetup as rs
-from pyDis.atomic import disField as df
+from pyDis.atomic import fields as df
 from pyDis.atomic import gulpUtils as gulp
 from pyDis.atomic import aniso
 
