@@ -99,6 +99,13 @@ def get_gsf_energy(energy_regex, prog, base_name, suffix, i, j=None, indir=False
             else:
                 E = np.nan
                 units = None
+
+        else: 
+            # Other codes - we don't check for convergence, perhapse we should
+            for match in matched_energies:
+                # We want the last match in the file.
+                E = float(match[0])
+                units = match[1]
         
     return E, units
         
