@@ -6,7 +6,7 @@ import numpy as np
 import pyDis.pn.fit_gsf
 
 def main(file_in, file_out):
-    gsf = pyDis.pn.fit_gsf.read_numerical_gsf(file_in)
+    gsf, units = pyDis.pn.fit_gsf.read_numerical_gsf(file_in)
 
     # Now turn into 3D array
     gsf_mesh = np.zeros([9,9,3])
@@ -19,7 +19,7 @@ def main(file_in, file_out):
             point = point + 1
 
     # Do the mirror op
-    gsf_mesh = pyDis.pn.fit_gsf.mirror(gsf_mesh)
+    gsf_mesh = pyDis.pn.fit_gsf.mirror2d(gsf_mesh)
 
     # return to 2D array
     #gsf = np.zeros([17*17,3])
@@ -35,6 +35,7 @@ def main(file_in, file_out):
 
     # Write out the data
     with open(file_out, 'w') as outstream:
+        outstream.write("# %s\n" % (units))
         for i in range(np.shape(gsf_mesh)[0]):
             for j in range(np.shape(gsf_mesh)[1]):
                 outstream.write("%d %d %.4f\n" % (i,j,gsf_mesh[i,j,2]))
