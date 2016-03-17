@@ -45,61 +45,7 @@ def read_numerical_gsf(filename):
         units = 'ev'
             
     return np.array(gsf), units
-    
-def mirror1d(gline):
-    '''Reflects a 1D gamma line about 0.5*a.
-    '''
-    
-    n = len(gline)
-    newlength = 2*n-1
-    new_gl = np.zeros((newlength, 2))
-    
-    for i in range(n):
-        for j in (0, 1):
-            new_gl[i, j] = gline[i, j]
-            new_gl[newlength-1-i] = (newlength-1-i, gline[i])[j]
-            
-    return new_gl
-
-def mirror2d(gsurf, axis=(0, 1)):
-    '''Reflects <gsf> about the provided symmetry <axis>. <axis> can 
-    take the values 0 or 1. Can also provide axis = (0, 1) to mirror 
-    about the x and y axes.
-    '''
-
-    if atm.isiter(axis):
-        temp_gs = mirror2d(gsurf, axis[0])
-        new_gs = mirror2d(temp_gs, axis[1])
-        return new_gs
-    # else
-    if axis != 0 and axis != 1:
-        raise ValueError("Invalid axis. Are you a Fortran programmer?")
-    grid_shape = list(np.shape(gsurf))
-    nx = grid_shape[axis]
-    grid_shape[axis] = 2*nx-1
-    new_gs = np.zeros(grid_shape)
-    for i in range(np.shape(gsurf)[0]):
-        for j in range(np.shape(gsurf)[1]):
-            for k in range(3):
-                new_gs[i, j, k] = gsurf[i, j, k]
-            
-            if axis == 0:
-                if i == nx-1:
-                    pass
-                else:
-                    new_gs[2*nx-2-i, j, 0] = 2*nx-2-i
-                    new_gs[2*nx-2-i, j, 1] = j
-                    new_gs[2*nx-2-i, j, 2] = gsurf[i, j, 2]
-            else: # axis == 1
-                if j == (nx - 1):
-                    pass
-                else:
-                    new_gs[i, 2*nx-2-j, 0] = i
-                    new_gs[i, 2*nx-2-j, 1] = 2*nx-2-j
-                    new_gs[i, 2*nx-2-j, 2] = gsurf[i, j, k]
-
-    return new_gs
-    
+       
 def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True, units='ev'):
     '''Fits a bivariate spline to a numerical gsf energies along a line (ie.
     fits a gamma line).

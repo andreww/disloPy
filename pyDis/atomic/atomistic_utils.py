@@ -125,3 +125,17 @@ def write_xyz(input_crystal, filename, defected=False, description='xyz file',
     xyz_file.write(xyz_lines)
         
     xyz_file.close()
+    
+def to_bool(in_str):
+    '''Routine to convert <in_str>, which may take the values "True" or "False", 
+    a boolean (needed because bool("False") == True)
+    '''
+    
+    bool_vals = {"True":True, "False":False}
+    
+    try:
+        new_value = bool_vals[in_str]
+    except KeyError:
+        raise ValueError("{} is not a boolean value.".format(in_str))
+        
+    return new_value
