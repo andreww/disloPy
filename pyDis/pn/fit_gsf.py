@@ -45,7 +45,7 @@ def read_numerical_gsf(filename):
         units = 'ev'
             
     return np.array(gsf), units
-       
+   
 def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True, units='ev'):
     '''Fits a bivariate spline to a numerical gsf energies along a line (ie.
     fits a gamma line).

@@ -12,9 +12,6 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.simplefilter("ignore", RuntimeWarning)
 
-# conversion factor to take elastic properties from GPa to atomic units
-GPa_To_Atomic = 160.2176
-
 def simple_gamma(u):
     return 0.5*(1-np.cos(2*np.pi*u))
 

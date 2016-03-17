@@ -6,10 +6,14 @@ sextic eigenvalue formulation.
 
 from numpy.linalg import norm
 
+import numpy as np
 import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from pyDis.atomic import aniso
+
+# conversion factor to take elastic properties from GPa to atomic units
+GPa_To_Atomic = 160.2176
 
 def isotropic_K(K, G, using_atomic=False):
     '''Calculate the shear and edge dislocation energy coefficient from the
