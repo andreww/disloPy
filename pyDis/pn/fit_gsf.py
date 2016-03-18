@@ -46,13 +46,14 @@ def read_numerical_gsf(filename):
             
     return np.array(gsf), units
    
-def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True, units='ev'):
+def spline_fit1d(num_gsf, b, a, angle=np.pi/2., two_planes=True, units='ev'):
     '''Fits a bivariate spline to a numerical gsf energies along a line (ie.
-    fits a gamma line).
+    fits a gamma line). 
     '''
 
     # extract gsf vectors and energies from <num_gsf>
     x_vals = num_gsf[:, 0]
+    x_vals = b*x_vals/x_vals.max()
     E_vals = num_gsf[:, 1]
     
     # convert energies to eV/\AA^2
@@ -192,6 +193,29 @@ def projection(gsf_func, const=0, axis=0):
     return g
     
 ### Plotting functions ###
+
+def gamma_line(X, E, xlabel, ylabel, size):
+    '''Plots a gamma line.
+    '''
+    
+    fig = plt.figure(figsize=size)
+    ax = plt.subplot()
+    
+    ax.plot(X, E, 'r--')
+    ax.plot(X, E, 'rs', markersize=6)
+    
+    ax.set_xlim(X.min(), X.max())
+    
+    pad = (E.max() - E.min())/20.
+    ax.set_ylim(E.min()-pad, E.max()+pad)
+    
+    ax.set_xlabel(xlabel, family='serif', weight='bold', size=14)
+    ax.set_ylabel(ylabel, family='serif', weight='bold', size=14)
+    
+    plt.tight_layout(pad=0.5)
+    plt.show()
+
+    return fig, ax
 
 def gamma_surface3d(X, Y, Z, xlabel, ylabel, zlabel, size):
     '''Plots a gamma surface in 3D.

@@ -8,6 +8,7 @@ import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from pyDis.atomic import atomistic_utils as atm
+from pyDis.pn.fit_gsf import gamma_line, gamma_surface3d
 
 # dictionary containing regex to match final energies for a variety of codes
 energy_lines = {"gulp": re.compile(r"\n\s*Final energy\s+=\s+" +
@@ -44,7 +45,8 @@ def command_line_options():
                          help="Each GSF point is in its own directory")
     options.add_argument("-m", dest="mirror", default='False', help="Reflect (about x if 2D)")
     options.add_argument("-my", dest="mirrory", default='False', help="Reflect about y.")
-                                  
+    options.add_argument("-plot", action="store_true", default=False,
+                            help="Plot gamma line/surface.")                             
     return options
                
 def get_gsf_energy(energy_regex, prog, base_name, suffix, i, j=None, indir=False):
