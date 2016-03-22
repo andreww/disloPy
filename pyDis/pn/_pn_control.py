@@ -152,6 +152,7 @@ def handle_pn_control(test_dict):
                      ('plot', {'default':False, 'type':to_bool}),
                      ('plot_name', {'default':'pn_plot.tif', 'type':str}),
                      ('plot_both', {'default':False, 'type':to_bool}),
+                     ('nplanes', {'default':30, 'type':int}),
                      ('noisy', {'default': False, 'type': to_bool})
                    )
 
@@ -417,25 +418,30 @@ class PNSim(object):
             if self.control('plot'):   
                 if self.control('dimensions') == 1:
                     self.fig, self.ax = pn1.plot_both(self.ux, r, self.struc('burgers'),
-                                                               self.struc('spacing'))
+                                                        self.struc('spacing'), 
+                                                        nplanes=self.control('nplanes'))
                     plt.savefig(self.control('plot_name'))
                     plt.close()             
                 elif self.control('plot_both'): # dimension == 2
                     self.fig, self.ax = pn1.plot_both(self.ux, r, self.struc('burgers'),
-                                                               self.struc('spacing'))
+                                                               self.struc('spacing'), 
+                                                        nplanes=self.control('nplanes'))
                     plt.savefig('edge.' + self.control('plot_name'))
                     plt.close()
                     self.fig, self.ax = pn1.plot_both(self.uy, r, self.struc('burgers'),
-                                                               self.struc('spacing'))
+                                                               self.struc('spacing'), 
+                                                        nplanes=self.control('nplanes'))
                     plt.savefig('screw.' + self.control('plot_name'))
                     plt.close()
                 else: # dimensions == 2
                     if self.control('disl_type') in 'edge':
                         self.fig, self.ax = pn1.plot_both(self.ux, r, self.struc('burgers'),
-                                                               self.struc('spacing'))
+                                                               self.struc('spacing'), 
+                                                        nplanes=self.control('nplanes'))
                     else: # screw
                         self.fig, self.ax = pn1.plot_both(self.uy, r, self.struc('burgers'),
-                                                               self.struc('spacing'))
+                                                               self.struc('spacing'), 
+                                                        nplanes=self.control('nplanes'))
                     plt.savefig(self.control('plot_name'))
                     plt.close()
                 

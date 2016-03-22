@@ -172,7 +172,7 @@ def plot_u(ax, u, x, colour='r', shape='s', linestyle='-.'):
     ax.plot(x, u, '{}{}'.format(colour, linestyle))
     return u_disc 
     
-def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True):
+def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True, nplanes=30):
     fig, ax = plt.subplots()
 
     if along_b:
@@ -191,7 +191,7 @@ def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True):
     mid_dist = (x[1]-x[0])/2.
     
     rho_disc = plot_rho(ax, rho_vals, x+mid_dist, colour=rho_col, width=spacing)
-    plt.xlim(-30*spacing, 30*spacing)
+    plt.xlim(-1*nplanes*spacing, nplanes*spacing)
     plt.ylim(0, 1.05)
     plt.tick_params(axis='y', which='both', left='off', right='off',
                                  labelleft='off', labelright='off')
