@@ -37,7 +37,7 @@ def make_slab(unit_cell, num_layers, vacuum=0.0, d_fix=5., free_atoms=[], axis=-
     # constraint will be applied
     if vacuum > 1e-10:
         print('Non-zero vacuum buffer. Proximity constraint to be used ' +
-                  'with d_fix = {.1f}.'.format(d_fix))
+                  'with d_fix = {:.1f}.'.format(d_fix))
         use_vacuum = True
     else:
         print('3D-periodic boundary conditions. Proximity constraints' +
@@ -115,7 +115,7 @@ def write_gulp_slab(outStream, slab, disp_vec, system_info):
     
     return
 
-def insert_gsf(slab, disp_vec, vacuum=0.):
+def insert_gsf(slab, disp_vec, vacuum=0., eps=1e-6):
     '''Inserts generalised stacking fault with stacking fault vector <disp_vec>
     into the provided <slab>. If <vacuum> == 0., the stacking fault is inserted
     at z = 0.5, otherwise, we insert it at 0.5*(z-vacuum)/z (z := slab height). 
@@ -135,7 +135,7 @@ def insert_gsf(slab, disp_vec, vacuum=0.):
     middle = 0.5*(norm(slab.getC()) - vacuum)/norm(slab.getC())
 
     for atom in slab.getAtoms():
-        if 0. <= atom.getCoordinates()[-1] < middle:
+        if 0. <= atom.getCoordinates()[-1] < middle-eps:
             # atom in the lower half of the cell -> no slip
             continue
         else:

@@ -147,9 +147,11 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
                     print("No calculation type specified; defaulting to scf")
                     outstream.write('    calculation = \'scf\'\n')
             elif variable == 'nat':
-                outstream.write('    nat = %d\n' % len(qe_struc))
+                outstream.write('    nat = {}\n'.format(len(qe_struc)))
+            elif variable == 'ntyp':
+                outstream.write('    ntyp = {}\n'.format(qe_struc.number_of_elements()))
             else:
-                outstream.write('    %s = %s\n' % (variable, 
+                outstream.write('    {} = {}\n'.format(variable, 
                                         sys_info['namelists'][block][variable]))
         outstream.write(' /\n')
         
@@ -164,7 +166,7 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
     
     # write lattice 
     outstream.write(' CELL_PARAMETERS')
-    outstream.write(' { %s }\n' % sys_info['cards']['CELL_PARAMETERS'])
+    outstream.write(' {{ {} }}\n'.format(sys_info['cards']['CELL_PARAMETERS']))
     qe_struc.writeLattice(outstream.write)
         
     # write k-point grid
@@ -175,8 +177,8 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
         # use automatically generated Monkhorst-Pack grid
         outstream.write(' K_POINTS { automatic }\n')
         grid = sys_info['cards']['K_POINTS']['spacing']
-        outstream.write('  %d %d %d' % (grid[0], grid[1], grid[2]))
-        outstream.write(' %s\n' % (sys_info['cards']['K_POINTS']['shift']))
+        outstream.write('  {} {} {}'.format(grid[0], grid[1], grid[2]))
+        outstream.write(' {}\n'.format(sys_info['cards']['K_POINTS']['shift']))
         
     outstream.close()
     return

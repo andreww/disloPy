@@ -6,7 +6,6 @@ from __future__ import print_function
 
 import numpy as np
 import sys
-import os
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from numpy.linalg import norm
@@ -14,7 +13,7 @@ from numpy.linalg import norm
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import transmutation as mutate
 
-import gsf_setup as gsf
+from pyDis.pn import gsf_setup as gsf
 
 def replace_at_plane(slab_cell, impurity, plane=0.5, vacuum=0.,
                         constraints=None, eps=1e-12, height=0.):
@@ -44,7 +43,8 @@ def replace_at_plane(slab_cell, impurity, plane=0.5, vacuum=0.,
     return to_substitute
 
 def impure_faults(slab_cell, impurity, site, write_fn, sys_info, resolution, 
-                 prefix='gsf', suffix='in', dim=2, limits=(1,1), mkdir=False):
+                      basename, dim=2, limits=(1,1), mkdir=False, vacuum=0., 
+                      suffix='in', line_vec=np.array([1., 0., 0.]), relax=None):
     '''Runs gamma surface calculations with an impurity (or impurity cluster)
     inserted at the specified atomic sites. <site> gives the index of the atom
     to be replaced by the impurity 
@@ -60,11 +60,21 @@ def impure_faults(slab_cell, impurity, site, write_fn, sys_info, resolution,
         pass
     else:
         for atom in impurity:
-            slab_cell.append(atom)
+            # need to make the displaced coordinates the base coordinates, so
+            # that the form of an impurity is brought in line with the form of
+            # an atom
+            new_atom = atom.copy()
+            new_atom.setCoordinates(new_atom.getDisplacedCoordinates())
+            slab_cell.addAtom(new_atom)
 
     # create input files for generalised stacking fault calculations
-    gsf.gamma_surface(slab_cell, resolution, write_fn, sys_info, mkdir=mkdir,
-         basename='{}.{}'.format(prefix, index), suffix=suffix, limits=limits)
+    if dim == 1:
+        gsf.gamma_line(slab_cell, line_vec, resolution, write_fn, sys_info, 
+                       limits=limits, vacuum=vacuum, basename=basename, suffix=suffix,
+                       mkdir=False, relax=relax)
+    else: # dim == 2
+        gsf.gamma_surface(slab_cell, resolution, write_fn, sys_info, mkdir=mkdir,
+                                 basename=basename, suffix=suffix, limits=limits)
 
     # return <index>th atom to slab and delete all impurity atoms
     slab_cell[site].switchOutputMode()

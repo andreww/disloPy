@@ -369,7 +369,14 @@ class Basis(object):
             return self[self._currentindex-1]
 
     def __len__(self):
-        return self.numberOfAtoms
+        '''Returns the number of atoms that will be written to output.
+        '''
+        
+        writeable = 0
+        for atom in self:
+            if atom.writeToOutput():
+                writeable += 1
+        return writeable
             
     def copy(self):
         '''Copy constructor for <Basis> class. Creates a new <Basis> object 
@@ -441,6 +448,22 @@ class Basis(object):
             atom.write(outstream.write, defected, add_constraints)
 
         return
+        
+    def number_of_elements(self):
+        '''Returns the number of distinct elements present in the basis.
+        '''
+        
+        n_species = 0
+        species_found = []
+        
+        for atom in self:
+            # check to see if the species of <atom> has been encountered before
+            # and add to list if it has not.
+            if not(atom.getSpecies() in species_found):
+                n_species += 1
+                species_found.append(atom.getSpecies())
+                
+        return n_species
         
 class Crystal(Basis, Lattice):
     '''Crystal is defined as a lattice with a basis.
