@@ -76,6 +76,7 @@ def handle_atomistic_control(test_dict):
                    ('shear' {'default': None, 'type': float}),
                    ('possion', {'default': None, 'type': float}),
                    ('in_gpa', {'default': True, 'type': to_bool}),
+                   ('rcore', {'default': 10., 'type': float)
                   )
                   
     # Now move on to namelists that specify parameters for specific simulation
@@ -83,55 +84,26 @@ def handle_atomistic_control(test_dict):
     # cards for the <&multipole> namelist
     multipole_cards = (('core_file', {'default': 'dis.cores', 'type': str}),
                        ('xlength', {'default': 1, 'type': int}),
-                       ('ylength', {'default': 1, 'type': int}),
+                       ('ylength', {'default': 1, 'type': int})
                       )
                       
     # cards for the <&cluster> namelist. One thing to remember is that while the
     # isotropic solution for the displacement field of edge dislocation given
     # in Hirth and Lothe places the branch cut along the negative y-axis, the 
     # Stroh sextic theory (ie. anisotropic solution) places it along the negative
-    # x-axis
+    # x-axisMethod for calculating core energy is specified using an 
+    # integer, which may take the following values:
+    # 1 == compare energy of dislocated and perfect cluster
+    # 2 == calculate energy of individual atoms (in the perfect material) and 
+    # sum their contributions to the energy of the cluster.
     cluster_cards = (('centre', {'default': np.zeros(2), 'type': vector}),
                      ('r1', {'default': None, 'type': float}),
                      ('r2', {'default': None, 'type': float}),
                      ('scale', {'default': 1.1, 'type': float}),
                      ('branch_cut', {'default': [0, -1], 'type': vector}),
-                     ('thickness', {'default': 1, 'type': int})
+                     ('thickness', {'default': 1, 'type': int}),
+                     ('method', {'default': 1, 'type': int})
                     )
-    
-    # cards for the <&energy> namelist, which determines how the core energy is
-    # calculated                
-    energy_cards = (('rcore', {'default': 10., 'type': float),
-                   )
-    
-    #!!! REMOVE FROM HERE...
-    # cards for the <&control> namelist
-    control_cards = (('unit_cell',{'default':None,'type':str}),
-                     ('path',{'default':'./','type':str}),
-                     ('calc_type',{'default':None,'type':str}),
-                     ('gulp_exec',{'default':'gulp','type':str),
-                     ('sim_name',{'default':'dislocation','type':str),
-                     ('max_cyc',{'default':1000,'type':int})
-                    )
-                    
-    # cards for the <&geometry> namelist
-    geometry_cards = (('eta',{'default':[0.,0.],'type':vector}),
-                      ('RI',{'default':25.,'type':float}),
-                      ('RII',{'default':15.,'type':float}),
-                      ('branch_cut',{'default':[0,-1],'type':vector})
-                     )
-                     
-    # cards for the <&fields> namelist. Elasticity is the parameter (eg. 
-    # poisson's ratio, S44/S55 ratio, etc.) required to set up simulation
-    # cij_file is the file containing the elastic constants matrix. Note that
-    # pyDis only checks if <cij_file> has been defined if the Stroh theory
-    # is being used to calculate the displacement fields.
-    field_cards = (('field_type',{'default':None,'type':str}),
-                    ('nfields',{'default':1,'type':int}),
-                    ('elasticity',{'default':np.nan,'type':float}),
-                    ('cij_file',{'default':None,'type':str})
-                   )
-    #!!! ...TO HERE.
                      
     namelists = ['control','geometry','fields']
     # that all namelists in control file
@@ -159,7 +131,18 @@ def handle_atomistic_control(test_dict):
                         pass
                         
     return
-    
+
+def parse_fields(fieldstring):
+    '''Parses a provided <field> to extract the type (eg. edge, screw),
+    Burgers vector, and the coordinates of the dislocation centre (in 2D).
+    '''
+
+    #found_fields = field_form.finditer(fieldstring)
+    for field in field_form.finditer(fieldstring):
+        fieldtype = field.group('fieldtype')
+        b = field.group('burgers')
+        eta = field.group('centre')
+        print(fieldtype, b, eta)    
                      
 def handle_fields(field_file):
     '''Handle fields separately from the <&control> and <&geometry> namelists.
@@ -178,8 +161,10 @@ def handle_fields(field_file):
     dis_locations = []
     
     # regex for fields
-    field_entry = re.compile('\s*new\s+field\s*:\s*\n(?P<dis>(?:\s*.*=.*;\s*\n))' +
-                                            '\s*end field;')
+    field_form = re.compile('new_field\s+<(?P<fieldtype>\w+)>' +
+                            '(?P<burgers>(?:\s+-?\d+\.?\d*){3})'+
+                            '(?P<centre>(?:\s+\d\.?\d*){2})\s+end_field')
+
     
     # begin by reading in field file and checking syntax
     field_options = {'burgers_length':{'default':None,'type':float},
@@ -188,16 +173,20 @@ def handle_fields(field_file):
                     }
     
     with open(field_file) as f:
-        lines = f.readlines()
+        field_lines = f.readlines()
         
-        # find all field entries
-        fields = re.findall(field_entry,lines)
+    # now find all field entries and construct dislocation fields
+    fields = re.findall(field_entry,lines)
         
-        if not(fields):
-            # no dislocations entered
-            raise Exception('No dislocations provided.')
-        else:
-            # extract stuff
+    if not(fields):
+        # no dislocations entered
+        raise Exception('No dislocations provided.')
+    else:
+        # extract stuff
+        
+        # extract centre -> defaults to zero
+        
+        # extract burgers vector
                    
     
     return burgers_vectors,dis_locations
