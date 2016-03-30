@@ -83,25 +83,25 @@ def change_type(top_dict, namelist, card, new_type):
 
     return
     
-def change_or_map(test_dict, namelist, card, new_type):
-    '''Decides whether the value in <test_dict[namelist][card]> can be converted
+def change_or_map(param_dict, namelist, card, new_type):
+    '''Decides whether the value in <param_dict[namelist][card]> can be converted
     directly to a bool or numerical type (ie. int, float, or complex) or whether the
     provided value is a mapping involving some other parameter.
     '''
 
     # check that value is defined
     try:
-        x = test_dict[namelist][card]
+        x = param_dict[namelist][card]
     except KeyError:
         # not defined -> go to default value
         raise ValueError
 
-    if 'map' in  test_dict[namelist][card]:
+    if 'map' in  param_dict[namelist][card]:
         # provided value is a mapping
-        from_mapping(test_dict, namelist, card)
+        from_mapping(param_dict, namelist, card)
     else:
         # convert to <new_type>
-        change_type(test_dict, namelist, card, new_type)
+        change_type(param_dict, namelist, card, new_type)
         
     return
     
@@ -130,7 +130,7 @@ def to_vector(in_str):
     
     return np.array(new_vec)
 
-def handle_pn_control(test_dict):
+def handle_pn_control(param_dict):
     '''handle each possible card in turn. If default value is <None>, the card is 
     considered "mission critical" and the program will abort if a value is not 
     provided.
@@ -204,12 +204,8 @@ def handle_pn_control(test_dict):
     # check that all namelists were in the control file and add them as keys
     # (with empty dicts as values) in the control dictionary
     for name in namelists:
-        if name not in test_dict.keys():
-            test_dict[name] = dict()
-        #try:
-        #    x = test_dict[name]
-        #except KeyError:
-        #    test_dict[name] = dict()
+        if name not in param_dict.keys():
+            param_dict[name] = dict()
 
     # handle the input namelists, except for the elasticity namelist, which
     # requires special handling.
@@ -221,7 +217,7 @@ def handle_pn_control(test_dict):
         # else    
         for var in cards:
             try:
-                change_or_map(test_dict, namelists[i], var[0], var[1]['type'])
+                change_or_map(param_dict, namelists[i], var[0], var[1]['type'])
             except ValueError:
                 default_val = var[1]['default']
                 # test to see if variable is "mission-critical" using None != None
@@ -229,31 +225,31 @@ def handle_pn_control(test_dict):
                     raise ValueError("No value supplied for mission-critical" +
                                                  " variable {}.".format(var[0]))
                 else:
-                    test_dict[namelists[i]][var[0]] = default_val
+                    param_dict[namelists[i]][var[0]] = default_val
                     # if <default_val> is a mapping, needs to be evaluated
                     if type(default_val) == str and 'map' in default_val:
-                        from_mapping(test_dict, namelists[i], var[0])
+                        from_mapping(param_dict, namelists[i], var[0])
                         
     # extract values from the &elast namelist
     for var in elast_cards:
         try:
-            change_or_map(test_dict, 'elast', var[0], var[1]['type'])
+            change_or_map(param_dict, 'elast', var[0], var[1]['type'])
         except ValueError:
-            test_dict['elast'][var[0]] = var[1]['default']
+            param_dict['elast'][var[0]] = var[1]['default']
                                          
     # test to make sure that all of the parameters required for one of isotropic
     # or anisotropic elasticity have been supplied. Should we also test to see
     # which function to use when calculating the energy coefficients?
-    if test_dict['elast']['cij'] != None:
+    if param_dict['elast']['cij'] != None:
         # if an elastic constants tensor is given, use anisotropic elasticity
-        test_dict['elast']['coefficients'] = 'aniso'
-    elif test_dict['elast']['shear'] != None:
+        param_dict['elast']['coefficients'] = 'aniso'
+    elif param_dict['elast']['shear'] != None:
         # test to see if another isotropic elastic property has been provided. 
         # Preference poisson's ratio over bulk modulus, if both have been provided
-        if test_dict['elast']['poisson']  != None:
-            test_dict['elast']['coefficients'] = 'iso_nu'
-        elif test_dict['elast']['bulk'] != None:
-            test_dict['elast']['coefficients'] = 'iso_bulk'
+        if param_dict['elast']['poisson']  != None:
+            param_dict['elast']['coefficients'] = 'iso_nu'
+        elif param_dict['elast']['bulk'] != None:
+            param_dict['elast']['coefficients'] = 'iso_bulk'
         else:
             raise AttributeError("No elastic properties have been provided.")
     else:

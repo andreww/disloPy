@@ -139,16 +139,14 @@ def handle_atomistic_control(test_dict):
     
     # that all namelists in control file
     for name in namelists:
-        try:
-            x = test_dict[name]
-        except KeyError:
-            test_dict[name] = dict()
+        if name not in param_dict.keys():
+            param_dict[name] = dict()
             
     for i,cards in enumerate([control_cards, elast_cards, multipole_cards,
                                                            cluster_cards]):
         for var in cards:
             try:
-                change_or_map(test_dict,namelist[i],var[0],var[1]['type'])
+                change_or_map(param_dict,namelist[i],var[0],var[1]['type'])
             except ValueError:
                 default_var = var[1]['default']
                 # test to see if variable is "mission-critical"
@@ -156,25 +154,14 @@ def handle_atomistic_control(test_dict):
                     raise ValueError("No value supplied for mission-critical" +
                                             " variable %s." % var[0])
                 else:
-                    test_dict[namelists[i]][var[0]] = default_val
+                    param_dict[namelists[i]][var[0]] = default_val
                     # no mapping options, but keep this line to make it easier
                     # to merge with corresponding function in <_pn_control.py>
                     if type(default_val) == str and 'map' in default_val:
                         pass
                         
     return
-
-def parse_fields(fieldstring):
-    '''Parses a provided <field> to extract the type (eg. edge, screw),
-    Burgers vector, and the coordinates of the dislocation centre (in 2D).
-    '''
-
-    # extract fields from <fieldstring>
-    for field in field_form.finditer(fieldstring):
-        b = field.group('burgers')
-        eta = field.group('centre')
-        print(fieldtype, b, eta)    
-                     
+                
 def handle_fields(field_file):
     '''Handle fields separately from the <&control> and <&geometry> namelists.
     This is necessary because each field must be defined separately, making
