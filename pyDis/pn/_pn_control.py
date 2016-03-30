@@ -296,8 +296,6 @@ class PNSim(object):
         self.stress = lambda card: self.sim['stress'][card]
 
         # calculate the energy coefficients
-        #!!! will need to change this when I move the energy coefficient functions
-        #!!! from <pn_1D> into their own module.
         if self.elast('coefficients') == 'aniso':
             self.K = coeff.anisotropic_K(self.elast('cij'),
                                          self.elast('b_edge'),

@@ -7,11 +7,11 @@ import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
 import numpy.linalg as L
 
-## temporary path definition -> will generalise later
-#sys.path.append('/home/richard/code_bases/pyDis_pn/') 
+# list of atomic simulation codes currently supported by pyDis
+supported_codes = ('qe', 'gulp', 'castep')
 
 #!!! need to shift the relevant functions to a simulation method-agnostic module  
-from pyDis.pn._pn_control import control_file, from_mapping, change_type, to_bool,
+from pyDis.pn._pn_control import control_file, from_mapping, change_type, to_bool, \
                                             change_or_map, print_control   
                             
 # import modules required to set up and run a dislocation simulation
@@ -22,6 +22,38 @@ from pyDis.atomic import crystal as cry
 from pyDis.atomic import rodSetup as rod
 from pyDis.atomic import fields
 from pyDis.atomic import aniso
+from pyDis.atomic import atomistic_utils as atm
+
+def array_or_int(dimension):
+    '''Determine whether the user is specifying a single supercell size, or a 
+    range of supercell sizes.
+    '''
+    
+    # form of array is <startlen>, <interval>, <maxlen>
+    array_string = re.match('(?P<i1>\d+)\s*,\s*(?P<di>\d+)\s*,\s*(?P<i2>\d+)', dimension)
+    int_string = re.match('\d+', dimension)
+    if array_string:
+        i1 = int(array_string.group('i1'))
+        di = int(array_string.group('di'))
+        i2 = int(array_string.group('i2'))
+        
+        # check that input corresponds to a valid array
+        if i2 <= i1:
+            raise ValueError(("Final value ({}) must be greater than initial" +
+                                                  " value ({})").format(i1, i2))
+        elif di <= 0:
+            raise ValueError("Increment ({}) must be positive.".format(di))
+        elif di > (i2 - i1):
+            raise ValueError(("Increment ({}) is too large. Maximum value is " +
+                                                      "{}.").format(di, i2-i1))
+
+        cell_size = np.arange(i1, i2+di, di)       
+    elif int_string:
+        cell_sizes = int(int_string.group())
+    else:
+        raise AttributeError("No cell dimensions found.")
+    
+    return cell_sizes
 
 def vector(vec_str):
     '''Converts a string of the form "[x1,x2,...,xn]" to a numpy array.
@@ -67,37 +99,35 @@ def handle_atomistic_control(test_dict):
                      ('run_sim', {'default': False, 'type': to_bool}),
                      ('simulation_name', {'default': 'dis', 'type': str}),
                      ('suffix', {'default': 'in', 'type': str}),
-                     ('executable', {'default': None, 'type': str})
+                     ('executable', {'default': '', 'type': str}),
                     )
     
-    # cards for the <&elast> namelist               
-    elast_cards = (('burgers', {'default': cry.ei(3), 'type': vector}),
+    # cards for the <&elast> namelist. Note that if dislocations are specified 
+    # in the <fields> file, they will overwrite <burgers>               
+    elast_cards = (('disl_type', {'default': None, 'type': str}),
+                   ('burgers', {'default': cry.ei(3), 'type': vector}),
                    ('bulk', {'default': None, 'type': float}),
-                   ('shear' {'default': None, 'type': float}),
+                   ('shear', {'default': None, 'type': float}),
                    ('possion', {'default': None, 'type': float}),
                    ('in_gpa', {'default': True, 'type': to_bool}),
-                   ('rcore', {'default': 10., 'type': float)
+                   ('rcore', {'default': 10., 'type': float}),
+                   ('centre', {'default': np.zeros(2), 'type': vector})
                   )
                   
     # Now move on to namelists that specify parameters for specific simulation
-    # types
+    # types. <xlength> and <ylength> may be integers or arrays.
     # cards for the <&multipole> namelist
-    multipole_cards = (('core_file', {'default': 'dis.cores', 'type': str}),
-                       ('xlength', {'default': 1, 'type': int}),
-                       ('ylength', {'default': 1, 'type': int})
+    multipole_cards = (('field_file', {'default': 'dis.cores', 'type': str}),
+                       ('xlength', {'default': 1, 'type': array_or_int}),
+                       ('ylength', {'default': 1, 'type': array_or_int})
                       )
                       
-    # cards for the <&cluster> namelist. One thing to remember is that while the
-    # isotropic solution for the displacement field of edge dislocation given
-    # in Hirth and Lothe places the branch cut along the negative y-axis, the 
-    # Stroh sextic theory (ie. anisotropic solution) places it along the negative
-    # x-axisMethod for calculating core energy is specified using an 
-    # integer, which may take the following values:
-    # 1 == compare energy of dislocated and perfect cluster
-    # 2 == calculate energy of individual atoms (in the perfect material) and 
-    # sum their contributions to the energy of the cluster.
-    cluster_cards = (('centre', {'default': np.zeros(2), 'type': vector}),
-                     ('r1', {'default': None, 'type': float}),
+    # cards for the <&cluster> namelist. Remember that the Stroh sextic theory
+    #  (ie. anisotropic solution) places that branch cut along the negative
+    # x-axis. Method for calculating core energy is specified using an 
+    # integer, which may take the following values: 1 == GULP method, 2 == explicit
+    # calculation of region energies, 3 == edge approach (ie. atomic energies).
+    cluster_cards = (('r1', {'default': None, 'type': float}),
                      ('r2', {'default': None, 'type': float}),
                      ('scale', {'default': 1.1, 'type': float}),
                      ('branch_cut', {'default': [0, -1], 'type': vector}),
@@ -105,7 +135,8 @@ def handle_atomistic_control(test_dict):
                      ('method', {'default': 1, 'type': int})
                     )
                      
-    namelists = ['control','geometry','fields']
+    namelists = ['control','elast', 'multipole', 'cluster']
+    
     # that all namelists in control file
     for name in namelists:
         try:
@@ -113,7 +144,8 @@ def handle_atomistic_control(test_dict):
         except KeyError:
             test_dict[name] = dict()
             
-    for i,cards in enumerate([control_cards,geometry_cards,field_cards]):
+    for i,cards in enumerate([control_cards, elast_cards, multipole_cards,
+                                                           cluster_cards]):
         for var in cards:
             try:
                 change_or_map(test_dict,namelist[i],var[0],var[1]['type'])
@@ -137,9 +169,8 @@ def parse_fields(fieldstring):
     Burgers vector, and the coordinates of the dislocation centre (in 2D).
     '''
 
-    #found_fields = field_form.finditer(fieldstring)
+    # extract fields from <fieldstring>
     for field in field_form.finditer(fieldstring):
-        fieldtype = field.group('fieldtype')
         b = field.group('burgers')
         eta = field.group('centre')
         print(fieldtype, b, eta)    
@@ -151,8 +182,8 @@ def handle_fields(field_file):
     
     Each field has the following form:
     
-    new <type of field> :
-        <important values (eg. burgers vectors, Sij)>
+    new_field
+        <b0> <b1> <b2> <eta1> <eta2>
     end field;
     '''
     
@@ -161,35 +192,30 @@ def handle_fields(field_file):
     dis_locations = []
     
     # regex for fields
-    field_form = re.compile('new_field\s+<(?P<fieldtype>\w+)>' +
-                            '(?P<burgers>(?:\s+-?\d+\.?\d*){3})'+
-                            '(?P<centre>(?:\s+\d\.?\d*){2})\s+end_field')
-
+    field_form = re.compile('new_field(?P<burgers>(?:\s+-?\d+\.?\d*){3})'+
+                            '(?P<centre>(?:\s+\d\.?\d*){2})\s+end_field;')
     
-    # begin by reading in field file and checking syntax
-    field_options = {'burgers_length':{'default':None,'type':float},
-                     'burgers_direction':{'default':[0,0,1],'type':vector},
-                     'core':{'default':[0.,0.],'type':vector}
-                    }
-    
-    with open(field_file) as f:
-        field_lines = f.readlines()
+    #with open(field_file) as f:
+    #    fieldstring = f.readlines()
+    fieldstring = field_file    
+    # now find all field entries and construct dislocation fields. Append entries
+    # of the form [b, eta]
+    dis_burgers = []
+    dis_locs = []
+    for field in field_form.finditer(fieldstring):
+        b = field.group('burgers').split()
+        b = np.array([float(bi) for bi in b])
+        dis_burgers.append(b)
         
-    # now find all field entries and construct dislocation fields
-    fields = re.findall(field_entry,lines)
+        eta = field.group('centre').split()
+        eta = np.array([float(etai) for etai in eta])
+        dis_locs.append(eta)
         
-    if not(fields):
+    if not(dis_burgers):
         # no dislocations entered
         raise Exception('No dislocations provided.')
-    else:
-        # extract stuff
-        
-        # extract centre -> defaults to zero
-        
-        # extract burgers vector
-                   
     
-    return burgers_vectors,dis_locations
+    return dis_burgers, dis_locs
     
 class AtomisticSim(object):
     '''handles the control file for multipole-SC and cluster based dislocation 
@@ -202,16 +228,42 @@ class AtomisticSim(object):
         
         # functions for easy access to namelist variables
         self.control = lambda card: self.sim['control'][card]
-        self.geometry = lambda card: self.sim['geometry'][card]
-        self.fields = lambda card: self.sim['fields'][card]
+        self.elast = lambda card: self.sim['elast'][card]
+        self.multipole = lambda card: self.sim['multipole'][card]
+        self.cluster = lambda card: self.sim['cluster'][card]
         
-        # construct displacement fields
-        self.burgers_vectors, self.core_locations = handle_fields(filename,
-                                                        self.fields('nfields'))
+        # check that the specified atomistic simulation code is supported
+        if self.control('program') in supported_codes:
+            pass
+        else: 
+            raise ValueError("{} is not a supported atomistic simulation code." +
+                         "Supported codes are: GULP; QE; CASTEP.")
         
-        # If generating displacement fields for an anisotropic medium using the
-        # Stroh theory, read in .cij file and construct the appropriate 
-        # field function
+        # if multipole simulation, read dislocation parameters from field file
+        if self.control('calc_type') == 'supercell':
+            self.burgers, self.cores = handle_fields(self.multipole('field_file'))
+        
+        # calculate the energy coefficients -> could be turned into own function
+        # need to rethink for analytic solutions with anisotropic elasticity
+        if self.elast('coefficients') == 'aniso':
+            self.K = coeff.anisotropic_K(self.elast('cij'),
+                                         self.elast('b_edge'),
+                                         self.elast('b_screw'),
+                                         self.elast('normal')
+                                        )
+        elif self.elast('coefficients').startswith('iso'):
+            # extract edge and screw components
+            if 'nu' in self.elast('coefficients'):
+                self.K = coeff.isotropic_nu(self.elast('poisson'), 
+                                              self.elast('shear'))
+            elif 'bulk' in self.elast('coefficients'):
+                self.K = coeff.isotropic_K(self.elast('bulk'), 
+                                            self.elast('shear'))
+            
+            if self.control('disl_type') == 'edge':
+                self.K = self.K[0]
+            elif self.control('disl_type') == 'screw':
+                self.K = self.K[1]
         
     def construct_cluster(self):
         return
@@ -220,9 +272,50 @@ class AtomisticSim(object):
         return
         
     def run_simulation(self):
+        '''If specified by the user, run the simulation on the local machine.
+        '''
+        
+        # check that a path to the atomistic program executable has been provided
+        if self.control('executable') == None:
+            raise ValueError('No executable provided.')
+        
+        if self.control('run_sim'):
+            # run simulation
+            if 'gulp' == args.prog.lower():
+                gulp.run_gulp(args.progexec, basename) 
+            elif 'qe' == args.prog.lower():
+                qe.run_qe(args.progexec, basename)
+            elif 'castep' == args.prog.lower():
+                castep.run_castep(args.progexec, basename)
+        else:
+            pass
+            
         return
         
     def core_energy(self):
+        '''Calculate the core energy of the dislocation.
+        '''
+        
+        if not self.control('calculate_core_energy'):
+            pass
+        
+        elif self.control('calc_type') == 'cluster':
+            # calculate using cluster method
+            if self.cluster('method') == 1:
+                pass
+            elif self.cluster('method') == 2:
+                pass
+            elif self.cluster('method') == 3:
+                pass
+            else: 
+                raise ValueError(("{} does not correspond to a valid way to " +
+                   "calculate the core energy.").format(self.cluster('method')))
+        else: # supercell calculation
+            if self.multipole('method') == 1:
+                pass
+            elif self.multipole('method') == 2:
+                pass
+            
         return
         
 def main(filename):
@@ -233,5 +326,3 @@ if __name__ == "__main__":
         main(sys.argv[1])
     except IndexError:
         main(raw_input('Enter name of control file: '))
-    
-
