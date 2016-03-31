@@ -7,7 +7,7 @@ import os
 import sys
 
 import gulpUtils as gulp
-import clusterEnergy as ce
+import cluster_energy as ce
 import crystal as cry
 
 # regex guff
@@ -17,7 +17,7 @@ atom_format = re.compile('(?P<name>[A-Z][a-z]?)(?P<nat>\d+)')
 latticeEnergy = re.compile(r'\n\s*Total lattice energy\s+=\s+' +
                                   '(?P<energy>-?\d+\.\d+)\s+eV\s*\n')
 
-def iterateEdgeRI(startRI,finalRI,dRI,base_name,gulpexec,E_atom):
+def iterateEdgeRI(startRI, finalRI, dRI, base_name, gulpexec, E_atom):
     '''Routine to calculate single-point energies for an edge dislocation -> 
     will merge with the routines for screw dislocations.
     
@@ -29,13 +29,13 @@ def iterateEdgeRI(startRI,finalRI,dRI,base_name,gulpexec,E_atom):
     # extract relaxed dislocation
     rIAtoms = cry.Basis()
     rIIAtoms = cry.Basis()
-    gulp.extractRegions('dis.%s.grs' % base_name,rIAtoms,rIIAtoms)
+    gulp.extractRegions('dis.{}.grs'.format(base_name), rIAtoms, rIIAtoms)
 
     # need to extract undislocated cluster for <clusterEnergy> routines
     # -> should fix this
     rIperf = cry.Basis()
     rIIperf = cry.Basis()
-    gulp.extractRegions('ndf.%s.grs' % base_name,rIperf,rIIperf)
+    gulp.extractRegions('ndf.{}.grs'.format(base_name), rIperf, rIIperf)
     
     currentRI = startRI 
     
@@ -44,40 +44,40 @@ def iterateEdgeRI(startRI,finalRI,dRI,base_name,gulpexec,E_atom):
     # iterate over radii
     while currentRI >= finalRI:
     
-        print('Setting RI = %.1f...' % currentRI)
-        print('Calculating energy',end=' ')
+        print('Setting RI = {:.1f}...'.format(currentRI))
+        print('Calculating energy', end=' ')
          
-        [newRI,newRII,tempRI,tempRII] = ce.newRegions(rIperf,rIAtoms,
-                    rIIperf,rIIAtoms,currentRI)    
+        [newRI, newRII, tempRI, tempRII] = ce.newRegions(rIperf, rIAtoms,
+                    rIIperf, rIIAtoms, currentRI)    
                     
-        ce.writeSPSections(newRI, newRII, sysInfo,'sp.%s.%d' % 
-                                        (base_name, currentRI), True)
+        ce.writeSPSections(newRI, newRII, sysInfo, 'sp.{}.{}'.format(base_name,
+                                                               currentRI), True)
                                         
-        for reg in ['RI','RII','BOTH']:
-            gulp.run_gulp(gulpexec,'sp.%s.%d.%s' % (base_name,currentRI,reg))
+        for reg in ['RI', 'RII', 'BOTH']:
+            gulp.run_gulp(gulpexec, 'sp.{}.{}.{}'.format(base_name, currentRI, reg))
 
         # calculate excess energies
-        rIfile = ce.readOutputFile('sp.%s.%d.RI.gout' % (base_name,currentRI))
-        rIIfile = ce.readOutputFile('sp.%s.%d.RII.gout' % (base_name,currentRI))
-        bothFile = ce.readOutputFile('sp.%s.%d.BOTH.gout' % (base_name,currentRI))
-        ERI = float(re.search(latticeEnergy,rIfile).group('energy'))
-        ERII = float(re.search(latticeEnergy,rIIfile).group('energy'))
-        EBoth = float(re.search(latticeEnergy,bothFile).group('energy'))
+        rIfile = ce.readOutputFile('sp.{}.{}.RI.gout'.format(base_name, currentRI))
+        rIIfile = ce.readOutputFile('sp.{}.{}.RII.gout'.format(base_name, currentRI))
+        bothFile = ce.readOutputFile('sp.{}.{}.BOTH.gout'.format(base_name, currentRI))
+        ERI = float(re.search(latticeEnergy, rIfile).group('energy'))
+        ERII = float(re.search(latticeEnergy, rIIfile).group('energy'))
+        EBoth = float(re.search(latticeEnergy, bothFile).group('energy'))
         
         total_E_RI = ERI + 0.5*(EBoth - (ERI+ERII))
         E_excess = total_E_RI - newRI.numberOfAtoms*E_atom
-        excess_energies.append([currentRI,E_excess])
+        excess_energies.append([currentRI, E_excess])
         currentRI -= dRI
-        print('Energy is %.6f eV' % E_excess) 
+        print('Energy is {:.6f} eV'.format(E_excess)) 
         
-    outStream = open(base_name + '.energies','w')
-    for r,E in excess_energies:
-        outStream.write('%d %.4f\n' % (r,E))
+    outStream = open(base_name + '.energies', 'w')
+    for r, E in excess_energies:
+        outStream.write('{} {:.4f}\n'.format(r, E))
         
     outStream.close()
     return
     
-def iterateIonicEdge(startRI,finalRI,dRI,base_name,gulpexec,E_atoms):
+def iterateIonicEdge(startRI, finalRI, dRI, base_name, gulpexec, E_atoms):
     '''Iterate over values of RI in the cluster cell to find the energy function
     E(r) for an edge dislocation.
     '''
@@ -89,44 +89,48 @@ def iterateIonicEdge(startRI,finalRI,dRI,base_name,gulpexec,E_atoms):
     # extract relaxed atomic positions in dislocated cell
     rIAtoms = cry.Basis()
     rIIAtoms = cry.Basis()
-    gulp.extractRegions('dis.%s.grs' % base_name,rIAtoms,rIIAtoms)
+    gulp.extractRegions('dis.{}.grs'.format(base_name), rIAtoms, rIIAtoms)
 
     # extract atoms in perfect cell (need to get rid of this)
     rIperf = cry.Basis()
     rIIperf = cry.Basis()
-    gulp.extractRegions('ndf.%s.grs' % base_name,rIperf,rIIperf)
+    gulp.extractRegions('ndf.{}.grs'.format(base_name), rIperf, rIIperf)
     currentRI = startRI
     excess_energies = []
     # iterate over radii
     while currentRI >= finalRI:
 
-        print('Setting RI = %.1f...' % currentRI)
-        print('Calculating energy',end=' ')
-        [newRI,newRII,tempRI,tempRII] = ce.newRegions(rIperf,rIAtoms,
-                            rIIperf,rIIAtoms,currentRI)
-        ce.writeSPSections(newRI,newRII,sysInfo,'sp.%s.%d' %
-                                (base_name,currentRI),True)
-        for reg in ['RI','RII','BOTH']:
-            gulp.run_gulp(gulpexec,'sp.%s.%d.%s' %
-                             (base_name,currentRI,reg))
-        rIfile = ce.readOutputFile('sp.%s.%d.RI.gout' % (base_name,currentRI))
-        rIIfile = ce.readOutputFile('sp.%s.%d.RII.gout' % (base_name,currentRI))
-        bothFile = ce.readOutputFile('sp.%s.%d.BOTH.gout' % (base_name,currentRI))
-        ERI = float(re.search(latticeEnergy,rIfile).group('energy'))
-        ERII = float(re.search(latticeEnergy,rIIfile).group('energy'))
-        EBoth = float(re.search(latticeEnergy,bothFile).group('energy'))
+        print('Setting RI = {:.1f}...'.format(currentRI))
+        print('Calculating energy', end=' ')
+        [newRI, newRII, tempRI, tempRII] = ce.newRegions(rIperf, rIAtoms,
+                                           rIIperf, rIIAtoms, currentRI)
+        ce.writeSPSections(newRI, newRII, sysInfo, 'sp.{}.{}'.format(base_name, currentRI),
+                                                                                  True)
+        for reg in ['RI', 'RII', 'BOTH']:
+            gulp.run_gulp(gulpexec, 'sp.{}.{}.{}'.format(base_name, currentRI, reg))
+            
+        rIfile = ce.readOutputFile('sp.{}.{}.RI.gout'.format((base_name, currentRI))
+        rIIfile = ce.readOutputFile('sp.{}.{}.RII.gout'.format(base_name, currentRI))
+        bothFile = ce.readOutputFile('sp.{}.{}.BOTH.gout'.format(base_name, currentRI))
+        
+        ERI = float(re.search(latticeEnergy, rIfile).group('energy'))
+        ERII = float(re.search(latticeEnergy, rIIfile).group('energy'))
+        EBoth = float(re.search(latticeEnergy, bothFile).group('energy'))
         total_E_RI = ERI + 0.5*(EBoth - (ERI+ERII))
         E_perfect = 0.0
+        
         for atom in newRI:
             E_perfect += E_atoms[atom.getSpecies()]
+            
         E_excess = total_E_RI - E_perfect
-        excess_energies.append([currentRI,E_excess])
+        excess_energies.append([currentRI, E_excess])
         currentRI -= dRI
-        print('Energy is %.6f eV' % E_excess)
+        print('Energy is {:.6f} eV'.format(E_excess))
         
-    outStream = open(base_name + '.energies','w')
-    for r,E in excess_energies:
-        outStream.write('%d %.4f\n' % (r,E))
+    outStream = open(base_name + '.energies', 'w')
+    for r, E in excess_energies:
+        outStream.write('{} {:.4f}\n'.format(r, E))
+        
     outStream.close()
     return
     
@@ -149,8 +153,8 @@ def main(argv):
     finalRI = eval(argv[2])
     dRI = eval(argv[3])
     basename = str(argv[4])
-    E_atom = eval(argv[5])
-    relax_K = eval(argv[6]) # True or False, do we fit K?
+    relax_K = eval(argv[5]) # True or False, do we fit K?
+    E_atom = eval(argv[6])
     
     try:
         gulpExec = str(argv[7])
@@ -161,7 +165,7 @@ def main(argv):
         
     # calculate energy as a function of radius
     print('####CALCULATING ENERGY OF EDGE DISLOCATION AS A FUNCTION OF R####')
-    iterateEdgeRI(startRI,finalRI,dRI,basename,gulpExec,E_atom)
+    iterateEdgeRI(startRI, finalRI, dRI, basename, gulpExec, E_atom)
     
     # calculate the core energy and energy coefficient
     # begin by prompting user to enter burgers vector and length of simulation
@@ -187,27 +191,26 @@ def main(argv):
         thickness = float(thickness)
         
     # Fit core energy and energy coefficient, and write to output
-    Ecore,K,cov = ce.fitCoreEnergy(basename,b,thickness,2*b,fit_K=relax_K)
+    Ecore, K, cov = ce.fitCoreEnergy(basename, b, thickness, 2*b, fit_K=relax_K)
     KGPa = K*ce.CONV_EV_TO_GPA
     if len(cov) > 1:  
-        errKGPa = np.sqrt(cov[1,1])*ce.CONV_EV_TO_GPA
+        errKGPa = np.sqrt(cov[1, 1])*ce.CONV_EV_TO_GPA
     else:
         errKGPa = 0. # did not fit K
         
-    EString = "Core energy: %.4f +- %.4f eV/angstrom" % (Ecore,np.sqrt(cov[0,0]))
-    KString = "Energy coefficient: %.2f +- %.2f GPa" % \
-                          (KGPa,errKGPa)
+    EString = "Core energy: {:.4f} +- {:.4f} eV/angstrom".format(Ecore, np.sqrt(cov[0, 0]))
+    KString = "Energy coefficient: {:.2f} +- {:.2f} GPa".format(KGPa, errKGPa)
                           
     print('\n\n' + EString)
     print(KString)
                           
     # generate fitted energies and output to file
     print('\n\nWriting fitted energies to file...\n\n')
-    fittedEnergies = open('%s.fitted.energies' % basename,'w')
-    r,E = ce.numericalEnergyCurve(startRI,Ecore,K,b,2*b)
-    fittedEnergies.write('# %s; %s\n' % (EString,KString))
-    for i,energy in enumerate(E):
-        fittedEnergies.write('%.3f %.6f\n' % (r[i],energy))
+    fittedEnergies = open('{}.fitted.energies'.format(basename), 'w')
+    r, E = ce.numericalEnergyCurve(startRI, Ecore, K, b, 2*b)
+    fittedEnergies.write('# {}; {}\n'.format(EString, KString))
+    for i, energy in enumerate(E):
+        fittedEnergies.write('{:.3f} {:.6f}\n'.format(r[i], energy))
     fittedEnergies.close()
     
     delete = raw_input('Delete single point calculation input/output files: ')
@@ -218,12 +221,4 @@ def main(argv):
     
     
 if __name__ == "__main__":
-    main(sys.argv) 
-    
-    
-####### IN PROGRESS - IONIC DISLOCATIONS #######
-'''
-
-
-
-'''                                           
+    main(sys.argv)                                           

@@ -23,7 +23,7 @@ def R(atom):
     distance = np.sqrt(x[0]**2+x[1]**2)
     return distance
  
-def newRegions(rIPerfect,rIDislocated,rIIPerfect,rIIDislocated,Rnew):
+def newRegions(rIPerfect, rIDislocated, rIIPerfect, rIIDislocated, Rnew):
     '''Creates new <cry.Basis> objects to hold the lists of 
     region I and region II atoms with a smaller radius <Rnew> 
     '''   
@@ -33,7 +33,7 @@ def newRegions(rIPerfect,rIDislocated,rIIPerfect,rIIDislocated,Rnew):
     newRIPerfect = cry.Basis()
     newRIIPerfect = rIIPerfect.copy()
     
-    for i,atom in enumerate(rIDislocated):
+    for i, atom in enumerate(rIDislocated):
         # calculate radial distance of the i-th atom from dislocation line
         # in the relaxed structure. 
         Rxy = R(atom)
@@ -53,22 +53,22 @@ def readSystemInfo(filename):
     potentials etc.), plus the value of pcell.
     '''
     
-    sysFile = open(filename + '.sysInfo','r')
+    sysFile = open(filename + '.sysInfo', 'r')
     sysInfo = sysFile.readlines()
     sysFile.close()
     
     return sysInfo
     
-def writeSinglePoint(rIBasis,rIIBasis,sysInfo,outName,disloc):
+def writeSinglePoint(rIBasis, rIIBasis, sysInfo, outName, disloc):
     '''Creates a gulp input file for a single point cluster calculation
     using the atoms in <rIBasis> and <rIIBasis>, with the pcell value and 
     interatomic potentials in <sysInfo>. <disloc> is Boolean variable
     whose value is <True> if the system contains a dislocation.
     '''
     
-    dummyLattice = np.array([[1,0,0],[0,1,0],[0,0,1]])
+    dummyLattice = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     
-    outStream = open(outName + '.gin','w')
+    outStream = open(outName + '.gin', 'w')
     
     # permit charged cells
     outStream.write('qok eregion\n')
@@ -78,10 +78,10 @@ def writeSinglePoint(rIBasis,rIIBasis,sysInfo,outName,disloc):
     
     # Before writing regions to output, test to see if they are empty.
     if rIBasis.getAtoms():  
-        gulp.writeRegion(rIBasis,dummyLattice,outStream,1,disloc,use_cart=False,
+        gulp.writeRegion(rIBasis, dummyLattice, outStream, 1, disloc, use_cart=False,
                                                        coordType='pfractional')
     if rIIBasis.getAtoms():
-        gulp.writeRegion(rIIBasis,dummyLattice,outStream,2,disloc,use_cart=False,
+        gulp.writeRegion(rIIBasis, dummyLattice, outStream, 2, disloc, use_cart=False,
                                                         coordType='pfractional')
     
     # finally, write interatomic potentials, etc. to file
@@ -89,7 +89,7 @@ def writeSinglePoint(rIBasis,rIIBasis,sysInfo,outName,disloc):
         outStream.write(line)
     return
     
-def writeSPSections(regionI,regionII,sysInfo,outName,disloc):
+def writeSPSections(regionI, regionII, sysInfo, outName, disloc):
     '''Takes in region I and region II atoms, and performs single-point energy
     calculations on 1D periodic simulation cells containing only atoms from
     region I (RI), only atoms from region II (RII), and all atoms (BOTH).
@@ -100,11 +100,11 @@ def writeSPSections(regionI,regionII,sysInfo,outName,disloc):
     emptyBasis = cry.Basis()
     
     # region I only
-    writeSinglePoint(regionI,emptyBasis,sysInfo,outName+'.RI',disloc)
+    writeSinglePoint(regionI, emptyBasis, sysInfo, outName+'.RI', disloc)
     # region II only
-    writeSinglePoint(emptyBasis,regionII,sysInfo,outName+'.RII',disloc)
+    writeSinglePoint(emptyBasis, regionII, sysInfo, outName+'.RII', disloc)
     # both regions 
-    writeSinglePoint(regionI,regionII,sysInfo,outName+'.BOTH',disloc)
+    writeSinglePoint(regionI, regionII, sysInfo, outName+'.BOTH', disloc)
     
     return
     
@@ -113,7 +113,7 @@ def nameBits(baseName):
     naming single-point calculation input files.
     '''
     
-    baseFormat = re.match(r'(\w+)\.\d+\.(\d+)',baseName)
+    baseFormat = re.match(r'(\w+)\.\d+\.(\d+)', baseName)
     systemName = baseFormat.group(1)
     RII = baseFormat.group(2) 
     
@@ -124,7 +124,7 @@ def readOutputFile(filename):
     Returns a string containing every line in filename, including \\n characters
     '''
     
-    outFile = open(filename,'r')
+    outFile = open(filename, 'r')
     outLines = outFile.readlines()
     outFile.close()
     
@@ -135,7 +135,7 @@ def readOutputFile(filename):
         
     return singleString
     
-def dislocationEnergyExplicit(gulpName,outStream,currentRI):
+def dislocationEnergyExplicit(gulpName, outStream, currentRI):
     '''Constructs energy curve for dislocation using output files of single
     point calculations. Outputs results to <outName>
     '''
@@ -163,12 +163,12 @@ def dislocationEnergyExplicit(gulpName,outStream,currentRI):
     # calculate energy of introducing a dislocation
     eDis = totalEnergyDis - totalEnergyPerf
     
-    outStream.write('%d %.6f\n' % (currentRI,eDis))
+    outStream.write('{} {:.6f}\n'.format(currentRI, eDis))
     
     return eDis
     
-def dislocationEnergySections(gulpName,outStream,currentRI):
-    '''Constructs energy curve for dislocation using RI,RII, and BOTH
+def dislocationEnergySections(gulpName, outStream, currentRI):
+    '''Constructs energy curve for dislocation using RI, RII, and BOTH
     output files from single point calculations. Outputs results to <outName>.
     '''
     
@@ -177,34 +177,35 @@ def dislocationEnergySections(gulpName,outStream,currentRI):
                                   '(?P<energy>-?\d+\.\d+)\s+eV\s*\n')
                                   
     # list of simulation regions
-    simulations = ('RI','RII','BOTH')
+    simulations = ('RI', 'RII', 'BOTH')
     
     energies = dict()
 
     # extract energies of each individual single point calculation
     # energy of dislocated cell...
-    for cellType in ('dislocated','perfect'):
+    for cellType in ('dislocated', 'perfect'):
         # create a subdictionary to hold energies of individual calculations
         energies[cellType] = dict()
         for region in simulations:
-            outputFile = readOutputFile(gulpName + '.%s.%s.gout' % (cellType,region))
-            E = float(re.search(latticeEnergy,outputFile).group('energy'))
+            outputFile = readOutputFile(gulpName + '.{}.{}.gout'.format(cellType, region))
+            E = float(re.search(latticeEnergy, outputFile).group('energy'))
             energies[cellType][region] = E
          
         # compute region I - region II interaction energy for polymer <cellType>    
         energies[cellType]['RIRII'] = (energies[cellType]['BOTH'] -
                     energies[cellType]['RI'] - energies[cellType]['RII'])
         # compute total energy of region I (ERI + 0.5*Einteraction)
-        energies[cellType]['Etot'] = energies[cellType]['RI'] + 0.5*energies[cellType]['RIRII']
+        energies[cellType]['Etot'] = (energies[cellType]['RI'] + 
+                                    0.5*energies[cellType]['RIRII'])
     
     # calculate energy of dislocation                
     eDis = energies['dislocated']['Etot'] - energies['perfect']['Etot']
     
-    outStream.write('%d %.6f\n' % (currentRI,eDis))
+    outStream.write('{} {:.6f}\n'.format(currentRI, eDis))
         
     return eDis
 
-def iterateOverRI(startRI,finalRI,dRI,baseName,gulpExec,
+def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec,
                                                 explicitRegions=True):
     '''Decreases the radius of region I from <startRI> to <finalRI> by
     decrementing by dRI (> 0). <baseName> gives the root name for both .grs
@@ -214,7 +215,7 @@ def iterateOverRI(startRI,finalRI,dRI,baseName,gulpExec,
     '''
     
     # open the output file to stream energy data to
-    outStream = open(baseName + '.energies','w')
+    outStream = open(baseName + '.energies', 'w')
     sysInfo = readSystemInfo(baseName)
    
     # get bits for output names
@@ -227,8 +228,8 @@ def iterateOverRI(startRI,finalRI,dRI,baseName,gulpExec,
     rIIDislocated = cry.Basis()
     
     # populate these bases from the input files
-    gulp.extractRegions('ndf.'+baseName+'.grs', rIPerfect, rIIPerfect)
-    gulp.extractRegions('dis.'+baseName+'.grs', rIDislocated, rIIDislocated)
+    gulp.extractRegions('ndf.{}.grs'.format(baseName), rIPerfect, rIIPerfect)
+    gulp.extractRegions('dis.{}.grs'.format(baseName), rIDislocated, rIIDislocated)
 
     # ensure that dRI is > 0
     dRI = abs(dRI)
@@ -246,45 +247,45 @@ def iterateOverRI(startRI,finalRI,dRI,baseName,gulpExec,
         
     while currentRI >= finalRI:
     
-        print('Setting RI = %.1f...' % currentRI)
-        print('Calculating energy',end=' ') 
+        print('Setting RI = {:.1f}...'.format(currentRI))
+        print('Calculating energy', end=' ') 
         
         [newRI, newRII, newRIPerfect, newRIIPerfect] = newRegions(rIPerfect,
-                             rIDislocated,rIIPerfect,rIIDislocated,currentRI)
+                             rIDislocated, rIIPerfect, rIIDislocated, currentRI)
 
-        derivedName = 'sp.%s.%.1f.%s' % (systemName,currentRI,RIIval)
+        derivedName = 'sp.{}.{:.1f}.{}'.format(systemName, currentRI, RIIval)
         
         # works to here
         
         if explicitRegions: # use GULP's eregion functionality     
             print('using eregion.')              
-            writeSinglePoint(newRI,newRII,sysInfo,derivedName+'.dislocated',
+            writeSinglePoint(newRI, newRII, sysInfo, derivedName+'.dislocated',
                                                                         True)
-            writeSinglePoint(newRIPerfect,newRIIPerfect,sysInfo,derivedName 
-                                                         + '.perfect',False)
+            writeSinglePoint(newRIPerfect, newRIIPerfect, sysInfo, derivedName 
+                                                         + '.perfect', False)
                                                          
             # run single point calculations and extract dislocation energy
-            for cellType in ('dislocated','perfect'):
-                gulp.run_gulp(gulpExec,'%s.%s' % (derivedName,cellType))
+            for cellType in ('dislocated', 'perfect'):
+                gulp.run_gulp(gulpExec, '{}.{}'.format(derivedName, cellType))
                                                 
-            eDis = dislocationEnergyExplicit(derivedName,outStream,currentRI) 
+            eDis = dislocationEnergyExplicit(derivedName, outStream, currentRI) 
             
         else: # calculate energy of region I by calculating energies of regions
             print ('using sections.')
-            writeSPSections(newRI,newRII,sysInfo,derivedName + '.dislocated',
+            writeSPSections(newRI, newRII, sysInfo, derivedName + '.dislocated',
                                                                         True)
-            writeSPSections(newRIPerfect,newRIIPerfect,sysInfo,derivedName 
-                                                         + '.perfect',False)
+            writeSPSections(newRIPerfect, newRIIPerfect, sysInfo, derivedName 
+                                                         + '.perfect', False)
                                                          
             # run single point calculations and extract dislocation energy                                             
-            for cellType in ('dislocated','perfect'):
-                for regionsUsed in ('RI','RII','BOTH'):
-                    gulp.run_gulp(gulpExec,'%s.%s.%s' % (derivedName,cellType,
+            for cellType in ('dislocated', 'perfect'):
+                for regionsUsed in ('RI', 'RII', 'BOTH'):
+                    gulp.run_gulp(gulpExec, '%s.%s.%s' % (derivedName, cellType,
                                                             regionsUsed))
                                                           
-            eDis = dislocationEnergySections(derivedName,outStream,currentRI) 
+            eDis = dislocationEnergySections(derivedName, outStream, currentRI) 
             
-        print('Energy is %.6f eV' % eDis)    
+        print('Energy is {:.6f} eV'.format(eDis))    
                                                          
         currentRI = currentRI - dRI        
         
@@ -297,14 +298,14 @@ def readEnergies(basename):
     '''
     
     E = []
-    with open(basename+'.energies','r') as EFile:
+    with open(basename+'.energies', 'r') as EFile:
         for line in EFile:
             line = line.rstrip().split()
-            E.append([float(line[0]),float(line[1])])
+            E.append([float(line[0]), float(line[1])])
             
     return np.array(E)
     
-def EDis(r,Ecore,K,b,rcore=10.):
+def EDis(r, Ecore, K, b, rcore=10.):
     '''Strain energy between rcore and r of a dislocation with core energy 
     <Ecore>, Burgers vector <b>, and energy coefficient K. Returns in units of
     eV/b.
@@ -312,48 +313,48 @@ def EDis(r,Ecore,K,b,rcore=10.):
     
     return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
     
-def fitCoreEnergy(basename,b,thickness,rcore=10,fit_K=False):
+def fitCoreEnergy(basename, b, thickness, rcore=10, fit_K=False):
     '''Fit the core energy and energy coefficient of the dislocation whose 
     radius-energy data is stored in <basename>.energies. Returns K in eV/ang**3
     and Ecore in eV/ang. <thickness> is the length of the simulation cell.
     '''
     
-    E = readEnergies(basename)/np.array([1.,thickness])
+    E = readEnergies(basename)/np.array([1., thickness])
    
     # define dislocation energy function -> contains specified core radius. If
     # fit_K is true, fit the value of K, otherwise, use the material specific
     # value (which we prompt the user to enter
     if fit_K:
-        def specific_energy(r,Ecore,K):
+        def specific_energy(r, Ecore, K):
             return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
     else:
         K = raw_input("Enter the energy coefficient K (in GPa): ")
         # convert to eV/ang**3
         K = float(K)/CONV_EV_TO_GPA
-        def specific_energy(r,Ecore):
+        def specific_energy(r, Ecore):
             return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
         
     # fit the core energy and energy coefficient
-    par,cov = curve_fit(specific_energy,E[:,0],E[:,1])
+    par, cov = curve_fit(specific_energy, E[:, 0], E[:, 1])
     Ecore = par[0] 
     if fit_K:
         K = par[1]
     
-    return Ecore,K,cov
+    return Ecore, K, cov
     
-def numericalEnergyCurve(rmax,Ecore,K,b,rcore=10,rmin=1,dr=0.1):
+def numericalEnergyCurve(rmax, Ecore, K, b, rcore=10, rmin=1, dr=0.1):
     '''Computes energy as a function of r between <rmin> and <rmax> (at
     intervals of <dr>) using the fitted dislocation energy function.
     '''
     
     # number of samples
     n = int((rmax-rmin)/dr)
-    r = np.linspace(rmin,rmax,n)
+    r = np.linspace(rmin, rmax, n)
     
     # generate energy as a function of r
-    E = EDis(r,Ecore,K,b,rcore)
+    E = EDis(r, Ecore, K, b, rcore)
     
-    return r,E    
+    return r, E    
     
 def main(argv):
     '''Driver function for energy fitting.
@@ -390,7 +391,7 @@ def main(argv):
         
     # calculate energy as a function of radius
     print('####CALCULATING ENERGY OF DISLOCATION AS A FUNCTION OF R####')
-    iterateOverRI(startRI,finalRI,dRI,basename,gulpExec,explicitRegions)
+    iterateOverRI(startRI, finalRI, dRI, basename, gulpExec, explicitRegions)
     
     # calculate the core energy and energy coefficient
     # begin by prompting user to enter burgers vector and length of simulation
@@ -422,27 +423,26 @@ def main(argv):
             not_thickness = False
     
     # Fit core energy and energy coefficient, and write to output
-    Ecore,K,cov = fitCoreEnergy(basename,b,thickness,2*b,fit_K=relax_K)
+    Ecore, K, cov = fitCoreEnergy(basename, b, thickness, 2*b, fit_K=relax_K)
     KGPa = K*CONV_EV_TO_GPA
     if len(cov) > 1:  
-        errKGPa = np.sqrt(cov[1,1])*CONV_EV_TO_GPA
+        errKGPa = np.sqrt(cov[1, 1])*CONV_EV_TO_GPA
     else:
         errKGPa = 0. # did not fit K
         
-    EString = "Core energy: %.4f +- %.4f eV/angstrom" % (Ecore,np.sqrt(cov[0,0]))
-    KString = "Energy coefficient: %.2f +- %.2f GPa" % \
-                          (KGPa,errKGPa)
+    EString = "Core energy: {:.4f} +- {:.4f} eV/angstrom".format(Ecore, np.sqrt(cov[0, 0]))
+    KString = "Energy coefficient: {:.2f} +- {:.2f} GPa".format(KGPa, errKGPa)
                           
     print('\n\n' + EString)
     print(KString)
                           
     # generate fitted energies and output to file
     print('\n\nWriting fitted energies to file...\n\n')
-    fittedEnergies = open('%s.fitted.energies' % basename,'w')
-    r,E = numericalEnergyCurve(startRI,Ecore,K,b,2*b)
-    fittedEnergies.write('# %s; %s\n' % (EString,KString))
-    for i,energy in enumerate(E):
-        fittedEnergies.write('%.3f %.6f\n' % (r[i],energy))
+    fittedEnergies = open('{}.fitted.energies'.format(basename), 'w')
+    r, E = numericalEnergyCurve(startRI, Ecore, K, b, 2*b)
+    fittedEnergies.write('# {}; {}\n'.format(EString, KString))
+    for i, energy in enumerate(E):
+        fittedEnergies.write('{:.3f} {:.6f}\n'.format(r[i], energy))
     fittedEnergies.close()
     
     delete = raw_input('Delete single point calculation input/output files' +

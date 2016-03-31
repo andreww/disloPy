@@ -15,14 +15,7 @@ from pyDis.pn._pn_control import control_file, from_mapping, change_type, to_boo
                                             change_or_map, print_control   
                             
 # import modules required to set up and run a dislocation simulation
-from pyDis.atomic import gulpUtils as gulp
-from pyDis.atomic import qe_utils as qe
-from pyDis.atomic import castep_utils as castep
-from pyDis.atomic import crystal as cry
-from pyDis.atomic import rodSetup as rod
-from pyDis.atomic import fields
-from pyDis.atomic import aniso
-from pyDis.atomic import atomistic_utils as atm
+from pyDis.atomic.atomic_import import *
 
 def array_or_int(dimension):
     '''Determine whether the user is specifying a single supercell size, or a 
@@ -127,12 +120,16 @@ def handle_atomistic_control(test_dict):
     # x-axis. Method for calculating core energy is specified using an 
     # integer, which may take the following values: 1 == GULP method, 2 == explicit
     # calculation of region energies, 3 == edge approach (ie. atomic energies).
-    cluster_cards = (('r1', {'default': None, 'type': float}),
-                     ('r2', {'default': None, 'type': float}),
+    cluster_cards = (('region1', {'default': None, 'type': float}),
+                     ('region2', {'default': None, 'type': float}),
                      ('scale', {'default': 1.1, 'type': float}),
                      ('branch_cut', {'default': [0, -1], 'type': vector}),
                      ('thickness', {'default': 1, 'type': int}),
-                     ('method', {'default': 1, 'type': int})
+                     ('method', {'default': 1, 'type': int}),
+                     ('rmax', {'default': 2, 'type': int}),
+                     ('rmin', {'default': 1, 'type': int}),
+                     ('dr', {'default': 1, 'type': int}),
+                     ('fit_K', {'default': False, 'type': to_bool})
                     )
                      
     namelists = ['control','elast', 'multipole', 'cluster']
@@ -288,11 +285,12 @@ class AtomisticSim(object):
         
         elif self.control('calc_type') == 'cluster':
             # calculate using cluster method
-            if self.cluster('method') == 1:
+            if self.cluster('method') == 1: # Normal GULP method
+                cluster_energy.main([self.cluster('rma
                 pass
-            elif self.cluster('method') == 2:
+            elif self.cluster('method') == 2: # direct calculation on regions
                 pass
-            elif self.cluster('method') == 3:
+            elif self.cluster('method') == 3: # edge method
                 pass
             else: 
                 raise ValueError(("{} does not correspond to a valid way to " +
