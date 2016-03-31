@@ -257,7 +257,7 @@ def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec,
         
         # works to here
         
-        if explicitRegions: # use GULP's eregion functionality     
+        if not explicitRegions: # use GULP's eregion functionality     
             print('using eregion.')              
             writeSinglePoint(newRI, newRII, sysInfo, derivedName+'.dislocated',
                                                                         True)
@@ -277,7 +277,7 @@ def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec,
             writeSPSections(newRIPerfect, newRIIPerfect, sysInfo, derivedName 
                                                          + '.perfect', False)
                                                          
-            # run single point calculations and extract dislocation energy                                             
+            # run single point calculations and extract dislocation energy
             for cellType in ('dislocated', 'perfect'):
                 for regionsUsed in ('RI', 'RII', 'BOTH'):
                     gulp.run_gulp(gulpExec, '%s.%s.%s' % (derivedName, cellType,
@@ -313,7 +313,7 @@ def EDis(r, Ecore, K, b, rcore=10.):
     
     return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
     
-def fitCoreEnergy(basename, b, thickness, rcore=10, fit_K=False):
+def fitCoreEnergy(basename, b, thickness, rcore=10, fit_K=False, in_K=None):
     '''Fit the core energy and energy coefficient of the dislocation whose 
     radius-energy data is stored in <basename>.energies. Returns K in eV/ang**3
     and Ecore in eV/ang. <thickness> is the length of the simulation cell.
@@ -328,7 +328,9 @@ def fitCoreEnergy(basename, b, thickness, rcore=10, fit_K=False):
         def specific_energy(r, Ecore, K):
             return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
     else:
-        K = raw_input("Enter the energy coefficient K (in GPa): ")
+        if in_K == None: # prompt user to provide energy coefficient
+            K = raw_input("Enter the energy coefficient K (in GPa): ")
+            
         # convert to eV/ang**3
         K = float(K)/CONV_EV_TO_GPA
         def specific_energy(r, Ecore):
@@ -356,38 +358,40 @@ def numericalEnergyCurve(rmax, Ecore, K, b, rcore=10, rmin=1, dr=0.1):
     
     return r, E    
     
-def main(argv):
+def main(argv, K=None):
     '''Driver function for energy fitting.
+    
+    #!!! rethink input of K
     '''
     
     # read in simulation parameters
-    startRI = eval(argv[1])
-    finalRI = eval(argv[2])
-    dRI = eval(argv[3])
-    basename = str(argv[4])
-    relax_K = eval(argv[5])
+    startRI = eval(argv[0])
+    finalRI = eval(argv[1])
+    dRI = eval(argv[2])
+    basename = str(argv[3])
+    relax_K = eval(argv[4])
     
     try:
-        gulpExec = str(argv[6])
+        gulpExec = str(argv[5])
     except IndexError:
         # if no path to the GULP executable is given, assume that it is in the
         # present working directory. 
         gulpExec = './gulp'
         # tell program whether or not to use <eregion> to partition energies 
         # between regions I and II
-        # <explicitRegions> == False => Do three single point calculations: one
+        # <explicitRegions> == True => Do three single point calculations: one
         # with the whole simulation cell, one with the region I atoms only, and
         # one with the region II atoms only. 
         try:
-            explicitRegions = eval(argv[6])
+            explicitRegions = eval(argv[5])
         except IndexError:
-            explicitRegions = True
+            explicitRegions = False
     else:
         # as above    
         try:
-            explicitRegions = eval(argv[7])
+            explicitRegions = eval(argv[6])
         except IndexError:
-            explicitRegions = True
+            explicitRegions = False
         
     # calculate energy as a function of radius
     print('####CALCULATING ENERGY OF DISLOCATION AS A FUNCTION OF R####')
@@ -423,7 +427,7 @@ def main(argv):
             not_thickness = False
     
     # Fit core energy and energy coefficient, and write to output
-    Ecore, K, cov = fitCoreEnergy(basename, b, thickness, 2*b, fit_K=relax_K)
+    Ecore, K, cov = fitCoreEnergy(basename, b, thickness, 2*b, fit_K=relax_K, in_K=K)
     KGPa = K*CONV_EV_TO_GPA
     if len(cov) > 1:  
         errKGPa = np.sqrt(cov[1, 1])*CONV_EV_TO_GPA
@@ -454,7 +458,7 @@ def main(argv):
     
     
 if __name__ == "__main__":
-    main(sys.argv)    
+    main(sys.argv[1:], K=None)    
     
         
         

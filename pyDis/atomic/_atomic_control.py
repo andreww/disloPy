@@ -5,7 +5,7 @@ import numpy as np
 import re
 import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
-import numpy.linalg as L
+from numpy.linalg import norm
 
 # list of atomic simulation codes currently supported by pyDis
 supported_codes = ('qe', 'gulp', 'castep')
@@ -90,9 +90,10 @@ def handle_atomistic_control(test_dict):
                      ('calc_type', {'default': None, 'type': str}),
                      ('program', {'default': None, 'type': str}),
                      ('run_sim', {'default': False, 'type': to_bool}),
-                     ('simulation_name', {'default': 'dis', 'type': str}),
+                     ('basename', {'default': 'dis', 'type': str}),
                      ('suffix', {'default': 'in', 'type': str}),
                      ('executable', {'default': '', 'type': str}),
+                     ('calculate_core_energy', {'default': False, 'type': to_bool})
                     )
     
     # cards for the <&elast> namelist. Note that if dislocations are specified 
@@ -227,8 +228,7 @@ class AtomisticSim(object):
         if self.control('calc_type') == 'supercell':
             self.burgers, self.cores = handle_fields(self.multipole('field_file'))
         
-        # calculate the energy coefficients -> could be turned into own function
-        # need to rethink for analytic solutions with anisotropic elasticity
+        # elasticity stuff
         if self.elast('coefficients') == 'aniso':
             self.K = coeff.anisotropic_K(self.elast('cij'),
                                          self.elast('b_edge'),
@@ -249,7 +249,36 @@ class AtomisticSim(object):
             elif self.control('disl_type') == 'screw':
                 self.K = self.K[1]
         
+        # create input and (if specified) run simulation        
+        if self.control('calc_type') == 'cluster':
+            self.construct_cluster()          
+        elif self.control('calc_type') == 'supercell':
+            self.construct_multipole()
+        else:
+            raise ValueError(("{} does not correspond to a known simulation " +
+                                      "type").format(self.control('calc_type')))
+            
+        if self.control('run_sim'):
+            self.run_simulation()
+        
     def construct_cluster(self):
+        '''Construct input file for a cluster-based simulation.
+        '''
+        
+        if self.control('program') != 'gulp': # or LAMMPS...when I implement it.
+            raise Warning("Only perform cluster-based calculation with" +
+                                                  "interatomic potentials")
+            
+        base_struc = cry.Crystal()
+        if self.control('program') == 'gulp': # add option for LAMMPS later
+            sys_info = gulp.parse_gulp(self.control('unit_cell', base_struc)
+            
+            #!!! need to work out why I included this bit
+            sysout = open('{}.{}.{}.sysInfo'.format(basename, self.cluster('region1'),
+                                                              self.cluster('region2'))
+            sysout.write('pcell\n')
+            sysout.write('{:.5f} 0\n'.format(self.cluster('thickness') *
+                                             norm(base_struc.getC())))
         return
         
     def construct_multipole(self):
@@ -278,20 +307,49 @@ class AtomisticSim(object):
         
     def core_energy(self):
         '''Calculate the core energy of the dislocation.
+        
+        Probably need to modify <cluster_energy> and <edge_energy> so that burgers
+        magnitude can be input.
         '''
         
-        if not self.control('calculate_core_energy'):
+        if not self.control('run_sim'):
+            # must have relaxed the dislocation structure to calculate it E_core
             pass
-        
+        elif not self.control('calculate_core_energy'):
+            pass      
         elif self.control('calc_type') == 'cluster':
             # calculate using cluster method
-            if self.cluster('method') == 1: # Normal GULP method
-                cluster_energy.main([self.cluster('rma
-                pass
-            elif self.cluster('method') == 2: # direct calculation on regions
-                pass
+            if self.cluster('method') == 1 or self.cluster('method') == 2:
+                # Calculate energies of regions explicitly
+                if self.cluster('method') == 1:
+                    # use hardcoded gulp routine
+                    explicit_regions = False
+                elif self.cluster('method') == 2:
+                    # do single-point calculations
+                    explicit_regions = True
+                    
+                cluster_energy.main([self.cluster('rmax'),
+                                     self.cluster('rmin'),
+                                     self.cluster('dr'),
+                                     self.control('basename'),
+                                     self.cluster('fit_K'),
+                                     self.control('executable'),
+                                     self.control(explicit_regions),
+                                     K=self.K]
+                                   )
             elif self.cluster('method') == 3: # edge method
-                pass
+                # get atomic energies
+                self.atomic_energies = edge_energy.make_atom_dict()
+                # calculate core energy
+                edge_energy.main([self.cluster('rmax'),
+                                  self.cluster('rmin'),
+                                  self.cluster('dr'),
+                                  self.control('basename')
+                                  self.cluster('fit_K'),
+                                  self.control('executable'),
+                                  self.atomic_energies,
+                                  K=self.K]
+                                )
             else: 
                 raise ValueError(("{} does not correspond to a valid way to " +
                    "calculate the core energy.").format(self.cluster('method')))

@@ -144,20 +144,22 @@ def make_atom_dict():
         new_dict[new_key] = value
     return new_dict
 
-def main(argv):
+def main(argv, K=None):
     '''Driver function for energy fitting.
+    
+    #!!! Need to rethink input for K, but no obvious way to do so here.
     '''
     
     # read in simulation parameters
-    startRI = eval(argv[1])
-    finalRI = eval(argv[2])
-    dRI = eval(argv[3])
-    basename = str(argv[4])
-    relax_K = eval(argv[5]) # True or False, do we fit K?
-    E_atom = eval(argv[6])
+    startRI = eval(argv[0])
+    finalRI = eval(argv[1])
+    dRI = eval(argv[2])
+    basename = str(argv[3])
+    relax_K = eval(argv[4]) # True or False, do we fit K?
+    E_atom = eval(argv[5])
     
     try:
-        gulpExec = str(argv[7])
+        gulpExec = str(argv[6])
     except IndexError:
         # if no path to the GULP executable is given, assume that it is in the
         # present working directory. 
@@ -191,7 +193,7 @@ def main(argv):
         thickness = float(thickness)
         
     # Fit core energy and energy coefficient, and write to output
-    Ecore, K, cov = ce.fitCoreEnergy(basename, b, thickness, 2*b, fit_K=relax_K)
+    Ecore, K, cov = ce.fitCoreEnergy(basename, b, thickness, 2*b, fit_K=relax_K, in_K=K)
     KGPa = K*ce.CONV_EV_TO_GPA
     if len(cov) > 1:  
         errKGPa = np.sqrt(cov[1, 1])*ce.CONV_EV_TO_GPA
@@ -208,9 +210,12 @@ def main(argv):
     print('\n\nWriting fitted energies to file...\n\n')
     fittedEnergies = open('{}.fitted.energies'.format(basename), 'w')
     r, E = ce.numericalEnergyCurve(startRI, Ecore, K, b, 2*b)
+    
     fittedEnergies.write('# {}; {}\n'.format(EString, KString))
+    
     for i, energy in enumerate(E):
         fittedEnergies.write('{:.3f} {:.6f}\n'.format(r[i], energy))
+        
     fittedEnergies.close()
     
     delete = raw_input('Delete single point calculation input/output files: ')
@@ -221,4 +226,4 @@ def main(argv):
     
     
 if __name__ == "__main__":
-    main(sys.argv)                                           
+    main(sys.argv[1:], K=None)                                           
