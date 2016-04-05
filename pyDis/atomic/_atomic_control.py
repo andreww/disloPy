@@ -267,7 +267,7 @@ class AtomisticSim(object):
         
         if self.control('program') != 'gulp': # or LAMMPS...when I implement it.
             raise Warning("Only perform cluster-based calculation with" +
-                                                  "interatomic potentials")
+                      "interatomic potentials if you know what's good for you")
             
         base_struc = cry.Crystal()
         if self.control('program') == 'gulp': # add option for LAMMPS later
@@ -318,6 +318,8 @@ class AtomisticSim(object):
         elif not self.control('calculate_core_energy'):
             pass      
         elif self.control('calc_type') == 'cluster':
+            #!!! Need to completely rewrite this to accommodate changes to the 
+            #!!! energy modules -> will be shorter.
             # calculate using cluster method
             if self.cluster('method') == 1 or self.cluster('method') == 2:
                 # Calculate energies of regions explicitly
@@ -338,7 +340,8 @@ class AtomisticSim(object):
                                      K=self.K]
                                    )
             elif self.cluster('method') == 3: # edge method
-                # get atomic energies
+                # get atomic energies -> may want to be able to input these
+                # non-interactively.
                 self.atomic_energies = edge_energy.make_atom_dict()
                 # calculate core energy
                 edge_energy.main([self.cluster('rmax'),
