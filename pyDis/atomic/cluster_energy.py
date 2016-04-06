@@ -17,8 +17,6 @@ from pyDis.atomic import gulpUtils as gulp
 CONV_EV_TO_GPA = 160.2176487 
 
 # regex guff -> find new home
-formula_parser = re.compile('\s+Formula\s+=\s+' +
-    '([A-Z][a-z]?\d+)+')
 atom_format = re.compile('(?P<name>[A-Z][a-z]?)(?P<nat>\d+)')
 latticeEnergy = re.compile(r'\n\s*Total lattice energy\s+=\s+' +
                                   '(?P<energy>-?\d+\.\d+)\s+eV\s*\n')
@@ -223,10 +221,6 @@ def dislocationEnergySections(gulpName, outStream, currentRI):
     '''Constructs energy curve for dislocation using RI, RII, and BOTH
     output files from single point calculations. Outputs results to <outName>.
     '''
-    
-    # regex to find the total energy of the simulation cell
-    latticeEnergy = re.compile(r'\n\s*Total lattice energy\s+=\s+' +
-                                  '(?P<energy>-?\d+\.\d+)\s+eV\s*\n')
                                   
     # list of simulation regions
     simulations = ('RI', 'RII', 'BOTH')
@@ -257,64 +251,41 @@ def dislocationEnergySections(gulpName, outStream, currentRI):
         
     return eDis
     
-def iterateEdge(startRI, finalRI, dRI, base_name, gulpexec, E_atoms):
-    '''Iterate over values of RI in the cluster cell to find the energy function
-    E(r) for an edge dislocation.
-    '''
-
     
-    # read system specific information required to run simulation
-    sysInfo = readSystemInfo(base_name)
-
-    # extract relaxed atomic positions in dislocated cell
-    rIAtoms = cry.Basis()
-    rIIAtoms = cry.Basis()
-    gulp.extractRegions('dis.{}.grs'.format(base_name), rIAtoms, rIIAtoms)
-
-    # extract atoms in perfect cell (need to get rid of this)
-    rIperf = cry.Basis()
-    rIIperf = cry.Basis()
-    gulp.extractRegions('ndf.{}.grs'.format(base_name), rIperf, rIIperf)
-    currentRI = startRI
-    excess_energies = []
-    # iterate over radii
-    while currentRI >= finalRI:
-
-        print('Setting RI = {:.1f}...'.format(currentRI))
-        print('Calculating energy', end=' ')
-        [newRI, newRII, tempRI, tempRII] = newRegions(rIperf, rIAtoms,
-                                           rIIperf, rIIAtoms, currentRI)
-        writeSPSections(newRI, newRII, sysInfo, 'sp.{}.{}'.format(base_name, currentRI),
-                                                                                  True)
-        for reg in ['RI', 'RII', 'BOTH']:
-            gulp.run_gulp(gulpexec, 'sp.{}.{}.{}'.format(base_name, currentRI, reg))
+def dislocation_energy_edge(base_name, outStream, currentRI, newRI, E_atoms):
+    '''Calculate energy using atomic energies. As the edge dislocation setup code
+    is non-conservative, the use of this method is mandatory for edge dislocations.
+    '''
+                                  
+    # list of simulation regions
+    simulations = ('RI', 'RII', 'BOTH')
+    
+    energies = dict()
+    
+    # extract energies from single point calculations
+    rIfile = readOutputFile('{}.RI.gout'.format(base_name))
+    rIIfile = readOutputFile('{}.RII.gout'.format(base_name))
+    bothFile = readOutputFile('{}.BOTH.gout'.format(base_name))
+    
+    # calculate energy of region I of the dislocated cell    
+    ERI = float(re.search(latticeEnergy, rIfile).group('energy'))
+    ERII = float(re.search(latticeEnergy, rIIfile).group('energy'))
+    EBoth = float(re.search(latticeEnergy, bothFile).group('energy'))
+    total_E_RI = ERI + 0.5*(EBoth - (ERI+ERII))
+    
+    # calculate energy of equivalent number of atoms in perfect crystal
+    E_perfect = 0.0        
+    for atom in newRI:
+        E_perfect += E_atoms[atom.getSpecies()]
             
-        rIfile = readOutputFile('sp.{}.{}.RI.gout'.format(base_name, currentRI))
-        rIIfile = readOutputFile('sp.{}.{}.RII.gout'.format(base_name, currentRI))
-        bothFile = readOutputFile('sp.{}.{}.BOTH.gout'.format(base_name, currentRI))
+    eDis = total_E_RI - E_perfect
         
-        ERI = float(re.search(latticeEnergy, rIfile).group('energy'))
-        ERII = float(re.search(latticeEnergy, rIIfile).group('energy'))
-        EBoth = float(re.search(latticeEnergy, bothFile).group('energy'))
-        total_E_RI = ERI + 0.5*(EBoth - (ERI+ERII))
-        E_perfect = 0.0
-        
-        for atom in newRI:
-            E_perfect += E_atoms[atom.getSpecies()]
-            
-        E_excess = total_E_RI - E_perfect
-        excess_energies.append([currentRI, E_excess])
-        currentRI -= dRI
-        print('Energy is {:.6f} eV'.format(E_excess))
-        
-    outStream = open(base_name + '.energies', 'w')
-    for r, E in excess_energies:
-        outStream.write('{} {:.4f}\n'.format(r, E))
-        
-    outStream.close()
-    return
+    outStream.write('{} {:.6f}\n'.format(currentRI, eDis))
+    
+    return eDis
 
-def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, use_eregion=True):
+def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, use_eregion=True,
+                                                                E_atoms=None):
     '''Decreases the radius of region I from <startRI> to <finalRI> by
     decrementing by dRI (> 0). <baseName> gives the root name for both .grs
     files and the .sysInfo file. <gulpExec> is the path to the GULP 
@@ -363,7 +334,17 @@ def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, use_eregion=True):
 
         derivedName = 'sp.{}.{:.1f}.{}'.format(systemName, currentRI, RIIval)
         
-        if use_eregion: # use GULP's eregion functionality     
+        if E_atoms != None:
+            print('using edge.')
+            writeSPSections(newRI, newRII, sysInfo, derivedName, True)
+            
+            # run single-point calculations
+            for regionsUsed in ('RI', 'RII', 'BOTH'):
+                gulp.run_gulp(gulpExec, '{}.{}'.format(derivedName, regionsUsed))
+            
+            eDis = dislocation_energy_edge(derivedName, outStream, currentRI, 
+                                                        newRI, E_atoms) 
+        elif use_eregion: # use GULP's eregion functionality     
             print('using eregion.')              
             writeSinglePoint(newRI, newRII, sysInfo, derivedName+'.dislocated',
                                                                         True)
@@ -386,7 +367,7 @@ def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, use_eregion=True):
             # run single point calculations and extract dislocation energy
             for cellType in ('dislocated', 'perfect'):
                 for regionsUsed in ('RI', 'RII', 'BOTH'):
-                    gulp.run_gulp(gulpExec, '%s.%s.%s' % (derivedName, cellType,
+                    gulp.run_gulp(gulpExec, '{}.{}.{}'.format(derivedName, cellType,
                                                             regionsUsed))
                                                           
             eDis = dislocationEnergySections(derivedName, outStream, currentRI) 
@@ -480,7 +461,7 @@ def dis_energy(rmax, rmin, dr, basename, executable, method, b, thick,
     elif method == 'eregion':
         iterateOverRI(rmax, rmin, dr, basename, executable, use_eregion=True)
     elif method == 'edge' and atom_dict != None:
-        iterateEdge(rmax, rmin, dr, basename, executable, atom_dict)
+        iterateOverRI(rmax, rmin, dr, basename, executable, E_atoms=atom_dict)
     
     # if rc == None, use the normal value of twice the burgers vector length
     if rc != rc:  
