@@ -45,7 +45,7 @@ if __name__ == "__main__":
     gulpStruc = cry.Crystal()
     sysInfo = gulp.parse_gulp(gulpName,gulpStruc)
             
-    superGulp = cry.superConstructor(gulpStruc,np.array([xWidth,yWidth,0]))
+    superGulp = cry.superConstructor(gulpStruc,np.array([xWidth,yWidth,1]))
             
     core1 = np.array([0.5/xWidth,0.25/yWidth])
     b = L.norm(gulpStruc.getC())*cry.ei(3)

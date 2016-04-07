@@ -276,9 +276,12 @@ class Lattice(object):
             end = ''
         else:
             end = '\n'
-        write_function('%.4f %.4f %.4f%s' % (self.__a[0], self.__a[1], self.__a[2], end))
-        write_function('%.4f %.4f %.4f%s' % (self.__b[0], self.__b[1], self.__b[2], end))
-        write_function('%.4f %.4f %.4f%s' % (self.__c[0], self.__c[1], self.__c[2], end))
+        write_function('{:.4f} {:.4f} {:.4f}{}'.format(self.__a[0], self.__a[1], 
+                                                               self.__a[2], end))
+        write_function('{:.4f} {:.4f} {:.4f}{}'.format(self.__b[0], self.__b[1], 
+                                                               self.__b[2], end))
+        write_function('{:.4f} {:.4f} {:.4f}{}'.format(self.__c[0], self.__c[1], 
+                                                               self.__c[2], end))
         
     def setLattice(self, otherLattice):
         '''Sets <self> equal to some <otherLattice>.

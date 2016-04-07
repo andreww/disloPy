@@ -42,7 +42,8 @@ def array_or_int(dimension):
 
         cell_size = np.arange(i1, i2+di, di)       
     elif int_string:
-        cell_sizes = int(int_string.group())
+        # making it iterable simplifies handling supercell setup
+        cell_sizes = [int(int_string.group())]
     else:
         raise AttributeError("No cell dimensions found.")
     
@@ -112,8 +113,9 @@ def handle_atomistic_control(test_dict):
     # types. <xlength> and <ylength> may be integers or arrays.
     # cards for the <&multipole> namelist
     multipole_cards = (('field_file', {'default': 'dis.cores', 'type': str}),
-                       ('xlength', {'default': 1, 'type': array_or_int}),
-                       ('ylength', {'default': 1, 'type': array_or_int})
+                       ('nx', {'default': 1, 'type': array_or_int}),
+                       ('ny', {'default': 1, 'type': array_or_int}),
+                       ('relaxtype', {'default': '', 'type': str})
                       )
                       
     # cards for the <&cluster> namelist. Remember that the Stroh sextic theory
@@ -133,18 +135,22 @@ def handle_atomistic_control(test_dict):
                      ('fit_K', {'default': False, 'type': to_bool})
                     )
                      
-    namelists = ['control','elast', 'multipole', 'cluster']
+    namelists = ['control', 'elast', 'multipole', 'cluster', 'atoms']
     
     # that all namelists in control file
     for name in namelists:
         if name not in param_dict.keys():
-            param_dict[name] = dict()
+            if name == 'atoms':
+                # record that no atomic energies were provided
+                param_dict[name] = None
+            else:
+                param_dict[name] = dict()
             
-    for i,cards in enumerate([control_cards, elast_cards, multipole_cards,
+    for i, cards in enumerate([control_cards, elast_cards, multipole_cards,
                                                            cluster_cards]):
         for var in cards:
             try:
-                change_or_map(param_dict,namelist[i],var[0],var[1]['type'])
+                change_or_map(param_dict, namelist[i], var[0], var[1]['type'])
             except ValueError:
                 default_var = var[1]['default']
                 # test to see if variable is "mission-critical"
@@ -159,6 +165,19 @@ def handle_atomistic_control(test_dict):
                         pass
                         
     return
+    
+def atom_namelist(param_dict):
+    '''Converts the &atoms namelist in <param_dict> into a lookup table for
+    atomic energies.
+    '''
+    
+    unformatted_atoms = param_dict['atoms']
+    atom_dict = dict()
+    
+    for species in unformatted_atoms.keys():
+        atom_dict[species] = float(unformatted_atoms[species])
+        
+    return atom_dict
                 
 def handle_fields(field_file):
     '''Handle fields separately from the <&control> and <&geometry> namelists.
@@ -180,9 +199,9 @@ def handle_fields(field_file):
     field_form = re.compile('new_field(?P<burgers>(?:\s+-?\d+\.?\d*){3})'+
                             '(?P<centre>(?:\s+\d\.?\d*){2})\s+end_field;')
     
-    #with open(field_file) as f:
-    #    fieldstring = f.readlines()
-    fieldstring = field_file    
+    with open(field_file) as f:
+        fieldstring = f.readlines()
+ 
     # now find all field entries and construct dislocation fields. Append entries
     # of the form [b, eta]
     dis_burgers = []
@@ -202,6 +221,19 @@ def handle_fields(field_file):
     
     return dis_burgers, dis_locs
     
+def burgers_cartesian(b, lattice):
+    '''Construct the cartesian representation of the Burgers vector from the
+    crystal lattice and lattice representation of the Burgers vector.
+    '''
+    
+    burgers = np.zeros(3)
+    
+    basis_vectors = lattice.getLattice()
+    for i in range(3):
+        burgers += b[i]*basis_vectors[i]
+        
+    return burgers
+    
 class AtomisticSim(object):
     '''handles the control file for multipole-SC and cluster based dislocation 
     simulations in <pyDis>.
@@ -210,6 +242,10 @@ class AtomisticSim(object):
     def __init__(self,filename):
         self.sim = control_file(filename)
         handle_atomistic_control(self.sim)
+        
+        if self.sim('atoms') != None:
+            # process provided atomic energies
+            self.atomic_energies = atom_namelist(self.sim)
         
         # functions for easy access to namelist variables
         self.control = lambda card: self.sim['control'][card]
@@ -257,9 +293,6 @@ class AtomisticSim(object):
         else:
             raise ValueError(("{} does not correspond to a known simulation " +
                                       "type").format(self.control('calc_type')))
-            
-        if self.control('run_sim'):
-            self.run_simulation()
         
     def construct_cluster(self):
         '''Construct input file for a cluster-based simulation.
@@ -269,22 +302,89 @@ class AtomisticSim(object):
             raise Warning("Only perform cluster-based calculation with" +
                       "interatomic potentials if you know what's good for you")
             
-        base_struc = cry.Crystal()
+        self.base_struc = cry.Crystal()
         if self.control('program') == 'gulp': # add option for LAMMPS later
-            sys_info = gulp.parse_gulp(self.control('unit_cell', base_struc)
+            sys_info = gulp.parse_gulp(self.control('unit_cell'), self.base_struc)
+            
+            self.burgers = burgers_cartesian(self.elast('burgers'), self.base_struc)
             
             #!!! need to work out why I included this bit
             sysout = open('{}.{}.{}.sysInfo'.format(basename, self.cluster('region1'),
                                                               self.cluster('region2'))
             sysout.write('pcell\n')
             sysout.write('{:.5f} 0\n'.format(self.cluster('thickness') *
-                                             norm(base_struc.getC())))
+                                             norm(self.base_struc.getC())))
+            for line in sys_info:
+                sysout.write('{}\n'.format(line))
+            
+            sysout.close()
+            
+            cluster = rs.TwoRegionCluster(self.base_struc, 
+                                          self.elast('centre'), 
+                                          self.cluster('region2')*self.cluster('scale'),
+                                          self.cluster('region1'),
+                                          self.cluster('region2),
+                                          self.cluster('thickness')
+                                         )
+                                         
+            # apply displacement field
+            cluster.applyField(self.field, #cores, #burgers, Sij=*, branch=?)
+            
+            outname = '{}.{}.{}'.format(self.control('sim_name'), self.cluster('region1'),
+                                                                  self.cluster('region2'))
+            gulp.write1DCluster(cluster, sys_info, outname)
+            
+            if self.control('run_sim'):
+                self.run_simulation('dis.{}'.format(outname))
+                self.run_simulation('ndf.{}'.format(outname))
+            
         return
         
     def construct_multipole(self):
+        '''Construct 3D-periodic simulation cell containing multiple dislocations
+        (whose burgers vectors must sum to zero).
+        '''
+        
+        self.base_struc = cry.Crystal()
+        
+        # find read/write functions appropriate to the atomistic simulation code
+        ab_initio = False
+        if self.control('program') == 'gulp':
+            parse_fn = gulp.parse_gulp
+            write_fn = gulp.write_gulp
+        elif self.control('program') == 'qe':
+            parse_fn = qe.parse_qe
+            write_fn = qe.write_qe
+            ab_initio = True
+        elif self.control('program') == 'castep':
+            parse_fn = castep.parse_castep
+            write_fn = castep.write_castep
+            ab_initio = True
+        
+        sys_info = parse_fn(self.control('unit_cell'), self.base_struc)
+        
+        for nx in self.multipole('nx'):
+            for ny in self.multipole('ny'):
+                # if calculation uses DFT, need to scale k-point grid
+                if ab_initio:
+                    atm.scale_kpoints(sys_info['cards']['K_POINTS'], np.array([nx, ny, 1.]))
+                
+                # construct supercell
+                supercell = cry.superConstructor(base_struc, np.array([nx, ny, 1.]))
+                                                                  
+                supercell.applyField(self.field, self.cores, self.burgers, #Sij=?)
+                
+                basename = '{}.{}.{}'.format(self.control('basename'), nx, ny)
+                outstream = open('{}.{}.{}.{}'.format(basename, self.control('suffix')), 'w')
+                write_fn(outstream, supercell, sys_info, to_cart=False, defected=True, 
+                          add_constraints=False, relax_type=self.multipole('relaxtype'))
+                          
+                # run calculations, if requested by the user
+                self.run_simulation(basename)
+        
         return
         
-    def run_simulation(self):
+    def run_simulation(self, basename):
         '''If specified by the user, run the simulation on the local machine.
         '''
         
@@ -292,16 +392,12 @@ class AtomisticSim(object):
         if self.control('executable') == None:
             raise ValueError('No executable provided.')
         
-        if self.control('run_sim'):
-            # run simulation
-            if 'gulp' == args.prog.lower():
-                gulp.run_gulp(args.progexec, basename) 
-            elif 'qe' == args.prog.lower():
-                qe.run_qe(args.progexec, basename)
-            elif 'castep' == args.prog.lower():
-                castep.run_castep(args.progexec, basename)
-        else:
-            pass
+        if 'gulp' == self.control('program'):
+            gulp.run_gulp(self.control('executable'), basename) 
+        elif 'qe' == self.control('program'):
+            qe.run_qe(self.control('executable'), basename)
+        elif 'castep' == self.control('program'):
+            castep.run_castep(self.control('executable'), basename)
             
         return
         
@@ -321,42 +417,38 @@ class AtomisticSim(object):
             #!!! Need to completely rewrite this to accommodate changes to the 
             #!!! energy modules -> will be shorter.
             # calculate using cluster method
-            if self.cluster('method') == 1 or self.cluster('method') == 2:
-                # Calculate energies of regions explicitly
-                if self.cluster('method') == 1:
-                    # use hardcoded gulp routine
-                    explicit_regions = False
-                elif self.cluster('method') == 2:
-                    # do single-point calculations
-                    explicit_regions = True
-                    
-                cluster_energy.main([self.cluster('rmax'),
-                                     self.cluster('rmin'),
-                                     self.cluster('dr'),
-                                     self.control('basename'),
-                                     self.cluster('fit_K'),
-                                     self.control('executable'),
-                                     self.control(explicit_regions),
-                                     K=self.K]
-                                   )
-            elif self.cluster('method') == 3: # edge method
-                # get atomic energies -> may want to be able to input these
-                # non-interactively.
-                self.atomic_energies = edge_energy.make_atom_dict()
-                # calculate core energy
-                edge_energy.main([self.cluster('rmax'),
-                                  self.cluster('rmin'),
-                                  self.cluster('dr'),
-                                  self.control('basename')
-                                  self.cluster('fit_K'),
-                                  self.control('executable'),
-                                  self.atomic_energies,
-                                  K=self.K]
-                                )
+            if self.cluster('method') == 1:
+                self.cluster('method') = 'eregion'
+                self.atomic_energies = None
+            elif self.cluster('method') == 2:
+                self.cluster('method') = 'explicit'
+                self.atomic_energies = None
+            elif self.cluster('method') == 3:
+                if self.atomic_energies == None: 
+                    # prompt user to enter atomic symbols & energies
+                    self.atomic_energies = ce.make_atom_dict()
+                
+                self.cluster('method') = 'edge'
+            
+            # run single point calculation    
+            ce.dis_energy(self.cluster('rmax'),
+                          self.cluster('rmin'),
+                          self.cluster('dr'),
+                          self.cluster('basename'),
+                          self.cluster('executable'),
+                          self.cluster('b'),
+                          self.cluster('thickness')*norm(self.base_struc.getC()),
+                          relax_K=self.cluster('fit_K'),
+                          K=self.K,
+                          atom_dict=self.atomic_energies,
+                          rc=self.elast('rcore')
+                         )
+                          
             else: 
                 raise ValueError(("{} does not correspond to a valid way to " +
                    "calculate the core energy.").format(self.cluster('method')))
         else: # supercell calculation
+            #!!! Need to think about this
             if self.multipole('method') == 1:
                 pass
             elif self.multipole('method') == 2:

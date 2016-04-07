@@ -22,12 +22,14 @@ def control_file(filename):
     
     sim_parameters = dict()
     lines = []
-    input_style = re.compile('\s+(?P<par>.+)\s*=\s*[\'"]?(?P<value>[^\'"]*)[\'"]?;')
+    input_style = re.compile('\s*(?P<par>.+)\s*=\s*[\'"]?(?P<value>[^\'"]*)[\'"]?\s*;')
 
     with open(filename) as f:
         for line in f:
-            temp = line.rstrip()
+            temp = line.strip()
             # handle the line
+            if temp.startswith('#'): # comment
+                continue
             if temp.startswith('&'): # check to see if <line> starts a namelist
                 card_name = re.search('&(?P<name>\w+)\s+{', temp).group('name')
                 sim_parameters[card_name] = dict()
@@ -369,11 +371,13 @@ class PNSim(object):
         # original test was self.control("dimensions")
         n_columns = np.shape(gsf_grid)[-1]
         if n_columns == 2:
-            self.gsf = fg.spline_fit1d(gsf_grid, self.surf('x_length'), self.surf('y_length'),
-                                                        angle=self.surf('angle'))
+            self.gsf = fg.spline_fit1d(gsf_grid, self.surf('x_length'), 
+                                                 self.surf('y_length'),
+                                                 angle=self.surf('angle'))
         elif n_columns == 3: # 2-dimensional misfit function
-            base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), self.surf('y_length'),
-                                                            angle=self.surf('angle'))
+            base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), 
+                                                  self.surf('y_length'),
+                                                  angle=self.surf('angle'))
             temp_gsf = fg.new_gsf(base_func, self.surf('map_ux'), 
                                              self.surf('map_uy'))
             if self.control('dimensions') == 1: 

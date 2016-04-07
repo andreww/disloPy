@@ -11,5 +11,4 @@ from pyDis.atomic import rodSetup as rod
 from pyDis.atomic import fields
 from pyDis.atomic import aniso
 from pyDis.atomic import atomistic_utils as atm
-from pyDis.atomic import cluster_energy
-from pyDis.atomic import edge_energy
+from pyDis.atomic import cluster_energy as ce

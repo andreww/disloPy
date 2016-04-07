@@ -52,14 +52,22 @@ def ceiling(x):
         return float(int(x + 1.0))
 
 def scale_kpoints(kgrid, sc_dimensions):
-    '''Scales the k-point grid to reflect new supercell dimensions.
+    '''Scales the k-point grid to reflect new supercell dimensions. 
     '''
 
     new_grid = []
-    for k, dim in zip(kgrid['spacing'], sc_dimensions):
+    try:
+        use_grid = kgrid['old_spacing']
+    except KeyError:
+        kgrid['old_spacing'] = kgrid['spacing']
+        use_grid = kgrid['spacing']       
+        
+    for k, dim in zip(use_grid, sc_dimensions):
         new_grid.append(max(int(ceiling(k / dim)), 1))
-
+    
+    # store the original grid and 
     kgrid['spacing'] = new_grid
+    return
 
 def write_kgrid(write_fn, kgrid):
     '''Writes k-point grid.
