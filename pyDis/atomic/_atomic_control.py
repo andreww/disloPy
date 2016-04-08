@@ -78,7 +78,7 @@ def vector(vec_str):
         
     return np.array(base_vector)    
 
-def handle_atomistic_control(test_dict):
+def handle_atomistic_control(param_dict):
     '''Handle each possible card for an atomistic (ie. cluster or multipole-SC)
     simulation of dislocation properties. As for Peierls-Nabarro simulations, if
     the default value of a card is <None>, the card is deemed "mission critical"
@@ -94,19 +94,23 @@ def handle_atomistic_control(test_dict):
                      ('basename', {'default': 'dis', 'type': str}),
                      ('suffix', {'default': 'in', 'type': str}),
                      ('executable', {'default': '', 'type': str}),
-                     ('calculate_core_energy', {'default': False, 'type': to_bool})
+                     ('calculate_core_energy', {'default': True, 'type': to_bool})
                     )
     
     # cards for the <&elast> namelist. Note that if dislocations are specified 
-    # in the <fields> file, they will overwrite <burgers>               
+    # in the <fields> file, they will overwrite <burgers>. Current options for
+    # <field_type> are: aniso(tropic), iso_screw, iso_edge, and aniso_screw.
+    # aniso_edge will be added later.           
     elast_cards = (('disl_type', {'default': None, 'type': str}),
                    ('burgers', {'default': cry.ei(3), 'type': vector}),
                    ('bulk', {'default': None, 'type': float}),
                    ('shear', {'default': None, 'type': float}),
-                   ('possion', {'default': None, 'type': float}),
+                   ('poisson', {'default': None, 'type': float}),
+                   ('cij', {'default': None, 'type': aniso.readCij}),
                    ('in_gpa', {'default': True, 'type': to_bool}),
                    ('rcore', {'default': 10., 'type': float}),
-                   ('centre', {'default': np.zeros(2), 'type': vector})
+                   ('centre', {'default': np.zeros(2), 'type': vector}),
+                   ('field_type', {'default': None, 'type': str})
                   )
                   
     # Now move on to namelists that specify parameters for specific simulation
@@ -135,7 +139,7 @@ def handle_atomistic_control(test_dict):
                      ('fit_K', {'default': False, 'type': to_bool})
                     )
                      
-    namelists = ['control', 'elast', 'multipole', 'cluster', 'atoms']
+    namelists = ['control', 'multipole', 'cluster', 'elast', 'atoms']
     
     # that all namelists in control file
     for name in namelists:
@@ -145,25 +149,50 @@ def handle_atomistic_control(test_dict):
                 param_dict[name] = None
             else:
                 param_dict[name] = dict()
-            
-    for i, cards in enumerate([control_cards, elast_cards, multipole_cards,
-                                                           cluster_cards]):
+    
+    # <&atoms> and <&elast> namelists need to be handled separately.        
+    for i, cards in enumerate([control_cards, multipole_cards, cluster_cards]):
         for var in cards:
             try:
-                change_or_map(param_dict, namelist[i], var[0], var[1]['type'])
+                change_or_map(param_dict, namelists[i], var[0], var[1]['type'])
             except ValueError:
-                default_var = var[1]['default']
+                default_val = var[1]['default']
                 # test to see if variable is "mission-critical"
-                if (default_vale == None) and var[0] != 'cij_file':
+                if default_val == None:
                     raise ValueError("No value supplied for mission-critical" +
-                                            " variable %s." % var[0])
+                                            " variable %s.".format(var[0]))
                 else:
                     param_dict[namelists[i]][var[0]] = default_val
                     # no mapping options, but keep this line to make it easier
                     # to merge with corresponding function in <_pn_control.py>
                     if type(default_val) == str and 'map' in default_val:
-                        pass
+                        from_mapping(param_dict, namelists[i], var[0])
                         
+    # extract values from the &elast namelist
+    for var in elast_cards:
+        try:
+            change_or_map(param_dict, 'elast', var[0], var[1]['type'])
+        except ValueError:
+            param_dict['elast'][var[0]] = var[1]['default']
+                                         
+    # test to make sure that all of the parameters required for one of isotropic
+    # or anisotropic elasticity have been supplied. Should we also test to see
+    # which function to use when calculating the energy coefficients?
+    if param_dict['elast']['cij'] != None:
+        # if an elastic constants tensor is given, use anisotropic elasticity
+        param_dict['elast']['coefficients'] = 'aniso'
+    elif param_dict['elast']['shear'] != None:
+        # test to see if another isotropic elastic property has been provided. 
+        # Preference poisson's ratio over bulk modulus, if both have been provided
+        if param_dict['elast']['poisson']  != None:
+            param_dict['elast']['coefficients'] = 'iso_nu'
+        elif param_dict['elast']['bulk'] != None:
+            param_dict['elast']['coefficients'] = 'iso_bulk'
+        else:
+            raise AttributeError("No elastic properties have been provided.")
+    else:
+        raise AttributeError("No elastic properties have been provided.")
+        
     return
     
 def atom_namelist(param_dict):
@@ -234,6 +263,14 @@ def burgers_cartesian(b, lattice):
         
     return burgers
     
+def poisson(K, G):
+    '''Calculate isotropic poisson's ratio from the bulk modulus <K> and shear
+    modulus <G>.
+    '''
+    
+    nu = (3*K - 2*G)/(2*(3*K+G))
+    return nu
+    
 class AtomisticSim(object):
     '''handles the control file for multipole-SC and cluster based dislocation 
     simulations in <pyDis>.
@@ -243,7 +280,7 @@ class AtomisticSim(object):
         self.sim = control_file(filename)
         handle_atomistic_control(self.sim)
         
-        if self.sim('atoms') != None:
+        if self.sim['atoms'] != None:
             # process provided atomic energies
             self.atomic_energies = atom_namelist(self.sim)
         
@@ -259,6 +296,8 @@ class AtomisticSim(object):
         else: 
             raise ValueError("{} is not a supported atomistic simulation code." +
                          "Supported codes are: GULP; QE; CASTEP.")
+                         
+        self.set_field()
         
         # if multipole simulation, read dislocation parameters from field file
         if self.control('calc_type') == 'supercell':
@@ -280,9 +319,9 @@ class AtomisticSim(object):
                 self.K = coeff.isotropic_K(self.elast('bulk'), 
                                             self.elast('shear'))
             
-            if self.control('disl_type') == 'edge':
+            if self.elast('disl_type') == 'edge':
                 self.K = self.K[0]
-            elif self.control('disl_type') == 'screw':
+            elif self.elast('disl_type') == 'screw':
                 self.K = self.K[1]
         
         # create input and (if specified) run simulation        
@@ -293,6 +332,38 @@ class AtomisticSim(object):
         else:
             raise ValueError(("{} does not correspond to a known simulation " +
                                       "type").format(self.control('calc_type')))
+                                      
+        # finally, calculate the dislocation core energy
+        if self.control('calculate_core_energy'):
+            self.core_energy()
+                                      
+    def set_field(self):
+        '''Sets the dislocation field type, using the values provided in <elast>.
+        '''
+        
+        # make choice of field
+        if self.elast('field_type') == 'aniso_stroh':          
+            self.ufield = aniso.makeAnisoField(self.elast('cij'))
+            self.sij = 0. # dummy
+            
+        elif self.elast('field_type') == 'iso_screw':
+            self.ufield = fields.isotropicScrewField
+            self.sij = 0. # dummy
+            
+        elif self.elast('field_type') == 'iso_edge':
+            self.ufield = fields.isotropicEdgeField
+            if self.elast('poisson') != None:
+                self.sij = self.elast('poisson')
+            else:
+                self.sij = poisson(self.elast('bulk'), self.elast('shear'))
+                
+        elif self.elast('field_type') == 'aniso_screw':
+            self.ufield = fields.anisotropicScrewField
+            # need to make this work for general elasticty, but currently works
+            # because C_{44} = 1/S_{44}, C_{55} = 1/S_{55}
+            self.sij = self.elast('cij')[4, 4]/self.elast('cij')[3, 3]
+        
+        return 
         
     def construct_cluster(self):
         '''Construct input file for a cluster-based simulation.
@@ -301,6 +372,8 @@ class AtomisticSim(object):
         if self.control('program') != 'gulp': # or LAMMPS...when I implement it.
             raise Warning("Only perform cluster-based calculation with" +
                       "interatomic potentials if you know what's good for you")
+        
+        print("Constructing cluster...", end='')
             
         self.base_struc = cry.Crystal()
         if self.control('program') == 'gulp': # add option for LAMMPS later
@@ -309,8 +382,9 @@ class AtomisticSim(object):
             self.burgers = burgers_cartesian(self.elast('burgers'), self.base_struc)
             
             #!!! need to work out why I included this bit
-            sysout = open('{}.{}.{}.sysInfo'.format(basename, self.cluster('region1'),
-                                                              self.cluster('region2'))
+            sysout = open('{}.{:.0f}.{:.0f}.sysInfo'.format(self.control('basename'),
+                                                    self.cluster('region1'),
+                                                    self.cluster('region2')), 'w')
             sysout.write('pcell\n')
             sysout.write('{:.5f} 0\n'.format(self.cluster('thickness') *
                                              norm(self.base_struc.getC())))
@@ -319,24 +393,29 @@ class AtomisticSim(object):
             
             sysout.close()
             
-            cluster = rs.TwoRegionCluster(self.base_struc, 
+            cluster = rod.TwoRegionCluster(self.base_struc, 
                                           self.elast('centre'), 
                                           self.cluster('region2')*self.cluster('scale'),
                                           self.cluster('region1'),
-                                          self.cluster('region2),
+                                          self.cluster('region2'),
                                           self.cluster('thickness')
                                          )
                                          
             # apply displacement field
-            cluster.applyField(self.field, #cores, #burgers, Sij=*, branch=?)
+            cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
+                                    Sij=self.sij, branch=self.cluster('branch_cut'))
             
-            outname = '{}.{}.{}'.format(self.control('sim_name'), self.cluster('region1'),
-                                                                  self.cluster('region2'))
+            outname = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), 
+                                                self.cluster('region1'),
+                                                self.cluster('region2'))
+                                                
             gulp.write1DCluster(cluster, sys_info, outname)
             
             if self.control('run_sim'):
                 self.run_simulation('dis.{}'.format(outname))
                 self.run_simulation('ndf.{}'.format(outname))
+                
+        print('done')
             
         return
         
@@ -372,7 +451,7 @@ class AtomisticSim(object):
                 # construct supercell
                 supercell = cry.superConstructor(base_struc, np.array([nx, ny, 1.]))
                                                                   
-                supercell.applyField(self.field, self.cores, self.burgers, #Sij=?)
+                supercell.applyField(self.field, self.cores, self.burgers, Sij=self.sij)
                 
                 basename = '{}.{}.{}'.format(self.control('basename'), nx, ny)
                 outstream = open('{}.{}.{}.{}'.format(basename, self.control('suffix')), 'w')
@@ -414,39 +493,46 @@ class AtomisticSim(object):
         elif not self.control('calculate_core_energy'):
             pass      
         elif self.control('calc_type') == 'cluster':
+            print('Calculating core energy:')
             #!!! Need to completely rewrite this to accommodate changes to the 
             #!!! energy modules -> will be shorter.
             # calculate using cluster method
+            print(self.cluster('method') == 'edge')
+            if (self.cluster('method') != 'eregion' 
+                and self.cluster('method') != 'explicit'
+                and self.cluster('method') != 'edge'):
+                raise ValueError(("{} does not correspond to a valid way to " +
+                   "calculate the core energy.").format(self.cluster('method')))
             if self.cluster('method') == 1:
-                self.cluster('method') = 'eregion'
+                method = 'eregion'
                 self.atomic_energies = None
             elif self.cluster('method') == 2:
-                self.cluster('method') = 'explicit'
+                method = 'explicit'
                 self.atomic_energies = None
-            elif self.cluster('method') == 3:
+            if self.cluster('method') == 3:
                 if self.atomic_energies == None: 
                     # prompt user to enter atomic symbols & energies
-                    self.atomic_energies = ce.make_atom_dict()
-                
-                self.cluster('method') = 'edge'
-            
-            # run single point calculation    
+                    self.atomic_energies = ce.make_atom_dict() 
+                          
+            # run single point calculation
+            basename = '{}.{:.0f}.{:.0f}'.format(self.control('basename'),
+                                                 self.cluster('region1'),
+                                                 self.cluster('region2'))    
             ce.dis_energy(self.cluster('rmax'),
                           self.cluster('rmin'),
                           self.cluster('dr'),
-                          self.cluster('basename'),
-                          self.cluster('executable'),
-                          self.cluster('b'),
+                          basename,
+                          self.control('executable'),
+                          self.cluster('method'),
+                          self.burgers[0],
                           self.cluster('thickness')*norm(self.base_struc.getC()),
                           relax_K=self.cluster('fit_K'),
                           K=self.K,
                           atom_dict=self.atomic_energies,
                           rc=self.elast('rcore')
                          )
-                          
-            else: 
-                raise ValueError(("{} does not correspond to a valid way to " +
-                   "calculate the core energy.").format(self.cluster('method')))
+            print('Finished.')              
+            
         else: # supercell calculation
             #!!! Need to think about this
             if self.multipole('method') == 1:

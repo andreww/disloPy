@@ -291,7 +291,7 @@ def writeSlab():
 
     pass
 
-def write1DCluster(clusterCell, sys_info, outFile, maxiter=1000):
+def write1DCluster(cluster, sys_info, outname, maxiter=1000):
     '''Writes 1D-periodic simulation cell to file. Always write an accompanying
     undislocated cluster, so that dislocation energy can be calculated. <maxiter>
     gives the maximum number of iterations allowed. GULP defaults to 1000, but
@@ -299,21 +299,24 @@ def write1DCluster(clusterCell, sys_info, outFile, maxiter=1000):
     '''
 
     # open files for the perfect and dislocated clusters
-    perOutStream = open('ndf.%s.gin' % outFile, 'w')
-    disOutStream = open('dis.%s.gin' % outFile, 'w')
+    perOutStream = open('ndf.{}.gin'.format(outname), 'w')
+    disOutStream = open('dis.{}.gin'.format(outname), 'w')
 
     for outstream in [perOutStream, disOutStream]:
         # fourth variable tells <writeRegion> which coordinates to use
         if outstream == perOutStream:
             disloc = False
-            relax = False
-            basename = 'ndf.%s' % outFile
+            relax = ''
+            do_relax = False
+            basename = 'ndf.{}'.format(outname)
         else:
             disloc = True
-            relax = True
-            prefix = 'dis.%s' % outFile
+            relax = 'conv'
+            do_relax = True
+            prefix = 'dis.{}'.format(outname)
 
-        write_gulp(outstream, clusterCell, sys_info, defected=disloc, relax=relax)
+        write_gulp(outstream, cluster, sys_info, defected=disloc, do_relax=do_relax, 
+                                                                    relax_type=relax)
 
     return
 
