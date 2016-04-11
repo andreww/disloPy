@@ -40,7 +40,7 @@ def array_or_int(dimension):
             raise ValueError(("Increment ({}) is too large. Maximum value is " +
                                                       "{}.").format(di, i2-i1))
 
-        cell_size = np.arange(i1, i2+di, di)       
+        cell_sizes = np.arange(i1, i2+di, di)       
     elif int_string:
         # making it iterable simplifies handling supercell setup
         cell_sizes = [int(int_string.group())]
@@ -108,7 +108,7 @@ def handle_atomistic_control(param_dict):
                    ('poisson', {'default': None, 'type': float}),
                    ('cij', {'default': None, 'type': aniso.readCij}),
                    ('in_gpa', {'default': True, 'type': to_bool}),
-                   ('rcore', {'default': 10., 'type': float}),
+                   ('rcore', {'default': np.nan, 'type': float}),
                    ('centre', {'default': np.zeros(2), 'type': vector}),
                    ('field_type', {'default': None, 'type': str})
                   )
@@ -119,7 +119,8 @@ def handle_atomistic_control(param_dict):
     multipole_cards = (('field_file', {'default': 'dis.cores', 'type': str}),
                        ('nx', {'default': 1, 'type': array_or_int}),
                        ('ny', {'default': 1, 'type': array_or_int}),
-                       ('relaxtype', {'default': '', 'type': str})
+                       ('relaxtype', {'default': '', 'type': str}),
+                       ('grid', {'default': True, 'type': to_bool})
                       )
                       
     # cards for the <&cluster> namelist. Remember that the Stroh sextic theory
@@ -152,6 +153,16 @@ def handle_atomistic_control(param_dict):
     
     # <&atoms> and <&elast> namelists need to be handled separately.        
     for i, cards in enumerate([control_cards, multipole_cards, cluster_cards]):
+        # if we are running a multipole simulation, no need to look at params
+        # for a cluster calculation, and vice versa
+        if namelists[i] == 'multipole':
+            if param_dict['control']['calc_type'] == 'cluster':
+                continue
+        elif namelists[i] == 'cluster':
+            if param_dict['control']['calc_type'] == 'multipole':
+                continue
+        
+        # read cards specifying simulation parameters        
         for var in cards:
             try:
                 change_or_map(param_dict, namelists[i], var[0], var[1]['type'])
@@ -160,7 +171,7 @@ def handle_atomistic_control(param_dict):
                 # test to see if variable is "mission-critical"
                 if default_val == None:
                     raise ValueError("No value supplied for mission-critical" +
-                                            " variable %s.".format(var[0]))
+                                            " variable {}.".format(var[0]))
                 else:
                     param_dict[namelists[i]][var[0]] = default_val
                     # no mapping options, but keep this line to make it easier
@@ -229,8 +240,8 @@ def handle_fields(field_file):
                             '(?P<centre>(?:\s+\d\.?\d*){2})\s+end_field;')
     
     with open(field_file) as f:
-        fieldstring = f.readlines()
- 
+        fieldstring = f.read()
+
     # now find all field entries and construct dislocation fields. Append entries
     # of the form [b, eta]
     dis_burgers = []
@@ -300,16 +311,16 @@ class AtomisticSim(object):
         self.set_field()
         
         # if multipole simulation, read dislocation parameters from field file
-        if self.control('calc_type') == 'supercell':
+        if self.control('calc_type') == 'multipole':
             self.burgers, self.cores = handle_fields(self.multipole('field_file'))
         
         # elasticity stuff
         if self.elast('coefficients') == 'aniso':
-            self.K = coeff.anisotropic_K(self.elast('cij'),
-                                         self.elast('b_edge'),
-                                         self.elast('b_screw'),
-                                         self.elast('normal')
-                                        )
+            self.K = 4*np.picoeff.anisotropic_K(self.elast('cij'),
+                                                self.elast('b_edge'),
+                                                self.elast('b_screw'),
+                                                self.elast('normal')
+                                               )
         elif self.elast('coefficients').startswith('iso'):
             # extract edge and screw components
             if 'nu' in self.elast('coefficients'):
@@ -320,14 +331,14 @@ class AtomisticSim(object):
                                             self.elast('shear'))
             
             if self.elast('disl_type') == 'edge':
-                self.K = self.K[0]
+                self.K = 4*np.pi*self.K[0]
             elif self.elast('disl_type') == 'screw':
-                self.K = self.K[1]
+                self.K = 4*np.pi*self.K[1]
         
         # create input and (if specified) run simulation        
         if self.control('calc_type') == 'cluster':
             self.construct_cluster()          
-        elif self.control('calc_type') == 'supercell':
+        elif self.control('calc_type') == 'multipole':
             self.construct_multipole()
         else:
             raise ValueError(("{} does not correspond to a known simulation " +
@@ -440,28 +451,38 @@ class AtomisticSim(object):
             write_fn = castep.write_castep
             ab_initio = True
         
-        sys_info = parse_fn(self.control('unit_cell'), self.base_struc)
+        self.sys_info = parse_fn(self.control('unit_cell'), self.base_struc)
         
-        for nx in self.multipole('nx'):
-            for ny in self.multipole('ny'):
-                # if calculation uses DFT, need to scale k-point grid
-                if ab_initio:
-                    atm.scale_kpoints(sys_info['cards']['K_POINTS'], np.array([nx, ny, 1.]))
-                
-                # construct supercell
-                supercell = cry.superConstructor(base_struc, np.array([nx, ny, 1.]))
-                                                                  
-                supercell.applyField(self.field, self.cores, self.burgers, Sij=self.sij)
-                
-                basename = '{}.{}.{}'.format(self.control('basename'), nx, ny)
-                outstream = open('{}.{}.{}.{}'.format(basename, self.control('suffix')), 'w')
-                write_fn(outstream, supercell, sys_info, to_cart=False, defected=True, 
-                          add_constraints=False, relax_type=self.multipole('relaxtype'))
-                          
-                # run calculations, if requested by the user
-                self.run_simulation(basename)
+        if self.multipole('grid'):
+            for nx in self.multipole('nx'):
+                for ny in self.multipole('ny'):
+                    self.make_multipole(nx, ny, write_fn, ab_initio)
+        else:
+            for nx, ny in zip(self.multipole('nx'), self.multipole('ny')):
+                self.make_multipole(nx, ny, write_fn, ab_initio)
         
         return
+        
+    def make_multipole(self, nx, ny, write_fn, ab_initio):
+        '''Make a single supercell with dimensions <nx>x<ny> containing a 
+        dislocation multipole.
+        '''
+        
+        if ab_initio:
+            atm.scale_kpoints(self.sys_info['cards']['K_POINTS'], np.array([nx, ny, 1.]))
+                    
+        # construct supercell
+        supercell = cry.superConstructor(self.base_struc, np.array([nx, ny, 1.]))
+                                                                      
+        supercell.applyField(self.ufield, self.cores, self.burgers, Sij=self.sij)
+                    
+        basename = '{}.{}.{}'.format(self.control('basename'), nx, ny)
+        outstream = open('{}.{}'.format(basename, self.control('suffix')), 'w')
+        write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True, 
+              add_constraints=False, relax_type=self.multipole('relaxtype'))
+                              
+        # run calculations, if requested by the user
+        self.run_simulation(basename)
         
     def run_simulation(self, basename):
         '''If specified by the user, run the simulation on the local machine.
@@ -517,7 +538,8 @@ class AtomisticSim(object):
             # run single point calculation
             basename = '{}.{:.0f}.{:.0f}'.format(self.control('basename'),
                                                  self.cluster('region1'),
-                                                 self.cluster('region2'))    
+                                                 self.cluster('region2'))  
+            print(self.K)  
             ce.dis_energy(self.cluster('rmax'),
                           self.cluster('rmin'),
                           self.cluster('dr'),
@@ -529,7 +551,8 @@ class AtomisticSim(object):
                           relax_K=self.cluster('fit_K'),
                           K=self.K,
                           atom_dict=self.atomic_energies,
-                          rc=self.elast('rcore')
+                          rc=self.elast('rcore'),
+                          using_atomic=True
                          )
             print('Finished.')              
             

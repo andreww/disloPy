@@ -400,7 +400,8 @@ def EDis(r, Ecore, K, b, rcore=10.):
     
     return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
     
-def fitCoreEnergy(basename, b, thickness, rcore=10, fit_K=False, in_K=None):
+def fitCoreEnergy(basename, b, thickness, rcore=10, fit_K=False, in_K=None,
+                                                        using_atomic=False):
     '''Fit the core energy and energy coefficient of the dislocation whose 
     radius-energy data is stored in <basename>.energies. Returns K in eV/ang**3
     and Ecore in eV/ang. <thickness> is the length of the simulation cell.
@@ -421,7 +422,9 @@ def fitCoreEnergy(basename, b, thickness, rcore=10, fit_K=False, in_K=None):
             K = in_K
             
         # convert to eV/ang**3
-        K = float(K)/CONV_EV_TO_GPA
+        if not using_atomic:
+            K = float(K)/CONV_EV_TO_GPA
+            
         def specific_energy(r, Ecore):
             return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
         
@@ -447,8 +450,8 @@ def numericalEnergyCurve(rmax, Ecore, K, b, rcore=10, rmin=1, dr=0.1):
     
     return r, E 
     
-def dis_energy(rmax, rmin, dr, basename, executable, method, b, thick, 
-                         relax_K=True, K=None, atom_dict=None, rc=np.nan):
+def dis_energy(rmax, rmin, dr, basename, executable, method, b, thick, relax_K=True,
+                            K=None, atom_dict=None, rc=np.nan, using_atomic=False):
     '''Calculate the energy of a dislocated cluster as a function of radius. This
     is the control function.
     '''
@@ -468,12 +471,13 @@ def dis_energy(rmax, rmin, dr, basename, executable, method, b, thick,
         rc = 2*b
         
     # Fit core energy and energy coefficient, and write to output
-    Ecore, K, cov = fitCoreEnergy(basename, b, thick, rc, fit_K=relax_K, in_K=K)
+    Ecore, K, cov = fitCoreEnergy(basename, b, thick, rc, fit_K=relax_K, in_K=K,
+                                                    using_atomic=using_atomic)
     KGPa = K*CONV_EV_TO_GPA
     
     # calculate 1-sigma uncertainty in the value of the energy coefficient
     if len(cov) > 1:  
-        errKGPa = np.sqrt(cov[1, 1])*ce.CONV_EV_TO_GPA
+        errKGPa = np.sqrt(cov[1, 1])*CONV_EV_TO_GPA
     else:
         errKGPa = 0. # did not fit K
     

@@ -12,29 +12,29 @@ from pyDis.atomic import transmutation as imp
 from pyDis.pn import slab_impurity as sl
 from pyDis.atomic import atomistic_utils as atm
 
-def main():
+def main(argv):
 
-    basefile = 'MgO.0.in'
+    basefile = argv[0]
     vacuum = 10.
     d_fix = 2.5
     
     struc = cry.Crystal()
     sys_info = qe.parse_qe(basefile, struc)
     new_struc = cry.superConstructor(struc, dims=np.array([2, 2, 1]))
-    new_slab = gsf.make_slab(new_struc, 6, vacuum, d_fix=d_fix, free_atoms=['O'])
+    new_slab = gsf.make_slab(new_struc, 6, vacuum, d_fix=d_fix, free_atoms=['H'])
     atm.scale_kpoints(sys_info["cards"]["K_POINTS"], np.array([2, 2, 6]))
 
     # replace here to make new impurity
     dfct = imp.Impurity('Mg', 'water')
-    dfct.addAtom(cry.Atom('H', coordinates=np.array([0., 0.12, 0.])))
-    dfct.addAtom(cry.Atom('H', coordinates=np.array([0., -0.12, 0.])))
+    dfct.addAtom(cry.Atom('H', coordinates=np.array([0., 0.13, 0.])))
+    dfct.addAtom(cry.Atom('H', coordinates=np.array([0., -0.13, 0.])))
     
     # find and replace appropriate atom
     i = sl.replace_at_plane(new_slab, dfct, vacuum=10.)[0]
-    sl.impure_faults(new_slab, dfct, i, qe.write_qe, sys_info, 0.2, 'mgoH.para', 
+    sl.impure_faults(new_slab, dfct, i, qe.write_qe, sys_info, 0.2, argv[1], 
                          dim=1, limits=0.25, vacuum=vacuum, relax='relax')
     
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
 
