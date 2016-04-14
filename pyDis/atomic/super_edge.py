@@ -21,11 +21,11 @@ atoms):
 -       +               +        -
 ----------------------------------
 
-For a dipole configuration, meanwhile, the arrangement of dislocations is
+For a dipole configuration, meanwhile, the arrangement of dislocations can be
 
-    +
-
-    -
+    +                           +
+                or          
+    -                       -
 
 which corresponds to the following:
 
@@ -45,7 +45,7 @@ from __future__ import print_function
 
 import numpy as np
 import sys
-import numpy.linalg as L
+from numpy.linalg import norm
 
 def compare(a, b):
     if abs(a) < 1 and abs(b) < 1:
@@ -66,14 +66,18 @@ class EdgeDipole(object):
 
     def __init__(self, x_neg, x_pos, b):
         '''Set up an edge dislocation dipole with negative Burgers vector
-        at x1 and positive Burgers vector at x2. <b> is the Burgers
-        vector magnitude.
+        at x1 and positive Burgers vector at x2. <b> is the Burgers vector 
+        magnitude, in units of fractional cell parameters (ie. in a 2x2 
+        supercell with b || x, b = 0.5).
         '''
 
         self.neg = np.copy(x_neg)
         self.pos = np.copy(x_pos)
-        self.b = b
-
+        if type(b) == float or type(b) == int:
+            self.b = b
+        else: # user has probably entered a 
+            self.b = norm(b)
+            
         # work out the orientation of the dislocation
         orient_x = False
         orient_y = False
@@ -112,7 +116,7 @@ class EdgeDipole(object):
         # if the <atom> is already set to not write to output, return
         # immediately
         if not atom.writeToOutput():
-            print('Atom not written to output. Skipping...')
+            print('Atom {} not written to output. Skipping...'.format(atom))
             return
 
         x = atom.getCoordinates()
@@ -129,7 +133,7 @@ class EdgeDipole(object):
             if (along_cut > self.neg[self.cut_index] or
                      along_cut < self.pos[self.cut_index]):
                 in_cut = True # provisional
-        #
+
         if in_cut:
             # this part is the same for both continuous and discontinuous
             # cuts
@@ -278,7 +282,7 @@ def cut_supercell(cell, *edges):
 
     return
 
-def compress_cell(supercell, *edges):
+def compress_cell(supercell, b, n=1, bdir=0):
     '''Given a simulation cell <supercell> into which one or more (usually max
     2) edge dislocation dipoles has been inserted, compresses the cell parameter
     parallel to the burgers vector b to reflect the amount of material that has
@@ -287,11 +291,151 @@ def compress_cell(supercell, *edges):
     ### NEED TO GENERALISE FOR MORE COMPLICATED GEOMETRIES ###
     '''
 
-    # need some routine to check that the amount of material removed is constant
-    # along the cell
-
     # axis to compress is the same as the burgers vector index
-    lattice = supercell.getVector(edges[0].b_index)
-    lattice *= 1.-edges[0].b # b is given as a fraction of cell length anyway
-    supercell.setVector(lattice,edges[0].b_index)
+    lattice_vec = supercell.getVector(bdir)
+    
+    # determine scale factor
+    scale = 1. - b 
+    lattice_vec *= scale
+    supercell.setVector(lattice_vec, bdir)
     return
+    
+### stuff for diagonally oriented dipole -> special case => special section ###
+
+def taxicab(x, x0):
+    '''Determines the distance between x and x0 in the taxicab metric.
+    '''
+    
+    dist = 0
+    for xi, x0i in zip(x, x0):
+        dist += abs(xi - x0i)
+        
+    return dist
+    
+def nearest_image_dist(x, x0, metric=taxicab):
+    '''Calculates the minimum distance in the specified metric from <x> to any 
+    periodic image of <x0>.
+    ''' 
+    
+    min_dist = np.inf
+
+    if type(x) == float or type(x) == int:
+        for dx in [-1, 0, 1]:
+            dist = abs(x+dx - x0)
+            if dist < min_dist:
+                min_dist = dist
+    else:  # vector
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                dist = metric([x[0]+dx, x[1]+dy], x0[:2])
+                if dist < min_dist:
+                    min_dist = dist
+    
+    return min_dist
+
+class EdgeDiagDipole(object):
+    '''Constructs an edge dislocation dipole with the dislocations with positive
+    and negative Burgers vectors located in opposing corners of the simulation
+    cell. Particularly useful for explicit atomistic calculations of the Peierls
+    stress.
+    '''
+    
+    def __init__(self, b, axis=0):
+        '''<b> is the Burgers vector (or its magnitude), and <axis> gives its
+        orientation (ie. the slip plane).
+        '''
+        
+        if type(b) == int or type(b) == float:
+            self.b = b
+        else: # assume that the Burgers vector has been supplied
+            self.b = norm(b)
+        
+        # check that the supplied axis exists
+        if not (axis in [0, 1]):
+            raise ValueError("Burgers vector must be parallel to x or y axes.")
+                
+        self.axis = axis
+        
+    def displace(self, atom):
+        '''Tests to see if <atom> is in a region affected by one of the dislocations.
+        '''
+        
+        x = atom.getCoordinates()
+        along_b = float(x[self.axis] % 1)
+        along_cut = float(x[(self.axis - 1) % 2] % 1)
+        if self.axis == 0:
+            xi = [along_b, along_cut]
+        else:
+            xi = [along_cut, along_b]
+            
+        xp = [0.25, 0.25] # positive dislocation
+        xm = [0.75, 0.75] # negative dislocation
+            
+        # check to see if atom is in the "middle region" where displacement is
+        # zero
+        u = np.zeros(3)
+        if along_cut >= 0.25 and along_cut <= 0.75:
+            # no displacement
+            pass
+        else: 
+            # determine the type of the nearest dislocation 
+            dp = nearest_image_dist(xi, xp, taxicab) 
+            dm = nearest_image_dist(xi, xm, taxicab)
+            
+            # calculate magnitude of displacement vector
+            if dp < dm:
+                # closest to positive dislocation
+                dx = -np.sign(along_b-0.25)*abs(0.5-(along_b-0.25))/0.5*self.b/2.
+                u[self.axis] = dx
+            elif dp > dm:
+                # closest to negative dislocation
+                dx = -np.sign(along_b-0.75)*abs(0.5-(along_b-0.75))/0.5*self.b/2.
+                u[self.axis] = dx
+            else:
+                pass
+    
+        return u        
+            
+    def incut(self, atom):
+        '''Tests to see if atom needs to be removed.
+        '''
+                
+        x = atom.getCoordinates()
+        along_b = x[self.axis] % 1
+        along_cut = x[(self.axis - 1) % 2] % 1
+        
+        if along_cut < 0.25: # in positive dislocation cut
+            if (along_b >= 0.25 - self.b/2. and  along_b < 0.25 + self.b/2.):
+                return True
+            else:    
+                return False 
+        elif along_cut > 0.75 or along_cut < 1e-6: # in negative dislocation cut
+            if (along_b >= 0.75 - self.b/2. and  along_b < 0.75 + self.b/2.):
+                return True
+            else:
+                return False
+        else:
+            return False       
+                
+def make_diag_dip(supercell, b, axis=0):
+    '''Inserts an edge dislocation dipole (diagonal orientation) into the
+    provided supercell. Usually assume that b || to the x-axis.
+    '''
+    
+    # create dipole
+    dipole = EdgeDiagDipole(b)
+    
+    # test to see if atoms need to be removed
+    for atom in supercell:
+        if dipole.incut(atom):
+            atom.switchOutputMode()
+            
+    # displace remaining atoms        
+    for atom in supercell: 
+        if atom.writeToOutput():
+            dx = dipole.displace(atom)
+            atom.setDisplacedCoordinates(atom.getCoordinates() + dx)
+    
+    # compress cell to account for material removed        
+    compress_cell(supercell, b, bdir=axis)
+    return              
