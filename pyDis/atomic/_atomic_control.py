@@ -53,7 +53,7 @@ def vector(vec_str):
     '''Converts a string of the form "[x1,x2,...,xn]" to a numpy array.
     '''
     
-    vec_regex = re.compile('(\[|\()(?P<contents>(?:.*,)*.*)(\]|\))')
+    vec_regex = re.compile('(\[|\()(?P<contents>(?:\d+\.?\d*,\s*)*(?:\d+\.?\d*))(\]|\))')
     # test to make sure that the entered string conforms to vector
     # notation
     vec_match = vec_regex.match(vec_str)
@@ -65,18 +65,11 @@ def vector(vec_str):
     # construct a numpy array from the <contents> of the vector string.
     # Since the magnitude of a burgers vector will, in general, be a floating
     # point number, we convert all elements to floats.
-    el_regex = re.compile('(\d+/\d+|\d+|\d+\.\d+)')
-    elements = el_regex.finditer(contents)
-    base_vector = []
-    for el in elements:
-        try:
-            el_value = float(eval(el.group()))
-        except NameError:
-            print('Error: vector contains non-numerical data.')
-            
-        base_vector.append(el_value)
+    vec_element = re.compile('\d+\.?\d*')
+    elements = vec_element.findall(contents)
+    base_vector = np.array([float(x) for x in elements])
         
-    return np.array(base_vector)    
+    return base_vector
 
 def handle_atomistic_control(param_dict):
     '''Handle each possible card for an atomistic (ie. cluster or multipole-SC)
@@ -116,11 +109,13 @@ def handle_atomistic_control(param_dict):
     # Now move on to namelists that specify parameters for specific simulation
     # types. <xlength> and <ylength> may be integers or arrays.
     # cards for the <&multipole> namelist
-    multipole_cards = (('field_file', {'default': 'dis.cores', 'type': str}),
-                       ('nx', {'default': 1, 'type': array_or_int}),
+    multipole_cards = (('nx', {'default': 1, 'type': array_or_int}),
                        ('ny', {'default': 1, 'type': array_or_int}),
+                       ('npoles', {'default': 2, 'type': int}),
                        ('relaxtype', {'default': '', 'type': str}),
-                       ('grid', {'default': True, 'type': to_bool})
+                       ('grid', {'default': True, 'type': to_bool}),
+                       ('bdir', {'default': 0, 'type': int}),
+                       ('method', {'default': 1, 'type': int})
                       )
                       
     # cards for the <&cluster> namelist. Remember that the Stroh sextic theory
@@ -189,6 +184,7 @@ def handle_atomistic_control(param_dict):
     # test to make sure that all of the parameters required for one of isotropic
     # or anisotropic elasticity have been supplied. Should we also test to see
     # which function to use when calculating the energy coefficients?
+    #!!! Need to think about this
     if param_dict['elast']['cij'] != None:
         # if an elastic constants tensor is given, use anisotropic elasticity
         param_dict['elast']['coefficients'] = 'aniso'
@@ -218,48 +214,6 @@ def atom_namelist(param_dict):
         atom_dict[species] = float(unformatted_atoms[species])
         
     return atom_dict
-                
-def handle_fields(field_file):
-    '''Handle fields separately from the <&control> and <&geometry> namelists.
-    This is necessary because each field must be defined separately, making
-    it difficult to map directly into a dictionary.
-    
-    Each field has the following form:
-    
-    new_field
-        <b0> <b1> <b2> <eta1> <eta2>
-    end field;
-    '''
-    
-    # list of burgers vectors and locations
-    burgers_vectors = []
-    dis_locations = []
-    
-    # regex for fields
-    field_form = re.compile('new_field(?P<burgers>(?:\s+-?\d+\.?\d*){3})'+
-                            '(?P<centre>(?:\s+\d\.?\d*){2})\s+end_field;')
-    
-    with open(field_file) as f:
-        fieldstring = f.read()
-
-    # now find all field entries and construct dislocation fields. Append entries
-    # of the form [b, eta]
-    dis_burgers = []
-    dis_locs = []
-    for field in field_form.finditer(fieldstring):
-        b = field.group('burgers').split()
-        b = np.array([float(bi) for bi in b])
-        dis_burgers.append(b)
-        
-        eta = field.group('centre').split()
-        eta = np.array([float(etai) for etai in eta])
-        dis_locs.append(eta)
-        
-    if not(dis_burgers):
-        # no dislocations entered
-        raise Exception('No dislocations provided.')
-    
-    return dis_burgers, dis_locs
     
 def burgers_cartesian(b, lattice):
     '''Construct the cartesian representation of the Burgers vector from the
@@ -307,20 +261,20 @@ class AtomisticSim(object):
         else: 
             raise ValueError("{} is not a supported atomistic simulation code." +
                          "Supported codes are: GULP; QE; CASTEP.")
-                         
-        self.set_field()
         
-        # if multipole simulation, read dislocation parameters from field file
-        if self.control('calc_type') == 'multipole':
-            self.burgers, self.cores = handle_fields(self.multipole('field_file'))
+        # read in the unit cell and atomistic simulation parameters
+        self.read_unit_cell()
+         
+        # construct the displacement field function                 
+        self.set_field()
         
         # elasticity stuff
         if self.elast('coefficients') == 'aniso':
-            self.K = 4*np.picoeff.anisotropic_K(self.elast('cij'),
-                                                self.elast('b_edge'),
-                                                self.elast('b_screw'),
-                                                self.elast('normal')
-                                               )
+            self.K = 4*np.pi*coeff.anisotropic_K(self.elast('cij'),
+                                                 self.elast('b_edge'),
+                                                 self.elast('b_screw'),
+                                                 self.elast('normal')
+                                                )
         elif self.elast('coefficients').startswith('iso'):
             # extract edge and screw components
             if 'nu' in self.elast('coefficients'):
@@ -347,6 +301,34 @@ class AtomisticSim(object):
         # finally, calculate the dislocation core energy
         if self.control('calculate_core_energy'):
             self.core_energy()
+            
+    def read_unit_cell(self):
+        '''Reads the unit cell and sets a few geometrical parameters.
+        '''
+        
+        self.base_struc = cry.Crystal()
+        self.ab_initio = False
+        if self.control('program') == 'gulp':
+            self.parse_fn = gulp.parse_gulp
+            self.write_fn = gulp.write_gulp
+        elif self.control('program') == 'qe':
+            self.parse_fn = qe.parse_qe
+            self.write_fn = qe.write_qe
+            self.ab_initio = True
+        elif self.control('program') == 'castep':
+            self.parse_fn = castep.parse_castep
+            self.write_fn = castep.write_castep
+            self.ab_initio = True
+        
+        # read in unit cell and translate so that origin of dislocation is at
+        # (0., 0.)
+        self.sys_info = self.parse_fn(self.control('unit_cell'), self.base_struc)
+
+        self.base_struc.translate_cell(np.array([self.elast('centre')[0], 
+                                   self.elast('centre')[1], 0.]), modulo=True)
+        
+        # convert the burgers vector to cartesian coordinates
+        self.burgers = burgers_cartesian(self.elast('burgers'), self.base_struc)
                                       
     def set_field(self):
         '''Sets the dislocation field type, using the values provided in <elast>.
@@ -386,12 +368,7 @@ class AtomisticSim(object):
         
         print("Constructing cluster...", end='')
             
-        self.base_struc = cry.Crystal()
-        if self.control('program') == 'gulp': # add option for LAMMPS later
-            sys_info = gulp.parse_gulp(self.control('unit_cell'), self.base_struc)
-            
-            self.burgers = burgers_cartesian(self.elast('burgers'), self.base_struc)
-            
+        if self.control('program') == 'gulp': # add option for LAMMPS later            
             #!!! need to work out why I included this bit
             sysout = open('{}.{:.0f}.{:.0f}.sysInfo'.format(self.control('basename'),
                                                     self.cluster('region1'),
@@ -399,17 +376,17 @@ class AtomisticSim(object):
             sysout.write('pcell\n')
             sysout.write('{:.5f} 0\n'.format(self.cluster('thickness') *
                                              norm(self.base_struc.getC())))
-            for line in sys_info:
+            for line in self.sys_info:
                 sysout.write('{}\n'.format(line))
             
             sysout.close()
             
             cluster = rod.TwoRegionCluster(self.base_struc, 
-                                          self.elast('centre'), 
-                                          self.cluster('region2')*self.cluster('scale'),
-                                          self.cluster('region1'),
-                                          self.cluster('region2'),
-                                          self.cluster('thickness')
+                                           np.zeros(3), 
+                                           self.cluster('region2')*self.cluster('scale'),
+                                           self.cluster('region1'),
+                                           self.cluster('region2'),
+                                           self.cluster('thickness')
                                          )
                                          
             # apply displacement field
@@ -420,7 +397,7 @@ class AtomisticSim(object):
                                                 self.cluster('region1'),
                                                 self.cluster('region2'))
                                                 
-            gulp.write1DCluster(cluster, sys_info, outname)
+            gulp.write1DCluster(cluster, self.sys_info, outname)
             
             if self.control('run_sim'):
                 self.run_simulation('dis.{}'.format(outname))
@@ -435,50 +412,59 @@ class AtomisticSim(object):
         (whose burgers vectors must sum to zero).
         '''
         
-        self.base_struc = cry.Crystal()
-        
         # find read/write functions appropriate to the atomistic simulation code
-        ab_initio = False
-        if self.control('program') == 'gulp':
-            parse_fn = gulp.parse_gulp
-            write_fn = gulp.write_gulp
-        elif self.control('program') == 'qe':
-            parse_fn = qe.parse_qe
-            write_fn = qe.write_qe
-            ab_initio = True
-        elif self.control('program') == 'castep':
-            parse_fn = castep.parse_castep
-            write_fn = castep.write_castep
-            ab_initio = True
         
-        self.sys_info = parse_fn(self.control('unit_cell'), self.base_struc)
         
         if self.multipole('grid'):
             for nx in self.multipole('nx'):
                 for ny in self.multipole('ny'):
-                    self.make_multipole(nx, ny, write_fn, ab_initio)
+                    self.make_multipole(nx, ny)
         else:
             for nx, ny in zip(self.multipole('nx'), self.multipole('ny')):
-                self.make_multipole(nx, ny, write_fn, ab_initio)
+                self.make_multipole(nx, ny)
         
         return
         
-    def make_multipole(self, nx, ny, write_fn, ab_initio):
+    def make_multipole(self, nx, ny):
         '''Make a single supercell with dimensions <nx>x<ny> containing a 
         dislocation multipole.
         '''
         
-        if ab_initio:
+        if self.ab_initio:
             atm.scale_kpoints(self.sys_info['cards']['K_POINTS'], np.array([nx, ny, 1.]))
                     
         # construct supercell
         supercell = cry.superConstructor(self.base_struc, np.array([nx, ny, 1.]))
-                                                                      
+        
+        ''' #!!! Changing this to use functions from <super_edge>
         supercell.applyField(self.ufield, self.cores, self.burgers, Sij=self.sij)
-                    
+        '''            
+        
+        if self.elast('disl_type') == 'edge':
+            if self.multipole('npoles') == 2:
+                # dipole 
+                mp.edge_dipole(supercell, self.burgers, bdir=self.multipole('bdir'))
+            elif self.multipole('npoles') == 4:
+                # quadrupole
+                mp.edge_quadrupole(supercell, self.burgers, bdir=self.multipole('bdir'))
+            else:
+                raise ValueError("Dipoles and quadrupoles only. You monster.")
+        elif self.elast('disl_type') == 'screw':
+            if self.multipole('npoles') == 2:
+                # dipole
+                mp.screw_dipole(supercell, self.burgers, self.ufield, self.sij)
+            elif self.multipole('npoles') == 4:
+                # quadrupole
+                mp.screw_quadrupole(supercell, self.burgers, self.ufield, self.sij)
+            else:
+                raise ValueError("Dipoles and quadrupoles only. You monster.")
+        else:
+            raise NotImplementedError("Multipole calculations currently work " +
+                                      "only for pure edge and screw dislocations.")
+        
         basename = '{}.{}.{}'.format(self.control('basename'), nx, ny)
         outstream = open('{}.{}'.format(basename, self.control('suffix')), 'w')
-        write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True, 
+        self.write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True, 
               add_constraints=False, relax_type=self.multipole('relaxtype'))
                               
         # run calculations, if requested by the user
@@ -518,19 +504,16 @@ class AtomisticSim(object):
             #!!! Need to completely rewrite this to accommodate changes to the 
             #!!! energy modules -> will be shorter.
             # calculate using cluster method
-            print(self.cluster('method') == 'edge')
             if (self.cluster('method') != 'eregion' 
                 and self.cluster('method') != 'explicit'
                 and self.cluster('method') != 'edge'):
                 raise ValueError(("{} does not correspond to a valid way to " +
                    "calculate the core energy.").format(self.cluster('method')))
-            if self.cluster('method') == 1:
-                method = 'eregion'
+            if self.cluster('method') == 'explicit':
                 self.atomic_energies = None
-            elif self.cluster('method') == 2:
-                method = 'explicit'
+            elif self.cluster('method') == 'eregion':
                 self.atomic_energies = None
-            if self.cluster('method') == 3:
+            if self.cluster('method') == 'edge':
                 if self.atomic_energies == None: 
                     # prompt user to enter atomic symbols & energies
                     self.atomic_energies = ce.make_atom_dict() 

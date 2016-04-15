@@ -288,14 +288,109 @@ def compress_cell(supercell, b, n=1, bdir=0):
     parallel to the burgers vector b to reflect the amount of material that has
     been extracted from the cell to create the edge dislocations.
     
-    ### NEED TO GENERALISE FOR MORE COMPLICATED GEOMETRIES ###
+    #!!! NEED TO GENERALISE FOR MORE COMPLICATED GEOMETRIES
     '''
+    
+    # make sure that b is (a) not a vector, and (b) positive. Fix if necessary
+    if type(b) == float or type(b) == int:
+        b = abs(b)
+    else: # assume vector
+        b = norm(b)
 
     # axis to compress is the same as the burgers vector index
     lattice_vec = supercell.getVector(bdir)
     
     # determine scale factor
-    scale = 1. - b 
+    scale = 1. - (n*b)/2. 
     lattice_vec *= scale
     supercell.setVector(lattice_vec, bdir)
-    return            
+    return  
+    
+### FUNCTIONS TO INSERT MULTIPOLES INTO SIMULATION CELLS ###
+
+def edge_dipole(supercell, b, bdir=0):
+    '''Inserts a pair of edge dislocations with Burgers vectors +- b into the 
+    provided <supercell>.
+    '''
+    
+    # normalise the Burgers vector
+    bnorm = b / norm(supercell.getVector(bdir))
+    
+    if bdir == 0:
+        xneg = [0.5, 0.25]
+        xpos = [0.5, 0.75]
+    elif bdir == 1:
+        xneg = [0.25, 0.5]
+        xpos = [0.75, 0.5]
+    else:
+        raise ValueError("b must be parallel to either x (0) or y (1).")
+        
+    new_dip = EdgeDipole(xneg, xpos, bnorm)
+    
+    # cut the simulation cell and compress it to account for removed material 
+    cut_supercell(supercell, new_dip)
+    compress_supercell(supercell, bnorm, n=1, bdir=bdir)
+    return
+    
+def edge_quadrupole(supercell, b, bdir=0):
+    '''Inserts four dislocations into the <supercell>, with Burgers vectors 
+    +- b
+    '''
+  
+    # normalise the Burgers vector
+    bnorm = b / norm(supercell.getVector(bdir))
+         
+    if bdir == 0:
+        xneg1 = [0.25, 0.25]
+        xpos1 = [0.25, 0.75]
+        xneg2 = [0.75, 0.75]
+        xpos2 = [0.75, 0.25]
+    elif bdir == 1:
+        xneg1 = [0.25, 0.25]
+        xpos1 = [0.75, 0.25]
+        xneg2 = [0.75, 0.75]
+        xpos2 = [0.25, 0.75]
+    else:
+        raise ValueError("b must be parallel to either x (0) or y (1).")
+        
+    # create dipoles
+    dipole1 = EdgeDipole(xneg1, xpos1, bnorm)
+    dipole2 = EdgeDipoel(xneg2, xpos2, bnorm)
+    
+    # cut the simulation cell and compress it to account for removed material
+    cut_supercell(supercell, dipole1, dipole2)
+    compress_supercell(supercell, bnorm, n=2, bdir=bdir) 
+    return
+    
+def screw_dipole(supercell, b, screwfield, sij):
+    '''Screw dislocation dipole in <supercell>. Note that setting <screwfield>
+    to be something other than a screw dislocation, you can technically use this
+    for an arbitrary displacement field.
+    '''
+    
+    xneg = [0.5, 0.25]
+    xpos = [0.5, 0.75]
+    
+    cores = np.array([xneg, xpos])
+    burgers = np.array([-b, b])
+    
+    supercell.applyField(screwfield, cores, burgers, Sij=sij)
+    
+    return
+    
+def screw_quadrupole(supercell, b, screwfield, sij):
+    '''Inserts a dislocation quadrupole into the <supercell>. As with 
+    <screw_dipole>, can actually be used with an arbitrary displacement field.
+    '''
+    
+    xneg1 = [0.25, 0.25]
+    xpos1 = [0.25, 0.75]
+    xneg2 = [0.75, 0.75]
+    xpos2 = [0.75, 0.25]
+    
+    cores = np.array([xneg1, xpos1, xneg2, xpos2])
+    burgers = np.array([-b, b, -b, b])
+    
+    supercell.applyField(screwfield, cores, burgers, Sij=sij)
+    
+    return              
