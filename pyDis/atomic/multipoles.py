@@ -41,11 +41,14 @@ Atoms on either side of the cut regions are then displaced according to some
 (as yet undetermined) algorithm. Relax using eg. BFGS, possibly at finite
 temperature
 '''
-from __future__ import print_function
+from __future__ import print_function, division
 
 import numpy as np
 import sys
 from numpy.linalg import norm
+import re
+
+supported_codes = ('qe', 'gulp', 'castep')
 
 def compare(a, b):
     if abs(a) < 1 and abs(b) < 1:
@@ -393,4 +396,119 @@ def screw_quadrupole(supercell, b, screwfield, sij):
     
     supercell.applyField(screwfield, cores, burgers, Sij=sij)
     
-    return              
+    return    
+    
+### FUNCTIONS TO EXTRACT CORE ENERGY ### 
+
+# dictionary containing regex to match final energies for a variety of codes
+energy_lines = {"gulp": re.compile(r"\n\s*Final energy\s+=\s+" +
+                                  "(?P<E>-?\d+\.\d+)\s*(?P<units>\w+)\s*\n"),
+                "castep": re.compile(r"\n\s*BFGS:\s*Final\s+Enthalpy\s+=\s+" +
+                              "(?P<E>-?\d+\.\d+E\+\d+)\s*(?P<units>\w+)\s*\n"),
+                "qe": re.compile(r"\n\s*Final energy\s+=\s+(?P<E>-?\d+\.\d+)" +
+                                  "\s+(?P<units>\w+)\s*\n")
+               }
+               
+def extract_energy(cellname, program):
+    '''Extracts the final energy of relaxed cell <cellname>, using the regular
+    expression appropriate for the atomic scale simulation code used.
+    
+    #!!! Can perhaps merge this with <get_gsf_energy> in <read_gsf>
+    '''
+    
+    if not (program in supported_codes):
+        raise ValueError("{} is not a supported atomistic code.".format(program))
+    else:
+        energy_regex = energy_lines[program]
+        
+    # read in the output file from the atomistic code
+    outfile = open(cellname)
+    output_lines = outfile.read()
+    matched_energies = re.findall(energy_regex, output_lines)
+    
+    E = np.nan
+    units = ''
+    if not matched_energies:
+        print("Warning: No energy block found.")
+        pass
+    else:
+        # use the last matched energy (ie. optimised structure)
+        E = float(matched_energies[-1][0])
+        units = matched_energies[-1][1]
+            
+    return E, units    
+    
+def gridded_energies(basename, program, suffix, i_index, j_index=None, 
+                                                        gridded=False):
+    '''Read in energies from several supercells with sizes specified by <i_array>
+    and <j_index>. If <j_index> == None, use <i_index> for both indices (ie. x
+    and y).
+    '''
+    
+    energy_values = []
+    if j_index == None:
+        # set equal to <i_index>
+        j_index = np.copy(i_index)
+    elif type(j_index) == int:
+        # if gridded is True, this axis will be of length one
+        if gridded:
+            j_index = [j_index]
+        else: # not gridded -> supplying indices raw
+            # zip needs an iterable object
+            j_index = j_index*np.ones(len(i_index), dtype=int)
+        
+    # read in supercell energies
+    if gridded:
+        for i in i_index:
+            for j in j_index:
+                cellname = '{}.{}.{}.{}'.format(basename, i, j, suffix)
+                Eij, units = extract_energy(cellname, program)
+                # record supercell size and energy
+                energy_values.append([i, j, Eij])
+    else:
+        for i, j in zip(i_index, j_index):
+            cellname = '{}.{}.{}.{}'.format(basename, i, j, suffix)
+            Eij, units = extract_energy(cellname, program)
+            energy_values.append([i, j, Eij])
+            
+    return energy_values, units     
+   
+def multipole_energy(sides, K, Ecore, b, ):
+    '''Function that gives the energy of a supercell with a dislocation multipole
+    embedded in it. Used for curve fitting. The variable <sides> is equal to
+    [a1, a2], ie. the side lengths of the supercell.
+    '''
+    
+    a1, a2 = sides
+    
+    #!!! need to check factors of pi
+    E = Ecore + K*b**2*(np.log(abs(a1)/(2*rcore))+A*abs(a1)/abs(a2))
+    return E 
+    
+def fit_core_energy_mp(dEij, basestruc, units='ev'):
+    '''Fits core energy of a dislocation using the excess energies <dEij> of 
+    dislocations in simulation cells of varying sizes. 
+    '''
+    
+    # extract the cell sizes (in \AA) and energies (in eV)
+    dEij = np.array(dEij)
+    
+    energies = dEij[:, -1]
+    if units.lower() == 'ev':
+        pass
+    elif 'ry' in units.lower(): # assume Rydberg, can add others later
+        energies /= 13.60569172
+         
+    
+    # extract cell dimensions
+    dims = []
+    for i in range(3):
+        dims.append(norm(basestruc.getVector(i))
+        
+    # convert side lengths from lattice units to \AA
+    sides = dEij[:, :2]
+    sides = np.array([[dims[0]*x[0], dims[1]*x[1]] for x in sides])
+    
+    return
+    
+    
