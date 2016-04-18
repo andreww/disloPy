@@ -607,7 +607,7 @@ class PNSim(object):
         if self.prop('max_rho'):
             outstream.write('Maximum density: %.3f\n' % self.max_density)
         if self.prop('width'):
-            outstream.write('Dislocation width: %.3f\n' % abs(self.dis_width))
+            outstream.write('Dislocation width: %.3f ang.\n' % abs(self.dis_width))
             
         outstream.write('\n\n**Finished**')
         outstream.close()

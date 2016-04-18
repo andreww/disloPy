@@ -45,8 +45,10 @@ from __future__ import print_function, division
 
 import numpy as np
 import sys
-from numpy.linalg import norm
 import re
+
+from scipy.optimize import curve_fit
+from numpy.linalg import norm
 
 supported_codes = ('qe', 'gulp', 'castep')
 
@@ -473,7 +475,7 @@ def gridded_energies(basename, program, suffix, i_index, j_index=None,
             
     return energy_values, units     
    
-def multipole_energy(sides, K, Ecore, b, ):
+def multipole_energy(sides, Ecore, A, K, b, rcore):
     '''Function that gives the energy of a supercell with a dislocation multipole
     embedded in it. Used for curve fitting. The variable <sides> is equal to
     [a1, a2], ie. the side lengths of the supercell.
@@ -485,7 +487,7 @@ def multipole_energy(sides, K, Ecore, b, ):
     E = Ecore + K*b**2*(np.log(abs(a1)/(2*rcore))+A*abs(a1)/abs(a2))
     return E 
     
-def fit_core_energy_mp(dEij, basestruc, units='ev'):
+def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None units='ev'):
     '''Fits core energy of a dislocation using the excess energies <dEij> of 
     dislocations in simulation cells of varying sizes. 
     '''
@@ -509,6 +511,30 @@ def fit_core_energy_mp(dEij, basestruc, units='ev'):
     sides = dEij[:, :2]
     sides = np.array([[dims[0]*x[0], dims[1]*x[1]] for x in sides])
     
-    return
+    # convert energy to eV/\AA
+    energies /= dims[-1]
+    
+    # create version of the energy function with specific <b> and maybe <K>
+    if K == None and A == None:
+        # fit both K and A
+        def fittable_energy(cell_lengths, Ecore, An, Kn):
+            return multipole_energy(cell_lengths, Ecore, An, Kn, b, rcore)
+    elif K == None:
+        # fit K 
+        def fittable_energy(cell_lengths, Ecore, Kn):
+            return multipole_energy(cell_lengths, Ecore, A, Kn, b, rcore)
+    elif A == None:
+        # fit A
+        def fittable_energy(cell_lengths, Ecore, An):
+            return multipole_energy(cell_lengths, Ecore, An, K, b, rcore)
+    else: 
+        # only fit core energy
+        def fittable_energy(cell_lengths, Ecore):
+            return multipole_energy(cell_lengths, Ecore, A, K, b, rcore)
+    
+    # fit the core energy and (depending on the input) elastic parameters K and A        
+    par, err = curve_fit(fittable_energy, sides, energies)
+    
+    return par, err
     
     
