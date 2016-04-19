@@ -26,8 +26,8 @@ def main(argv):
 
     # replace here to make new impurity
     dfct = imp.Impurity('Mg', 'water')
-    dfct.addAtom(cry.Atom('H', coordinates=np.array([0., 0.13, 0.])))
-    dfct.addAtom(cry.Atom('H', coordinates=np.array([0., -0.13, 0.])))
+    dfct.addAtom(cry.Atom('H', coordinates=np.array([0.0, 0.0, 0.03])))
+    dfct.addAtom(cry.Atom('H', coordinates=np.array([0.0, 0.0, -0.03])))
     
     # find and replace appropriate atom
     i = sl.replace_at_plane(new_slab, dfct, vacuum=10.)[0]

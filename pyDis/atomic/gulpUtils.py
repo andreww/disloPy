@@ -420,6 +420,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
         # write lattice vectors
         preamble(outstream, relax=do_relax, relax_type=relax_type) 
         writeVectors(struc.getLattice(), outstream)
+        
         if relax_type is None:
             # give strain optimization flags
             outstream.write('0 0 0 0 0 0\n')

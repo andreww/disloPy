@@ -108,27 +108,27 @@ def handle_atomistic_control(param_dict):
                   
     # Now move on to namelists that specify parameters for specific simulation
     # types. <xlength> and <ylength> may be integers or arrays.
-    # cards for the <&multipole> namelist
+    # cards for the <&multipole> namelist. Valid methods for calculating the 
+    # energy are: 'comparison' (screw dislocations only) and 'edge'.
     multipole_cards = (('nx', {'default': 1, 'type': array_or_int}),
                        ('ny', {'default': 1, 'type': array_or_int}),
                        ('npoles', {'default': 2, 'type': int}),
                        ('relaxtype', {'default': '', 'type': str}),
                        ('grid', {'default': True, 'type': to_bool}),
                        ('bdir', {'default': 0, 'type': int}),
-                       ('method', {'default': 1, 'type': int})
+                       ('method', {'default': '', 'type': int})
                       )
                       
     # cards for the <&cluster> namelist. Remember that the Stroh sextic theory
     #  (ie. anisotropic solution) places that branch cut along the negative
-    # x-axis. Method for calculating core energy is specified using an 
-    # integer, which may take the following values: 1 == GULP method, 2 == explicit
-    # calculation of region energies, 3 == edge approach (ie. atomic energies).
+    # x-axis. Method for calculating core energy is specified may be edge,
+    # eregion or explicit.
     cluster_cards = (('region1', {'default': None, 'type': float}),
                      ('region2', {'default': None, 'type': float}),
                      ('scale', {'default': 1.1, 'type': float}),
                      ('branch_cut', {'default': [0, -1], 'type': vector}),
                      ('thickness', {'default': 1, 'type': int}),
-                     ('method', {'default': 1, 'type': int}),
+                     ('method', {'default': '', 'type': str}),
                      ('rmax', {'default': 2, 'type': int}),
                      ('rmin', {'default': 1, 'type': int}),
                      ('dr', {'default': 1, 'type': int}),
@@ -462,13 +462,25 @@ class AtomisticSim(object):
             raise NotImplementedError("Multipole calculations currently work " +
                                       "only for pure edge and screw dislocations.")
         
+        # write the dislocated structure to file
         basename = '{}.{}.{}'.format(self.control('basename'), nx, ny)
         outstream = open('{}.{}'.format(basename, self.control('suffix')), 'w')
         self.write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True, 
               add_constraints=False, relax_type=self.multipole('relaxtype'))
-                              
+        
         # run calculations, if requested by the user
         self.run_simulation(basename)
+              
+        # if the excess energy of the dislocation will be calculated using the 
+        # comparison method, write an undislocated cell to file
+        if self.multipole('method') == 'comparison':
+            outstream = open('{}.{}.{}'.format('ndf', basename, 
+                                    self.control('suffix')), 'w')
+            self.write_fn(outstream, supercell, self.sys_info, to_cart=False,
+                         defected=False, add_constraints=False, do_relax=False)
+
+            # run single point calculation, of requested
+            self.run_simulation('{}.{}'.format('ndf', basename))       
         
     def run_simulation(self, basename):
         '''If specified by the user, run the simulation on the local machine.
@@ -501,21 +513,19 @@ class AtomisticSim(object):
             pass      
         elif self.control('calc_type') == 'cluster':
             print('Calculating core energy:')
-            #!!! Need to completely rewrite this to accommodate changes to the 
-            #!!! energy modules -> will be shorter.
             # calculate using cluster method
-            if (self.cluster('method') != 'eregion' 
-                and self.cluster('method') != 'explicit'
-                and self.cluster('method') != 'edge'):
+            if not (self.cluster('method') in ['explicit', 'eregion', 'edge']):
                 raise ValueError(("{} does not correspond to a valid way to " +
                    "calculate the core energy.").format(self.cluster('method')))
+                   
+            # calculate excess energy due to the presence of a dislocation       
             if self.cluster('method') == 'explicit':
                 self.atomic_energies = None
             elif self.cluster('method') == 'eregion':
                 self.atomic_energies = None
             if self.cluster('method') == 'edge':
                 if self.atomic_energies == None: 
-                    # prompt user to enter atomic symbols & energies
+                    # prompt user to enter atomic symbols and energies
                     self.atomic_energies = ce.make_atom_dict() 
                           
             # run single point calculation
@@ -540,11 +550,21 @@ class AtomisticSim(object):
             print('Finished.')              
             
         else: # supercell calculation
-            #!!! Need to think about this
-            if self.multipole('method') == 1:
+            # check that valid method has been supplied
+            if not (self.multipole('method') in ['comparison', 'edge']):
+                raise ValueError(("{} does not correspond to a valid way to " +
+                   "calculate the core energy.").format(self.cluster('method')))
+
+            # calculate excess energy of the dislocation
+            if self.multipole('method') == 'comparison':
+                # compare energies of dislocated cells with defect-free cells
                 pass
-            elif self.multipole('method') == 2:
-                pass
+                
+            elif self.multipole('method') == 'edge':
+                # calculate excess energy from energies of atoms in perfect crystal
+                if self.atomic_energies == None:
+                    # prompt use to enter energies for all atoms
+                    self.atomic_energies = ce.make_atom_dict()
             
         return
         

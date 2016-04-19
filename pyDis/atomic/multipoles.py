@@ -487,7 +487,7 @@ def multipole_energy(sides, Ecore, A, K, b, rcore):
     E = Ecore + K*b**2*(np.log(abs(a1)/(2*rcore))+A*abs(a1)/abs(a2))
     return E 
     
-def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None units='ev'):
+def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev'):
     '''Fits core energy of a dislocation using the excess energies <dEij> of 
     dislocations in simulation cells of varying sizes. 
     '''
@@ -505,7 +505,7 @@ def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None units='ev'):
     # extract cell dimensions
     dims = []
     for i in range(3):
-        dims.append(norm(basestruc.getVector(i))
+        dims.append(norm(basestruc.getVector(i)))
         
     # convert side lengths from lattice units to \AA
     sides = dEij[:, :2]
