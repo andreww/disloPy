@@ -558,7 +558,11 @@ class AtomisticSim(object):
             # calculate excess energy of the dislocation
             if self.multipole('method') == 'comparison':
                 # compare energies of dislocated cells with defect-free cells
-                pass
+                # begin by reading in the energies of the cells with dislocations...
+                pass 
+                # ...and without
+                
+                # compute the excess energy of the dislocation(s)
                 
             elif self.multipole('method') == 'edge':
                 # calculate excess energy from energies of atoms in perfect crystal

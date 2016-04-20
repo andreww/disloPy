@@ -18,11 +18,10 @@ psps = re.compile('ATOMIC_SPECIES\s*\n(?:\s*[A-Z][a-z]?\s+\d+\.\d+\s+.+UPF\s*\n)
 kpoints = re.compile('K_POINTS.+?\n\s*\d+(?:\s+\d+){2,5}', re.DOTALL)
 
 # regular expressions to match important parts of qe output file
-cell_block = re.compile('CELL_PARAMETERS\s*?(?:\(|{)?(?P<units>[^({]*?)(?:\)|})?\s*?\n' +
-                            '(?P<pars>(?:(?:\s+-?\d+\.\d+){3}\n){3})', re.DOTALL)
+cell_block = re.compile('CELL_PARAMETERS\s*?(?:\(|{)?(?P<units>[^\(\{]*?)(?:\)|})?\s*?\n' +
+                            '(?P<pars>(?:(?:\s*-?\d+\.\d+)(?:\s+-?\d+\.\d+){2}\s*?\n){3})')
 atoms_block = re.compile('(?P<block>ATOMIC_POSITIONS\s+\(\w+\)\s*\n' +
-                           '(?:[A-Z][a-z]?(?:\s+-?\d+\.\d+){3}\n)+)' +
-                                               'End final coordinates')
+                  '(?:[A-Z][a-z]?(?:\s+-?\d+\.\d+){3}(?:(?:\s+\d){3})?\s*?\n)+)')
 
 def write_system(sys_namelist, outstream):
     ''' Modify the &system namelist to make sure that celldm(1) = 0.0, all other
@@ -122,6 +121,7 @@ def main(argv):
         # if the cell dimensions have already been specified in the &system 
         # namelist.
         cell = cell_block.search(qe_input)
+        cell = format_cell(cell)
         if cell:
             outstream.write(cell)
         else:

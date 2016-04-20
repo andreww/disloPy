@@ -535,6 +535,4 @@ def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev'):
     # fit the core energy and (depending on the input) elastic parameters K and A        
     par, err = curve_fit(fittable_energy, sides, energies)
     
-    return par, err
-    
-    
+    return par, err    
