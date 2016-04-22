@@ -15,8 +15,12 @@ import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
 from numpy.linalg import norm
 import numpy as np
+import re
 
 from pyDis.atomic import crystal as cry
+
+# currently supported atomistic simulation codes
+supported_codes = ('gulp', 'castep', 'qe')
 
 def read_file(filename,path='./', return_str=False):
     '''Reads a file and prepares it for parsing. Has the option to return the
@@ -147,3 +151,77 @@ def to_bool(in_str):
         raise ValueError("{} is not a boolean value.".format(in_str))
         
     return new_value
+    
+def extract_energy(cellname, program, relax=True):
+    '''Reads in the final energy (or enthalpy) from an atomistic calculation.
+    If the calculation involved relaxation of the atomic coordinates or the 
+    cell shape/size, <relax> == True, otherwise it should be False. 
+    '''
+    
+    
+    
+    # regex to match the final energy output from relaxation calculations 
+    energy_relax = {"gulp": re.compile(r"\n\s*Final energy\s+=\s+" +
+                                  "(?P<E>-?\d+\.\d+)\s*(?P<units>eV)\s*\n"),
+                    "castep": re.compile(r"\n\s*BFGS:\s*Final\s+Enthalpy\s+=\s+" +
+                              "(?P<E>-?\d+\.\d+E\+\d+)\s*(?P<units>\w+)\s*\n"),
+                    "qe": re.compile(r"\n\s*Final (?:energy|enthalpy)\s+=\s+" +
+                                  "(?P<E>-?\d+\.\d+)\s+(?P<units>\w+)\s*\n")
+                   }
+    
+    # regex to match energy from a single-point calculation               
+    energy_fixed = {'gulp': re.compile(r'\n\s*Total lattice energy\s+=\s+'+
+                                    '(?P<E>-?\d+\.\d+)\s*(?P<units>eV)\s*\n'),
+                    'castep': re.compile(r'\n\s*Final energy\s+=\s+' +
+                                     '(?P<E>-?\d+\.\d+)\s*(?P<units>\w+)\s*\n'),
+                    'qe': re.compile(r'\n\s*!\s+total energy\s+=\s+'+
+                                    '(?P<E>-?\d+\.\d+)\s*(?P<units>\w+)\s*')
+                   }
+    
+    # stuff to match total force in GULP output
+    acceptable_gnorm = 0.2               
+    get_gnorm = re.compile(r"Final Gnorm\s*=\s*(?P<gnorm>\d+\.\d+)")
+    
+    if not (program in supported_codes):
+        raise ValueError("{} is not a supported atomistic code.".format(program))
+    elif relax:
+        energy_regex = energy_relax[program]
+    else: # SP calc.
+        energy_regex = energy_fixed[program]
+        
+    # read in the output file from the atomistic code
+    outfile = open(cellname)
+    output_lines = outfile.read()
+    matched_energies = re.findall(energy_regex, output_lines)
+    
+    E = np.nan
+    units = ''
+    if not matched_energies:
+        print("Warning: No energy block found.")
+    else:
+        # check that structure is, in fact, relaxed
+        if program.lower() == 'gulp':
+            # triggers for failed energy convergence
+            gulp_flag_failure = ["Conditions for a minimum have not been satisfied",
+                                                "Too many failed attempts to optimise"]
+            if ((gulp_flag_failure[0] in output_lines) or 
+                (gulp_flag_failure[1] in output_lines)):
+                gnorm = float(get_gnorm.search(output_lines).group("gnorm"))
+            else:
+                gnorm = 0.
+            
+            # check to see if the total force is below reasonable threshold
+            if gnorm < acceptable_gnorm:       
+                E = float(matched_energies[-1][0])
+                units = matched_energies[-1][1]
+            else:
+                E = np.nan
+                units = None
+
+        else: 
+            # Other codes - we don't check for convergence, perhaps we should
+            # use the last matched energy (ie. optimised structure)
+            E = float(matched_energies[-1][0])
+            units = matched_energies[-1][1]
+        
+    return E, units    

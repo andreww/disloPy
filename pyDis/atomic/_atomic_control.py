@@ -469,18 +469,19 @@ class AtomisticSim(object):
               add_constraints=False, relax_type=self.multipole('relaxtype'))
         
         # run calculations, if requested by the user
-        self.run_simulation(basename)
+        if self.control('run_sim'):
+            self.run_simulation(basename)
               
-        # if the excess energy of the dislocation will be calculated using the 
-        # comparison method, write an undislocated cell to file
+        # write undislocated cell to file -> useful primarily if excess energy
+        # of the dislocation array is being calculated using "comparison"
         if self.multipole('method') == 'comparison':
-            outstream = open('{}.{}.{}'.format('ndf', basename, 
-                                    self.control('suffix')), 'w')
+            outstream = open('{}.{}.{}'.format('ndf', basename, self.control('suffix')), 'w')
             self.write_fn(outstream, supercell, self.sys_info, to_cart=False,
-                         defected=False, add_constraints=False, do_relax=False)
+                      defected=False, add_constraints=False, do_relax=False)
 
-            # run single point calculation, of requested
-            self.run_simulation('{}.{}'.format('ndf', basename))       
+            # run single point calculation, if requested
+            if self.control('run_sim'):
+                self.run_simulation('{}.{}'.format('ndf', basename))       
         
     def run_simulation(self, basename):
         '''If specified by the user, run the simulation on the local machine.
@@ -555,14 +556,31 @@ class AtomisticSim(object):
                 raise ValueError(("{} does not correspond to a valid way to " +
                    "calculate the core energy.").format(self.cluster('method')))
 
-            # calculate excess energy of the dislocation
-            if self.multipole('method') == 'comparison':
-                # compare energies of dislocated cells with defect-free cells
-                # begin by reading in the energies of the cells with dislocations...
-                pass 
-                # ...and without
+            # determine suffix of atomistic simulation output files
+            if self.control('program') == 'gulp':
+                suffix = 'gout'
+            elif self.control('program') == 'qe':
+                suffix = 'out'
+            elif self.control('program') == 'castep':
+                suffix = 'castep'
                 
-                # compute the excess energy of the dislocation(s)
+            # calculate excess energy of the dislocation
+            # read in energy of dislocated cells
+            edis, units = mp.gridded_energies(self.control('basename'), self.control('program'),
+                        suffix, relax=True) 
+            if self.multipole('method') == 'comparison':
+                # read in energy of undislocated reference cell
+                eperf, units = mp.gridded_energies('ndf.{}'.format(self.control('basename')),
+                              self.control('program'), suffix, self.relax=False)
+                
+                # compute the excess energy of the dislocation(s) in eV
+                if units.lower() == 'ry':
+                    scale = 13.60569172 # conversion from Ry to eV
+                elif units.lower() == 'ev':
+                    scale = 1.
+                    
+                energy_excess = [[e1[0], e1[1], scale*(e1[2]-e0[2])] for e1, e0 in 
+                                                                 zip(edis, eperf)]
                 
             elif self.multipole('method') == 'edge':
                 # calculate excess energy from energies of atoms in perfect crystal

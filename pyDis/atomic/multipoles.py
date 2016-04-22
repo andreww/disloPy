@@ -46,9 +46,12 @@ from __future__ import print_function, division
 import numpy as np
 import sys
 import re
+sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from scipy.optimize import curve_fit
 from numpy.linalg import norm
+
+from pyDis.atomic import atomistic_utils as atm
 
 supported_codes = ('qe', 'gulp', 'castep')
 
@@ -401,47 +404,9 @@ def screw_quadrupole(supercell, b, screwfield, sij):
     return    
     
 ### FUNCTIONS TO EXTRACT CORE ENERGY ### 
-
-# dictionary containing regex to match final energies for a variety of codes
-energy_lines = {"gulp": re.compile(r"\n\s*Final energy\s+=\s+" +
-                                  "(?P<E>-?\d+\.\d+)\s*(?P<units>\w+)\s*\n"),
-                "castep": re.compile(r"\n\s*BFGS:\s*Final\s+Enthalpy\s+=\s+" +
-                              "(?P<E>-?\d+\.\d+E\+\d+)\s*(?P<units>\w+)\s*\n"),
-                "qe": re.compile(r"\n\s*Final energy\s+=\s+(?P<E>-?\d+\.\d+)" +
-                                  "\s+(?P<units>\w+)\s*\n")
-               }
-               
-def extract_energy(cellname, program):
-    '''Extracts the final energy of relaxed cell <cellname>, using the regular
-    expression appropriate for the atomic scale simulation code used.
-    
-    #!!! Can perhaps merge this with <get_gsf_energy> in <read_gsf>
-    '''
-    
-    if not (program in supported_codes):
-        raise ValueError("{} is not a supported atomistic code.".format(program))
-    else:
-        energy_regex = energy_lines[program]
-        
-    # read in the output file from the atomistic code
-    outfile = open(cellname)
-    output_lines = outfile.read()
-    matched_energies = re.findall(energy_regex, output_lines)
-    
-    E = np.nan
-    units = ''
-    if not matched_energies:
-        print("Warning: No energy block found.")
-        pass
-    else:
-        # use the last matched energy (ie. optimised structure)
-        E = float(matched_energies[-1][0])
-        units = matched_energies[-1][1]
-            
-    return E, units    
-    
+  
 def gridded_energies(basename, program, suffix, i_index, j_index=None, 
-                                                        gridded=False):
+                                              gridded=False, relax=True):
     '''Read in energies from several supercells with sizes specified by <i_array>
     and <j_index>. If <j_index> == None, use <i_index> for both indices (ie. x
     and y).
@@ -464,13 +429,13 @@ def gridded_energies(basename, program, suffix, i_index, j_index=None,
         for i in i_index:
             for j in j_index:
                 cellname = '{}.{}.{}.{}'.format(basename, i, j, suffix)
-                Eij, units = extract_energy(cellname, program)
+                Eij, units = atm.extract_energy(cellname, program, relax=relax)
                 # record supercell size and energy
                 energy_values.append([i, j, Eij])
     else:
         for i, j in zip(i_index, j_index):
             cellname = '{}.{}.{}.{}'.format(basename, i, j, suffix)
-            Eij, units = extract_energy(cellname, program)
+            Eij, units = atm.extract_energy(cellname, program, relax=relax)
             energy_values.append([i, j, Eij])
             
     return energy_values, units     

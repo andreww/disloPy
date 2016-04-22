@@ -12,14 +12,15 @@ from scipy.optimize import curve_fit
 sys.path.append('/home/richard/code_bases/dislocator2/')
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import gulpUtils as gulp
+from pyDis.atomic import atomistic_utils as atm
 
 # convert elastic modulus in eV/ang**3 to GPa
 CONV_EV_TO_GPA = 160.2176487 
 
 # regex guff -> find new home
 atom_format = re.compile('(?P<name>[A-Z][a-z]?)(?P<nat>\d+)')
-latticeEnergy = re.compile(r'\n\s*Total lattice energy\s+=\s+' +
-                                  '(?P<energy>-?\d+\.\d+)\s+eV\s*\n')
+#latticeEnergy = re.compile(r'\n\s*Total lattice energy\s+=\s+' +
+#                                  '(?P<energy>-?\d+\.\d+)\s+eV\s*\n')
     
 def R(atom):
     '''Radial distance from dislocation line.
@@ -233,8 +234,8 @@ def dislocationEnergySections(gulpName, outStream, currentRI):
         # create a subdictionary to hold energies of individual calculations
         energies[cellType] = dict()
         for region in simulations:
-            outputFile = readOutputFile(gulpName + '.{}.{}.gout'.format(cellType, region))
-            E = float(re.search(latticeEnergy, outputFile).group('energy'))
+            E, units = atm.extract_energy('{}.{}.{}.gout'.format(gulpName, 
+                                   cellType, region), 'gulp', relax=False)
             energies[cellType][region] = E
          
         # compute region I - region II interaction energy for polymer <cellType>    
@@ -263,14 +264,9 @@ def dislocation_energy_edge(base_name, outStream, currentRI, newRI, E_atoms):
     energies = dict()
     
     # extract energies from single point calculations
-    rIfile = readOutputFile('{}.RI.gout'.format(base_name))
-    rIIfile = readOutputFile('{}.RII.gout'.format(base_name))
-    bothFile = readOutputFile('{}.BOTH.gout'.format(base_name))
-    
-    # calculate energy of region I of the dislocated cell    
-    ERI = float(re.search(latticeEnergy, rIfile).group('energy'))
-    ERII = float(re.search(latticeEnergy, rIIfile).group('energy'))
-    EBoth = float(re.search(latticeEnergy, bothFile).group('energy'))
+    ERI, units = atm.extract_energy('{}.RI.gout'.format(base_name), 'gulp', relax=False)
+    ERII, units = atm.extract_energy('{}.RII.gout'.format(base_name), 'gulp', relax=False)
+    EBoth, units = atm.extract_energy('{}.BOTH.gout'.format(base_name), 'gulp', relax=False)
     total_E_RI = ERI + 0.5*(EBoth - (ERI+ERII))
     
     # calculate energy of equivalent number of atoms in perfect crystal

@@ -9,19 +9,6 @@ sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from pyDis.atomic import atomistic_utils as atm
 from pyDis.pn.fit_gsf import gamma_line, gamma_surface3d
-
-# dictionary containing regex to match final energies for a variety of codes
-energy_lines = {"gulp": re.compile(r"\n\s*Final energy\s+=\s+" +
-                                  "(?P<E>-?\d+\.\d+)\s*(?P<units>\w+)\s*\n"),
-                "castep": re.compile(r"\n\s*BFGS:\s*Final\s+Enthalpy\s+=\s+" +
-                              "(?P<E>-?\d+\.\d+E\+\d+)\s*(?P<units>\w+)\s*\n"),
-                "qe": re.compile(r"\n\s*Final energy\s+=\s+(?P<E>-?\d+\.\d+)" +
-                                  "\s+(?P<units>\w+)\s*\n")
-               }
-
-# regex to match the gnorm of the completed (but not necessarily converged) 
-# structure output by a GULP calculation               
-get_gnorm = re.compile(r"Final Gnorm\s*=\s*(?P<gnorm>\d+\.\d+)")
                
 def command_line_options():
     '''Parse command line options to control extraction of gamma surface.
@@ -48,8 +35,8 @@ def command_line_options():
     options.add_argument("-plot", action="store_true", default=False,
                             help="Plot gamma line/surface.")                             
     return options
-               
-def get_gsf_energy(energy_regex, prog, base_name, suffix, i, j=None, indir=False):
+    
+def get_gsf_energy(base_name, program, suffix, i, j=None, indir=False, relax=True):
     '''Extracts calculated energy from a generalized stacking fault calculation
     using the regular expression <energy_regex> corresponding to the code used
     to calculate the GSF energy.
@@ -57,8 +44,7 @@ def get_gsf_energy(energy_regex, prog, base_name, suffix, i, j=None, indir=False
     Set argument indir to True if mkdir was True in gsf_setup.
     '''
     
-    acceptable_gnorm = 0.2
-    
+    # construct name of GSF file
     name_format = '{}.{}'.format(base_name, i)
     if j is not None: # gamma surface, need x and y indices
         name_format += '.{}'.format(j)
@@ -68,49 +54,12 @@ def get_gsf_energy(energy_regex, prog, base_name, suffix, i, j=None, indir=False
         filename = '{}/{}.{}'.format(name_format, name_format, suffix)
     else:
         filename = '{}.{}'.format(name_format, suffix)
-
-    outfile = open(filename)
-    output_lines = outfile.read()
-    outfile.close()
-    matched_energies = re.findall(energy_regex, output_lines)
-    
-    # flags that we use to see if convergence has failed without resulting in
-    # a divergent energy (which would stop GULP).
-    gulp_flag_failure = ["Conditions for a minimum have not been satisfied",
-                         "Too many failed attempts to optimise"]
-    
-                    
-    if not(matched_energies):
-        # match the unconverged energy, and see if the total force is below
-        # some acceptance threshold
-        #raise AttributeError("Calculation does not have an energy.")
-        E = np.nan
-        units = None    
-    else:
-        if prog.lower() == 'gulp':
-            if ((gulp_flag_failure[0] in output_lines) or 
-                (gulp_flag_failure[1] in output_lines)):
-                gnorm = float(get_gnorm.search(output_lines).group("gnorm"))
-            else:
-                gnorm = 0.
-                
-            if gnorm < acceptable_gnorm:       
-                for match in matched_energies:
-                    E = float(match[0])
-                    units = match[1]
-            else:
-                E = np.nan
-                units = None
-
-        else: 
-            # Other codes - we don't check for convergence, perhapse we should
-            for match in matched_energies:
-                # We want the last match in the file.
-                E = float(match[0])
-                units = match[1]
         
-    return E, units
+    # read in energies
+    E, units = atm.extract_energy(filename, program, relax=relax)
     
+    return E, units
+   
 def check_dimensions(nx, ny):
     '''Check to see whether the user has specified a gamma line or a gamma 
     surface.
@@ -190,15 +139,7 @@ def main():
     else:
         options = command_line_options()
         args = options.parse_args()
-        
-    # determine which regular expression to use to match output energies
-    try:
-        regex = energy_lines[(args.program).lower()]
-    except KeyError:
-        print("Invalid program name supplied. Implemented programs are: ")
-        for prog in energy_lines.keys():
-            print("***{}***".format(prog))
-        
+         
     outstream = open("{}".format(args.out_name), "w")  
     
     # determine dimensionality of stacking fault calculation from bounds on x
@@ -209,8 +150,8 @@ def main():
         energies = np.zeros(args.x_max+1)
         # handle gamma line
         for i in xrange(args.x_max+1):
-            E, units = get_gsf_energy(regex, args.program, args.base_name, 
-                                         args.suffix, i, indir=args.indir)
+            E, units = get_gsf_energy(args.base_name, args.program, args.suffix, 
+                                          i, indir=args.indir)
             energies[i] = E
             
         # record the units in which the cell energy is expressed
@@ -241,8 +182,8 @@ def main():
         # handle gamma surface
         for i in xrange(args.x_max+1):
             for j in xrange(args.y_max+1):
-                E, units = get_gsf_energy(regex, args.program, args.base_name, 
-                                           args.suffix, i, j, indir=args.indir)
+                E, units = get_gsf_energy(args.base_name, args.program, args.suffix, 
+                                                               i, j, indir=args.indir)
                 energies[i, j] = E
 
         # record energy units used
