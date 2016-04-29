@@ -567,18 +567,20 @@ class AtomisticSim(object):
             # calculate excess energy of the dislocation
             # read in energy of dislocated cells
             edis, units = mp.gridded_energies(self.control('basename'), self.control('program'),
-                        suffix, relax=True) 
+                        suffix, relax=True, E_atoms=self.atomic_energies) 
+                        
             if self.multipole('method') == 'comparison':
                 # read in energy of undislocated reference cell
                 eperf, units = mp.gridded_energies('ndf.{}'.format(self.control('basename')),
-                              self.control('program'), suffix, self.relax=False)
+                                           self.control('program'), suffix, self.relax=False)
                 
                 # compute the excess energy of the dislocation(s) in eV
                 if units.lower() == 'ry':
                     scale = 13.60569172 # conversion from Ry to eV
                 elif units.lower() == 'ev':
                     scale = 1.
-                    
+                
+                # calculate excess energy of the cell introduced by dislocations    
                 energy_excess = [[e1[0], e1[1], scale*(e1[2]-e0[2])] for e1, e0 in 
                                                                  zip(edis, eperf)]
                 
@@ -587,6 +589,8 @@ class AtomisticSim(object):
                 if self.atomic_energies == None:
                     # prompt use to enter energies for all atoms
                     self.atomic_energies = ce.make_atom_dict()
+                    
+                energy_excess = mp.mp_E_edge
             
         return
         

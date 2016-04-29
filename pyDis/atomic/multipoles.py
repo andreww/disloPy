@@ -403,7 +403,38 @@ def screw_quadrupole(supercell, b, screwfield, sij):
     
     return    
     
-### FUNCTIONS TO EXTRACT CORE ENERGY ### 
+### FUNCTIONS TO EXTRACT CORE ENERGY ###
+
+def mp_E_compare(disname, perfname, program):
+    '''Calculates the excess energy of the dislocated cell contained in file
+    <disname> by comparing its total energy with that of an appropriate defect-free 
+    reference cell (contained in <perfname>).
+    '''
+    
+    # extract energy of dislocated and defect-free cells
+    E_dis, units = atm.extract_energy(disname, program, relax=True)
+    E_perf, units = atm.extract_energy(perfname, program, relax=False)
+    
+    E_excess = E_dis - E_perf
+    
+    return E_excess, units
+
+def mp_E_edge(basename, program, E_atoms):
+    '''Calculates the excess energy of the dislocated cell by subtracting the
+    energy of the atoms in a perfect crystal (specified in <E_atoms>) from the
+    total energy of the simulation cell <dislocated_cell> (<E_disloc>).
+    '''
+    
+    # extract the relaxed energy of the dislocated cell
+    E_dis, units = atm.extract_energy(basename, program, relax=True)
+    
+    # calculate the energy of the atoms in a perfect crystal
+    E_perf = 0.
+    for atom in dislocated_cell:
+        E_perf += E_atoms[atom.getSpecies()]
+        
+    E_excess = E_dis - E_perf
+    return E_excess, units
   
 def gridded_energies(basename, program, suffix, i_index, j_index=None, 
                                               gridded=False, relax=True):
