@@ -109,7 +109,7 @@ def handle_atomistic_control(param_dict):
     # Now move on to namelists that specify parameters for specific simulation
     # types. <xlength> and <ylength> may be integers or arrays.
     # cards for the <&multipole> namelist. Valid methods for calculating the 
-    # energy are: 'comparison' (screw dislocations only) and 'edge'.
+    # energy are: 'compare' (screw dislocations only) and 'edge'.
     multipole_cards = (('nx', {'default': 1, 'type': array_or_int}),
                        ('ny', {'default': 1, 'type': array_or_int}),
                        ('npoles', {'default': 2, 'type': int}),
@@ -474,7 +474,7 @@ class AtomisticSim(object):
               
         # write undislocated cell to file -> useful primarily if excess energy
         # of the dislocation array is being calculated using "comparison"
-        if self.multipole('method') == 'comparison':
+        if self.multipole('method') == 'compare':
             outstream = open('{}.{}.{}'.format('ndf', basename, self.control('suffix')), 'w')
             self.write_fn(outstream, supercell, self.sys_info, to_cart=False,
                       defected=False, add_constraints=False, do_relax=False)
@@ -552,7 +552,7 @@ class AtomisticSim(object):
             
         else: # supercell calculation
             # check that valid method has been supplied
-            if not (self.multipole('method') in ['comparison', 'edge']):
+            if not (self.multipole('method') in ['compare', 'edge']):
                 raise ValueError(("{} does not correspond to a valid way to " +
                    "calculate the core energy.").format(self.cluster('method')))
 
@@ -566,23 +566,18 @@ class AtomisticSim(object):
                 
             # calculate excess energy of the dislocation
             # read in energy of dislocated cells
-            edis, units = mp.gridded_energies(self.control('basename'), self.control('program'),
-                        suffix, relax=True, E_atoms=self.atomic_energies) 
+            edis = mp.gridded_energies(self.control('basename'), self.control('program'), 
+                              suffix, self.multipole('nx'), j_index=self.multipole('ny'), 
+                                              relax=True, gridded=self.multipole('grid')) 
                         
-            if self.multipole('method') == 'comparison':
+            if self.multipole('method') == 'compare':
                 # read in energy of undislocated reference cell
-                eperf, units = mp.gridded_energies('ndf.{}'.format(self.control('basename')),
-                                           self.control('program'), suffix, self.relax=False)
-                
-                # compute the excess energy of the dislocation(s) in eV
-                if units.lower() == 'ry':
-                    scale = 13.60569172 # conversion from Ry to eV
-                elif units.lower() == 'ev':
-                    scale = 1.
+                eperf = mp.gridded_energies('ndf.{}'.format(self.control('basename')),
+                                    self.control('program'), suffix, self.multipole('nx'),
+                                    self.multipole('ny'), relax=False, gridded=self.multipole('grid'))
                 
                 # calculate excess energy of the cell introduced by dislocations    
-                energy_excess = [[e1[0], e1[1], scale*(e1[2]-e0[2])] for e1, e0 in 
-                                                                 zip(edis, eperf)]
+                e_excess = mp.excess_energy(edis, 'compare', eperf)
                 
             elif self.multipole('method') == 'edge':
                 # calculate excess energy from energies of atoms in perfect crystal
@@ -590,7 +585,8 @@ class AtomisticSim(object):
                     # prompt use to enter energies for all atoms
                     self.atomic_energies = ce.make_atom_dict()
                     
-                energy_excess = mp.mp_E_edge
+                e_excess = mp.excess_energy(edis, 'edge', Edict=self.atomic_energies,
+                               parse_fn=self.parse_fn, in_suffix=self.control('suffix'))
             
         return
         

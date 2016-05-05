@@ -52,6 +52,10 @@ from scipy.optimize import curve_fit
 from numpy.linalg import norm
 
 from pyDis.atomic import atomistic_utils as atm
+from pyDis.atomic import crystal as cry
+from pyDis.atomic import gulpUtils as gulp
+from pyDis.atomic import castep_utils as castep
+from pyDis.atomic import qe_utils as qe
 
 supported_codes = ('qe', 'gulp', 'castep')
 
@@ -404,43 +408,64 @@ def screw_quadrupole(supercell, b, screwfield, sij):
     return    
     
 ### FUNCTIONS TO EXTRACT CORE ENERGY ###
-
-def mp_E_compare(disname, perfname, program):
-    '''Calculates the excess energy of the dislocated cell contained in file
-    <disname> by comparing its total energy with that of an appropriate defect-free 
-    reference cell (contained in <perfname>).
+    
+def excess_energy(energy_grid, method, perf_grid=None, Edict=None, parse_fn=None,
+                                                                   in_suffix='in'):
+    '''Calculate the excess energy due to the presence of dislocations in the 
+    cells whose total energies and dimensions (in units of lattice parameters)
+    are contained in <energy_grid>. Valid methods are "compare" and "edge," 
+    which require additional input data contained in either <perf_grid> (the
+    energies of undislocated cells) or <Edict> (energies of atoms), respectively
     '''
     
-    # extract energy of dislocated and defect-free cells
-    E_dis, units = atm.extract_energy(disname, program, relax=True)
-    E_perf, units = atm.extract_energy(perfname, program, relax=False)
+    E_excess = []
     
-    E_excess = E_dis - E_perf
-    
-    return E_excess, units
-
-def mp_E_edge(basename, program, E_atoms):
-    '''Calculates the excess energy of the dislocated cell by subtracting the
-    energy of the atoms in a perfect crystal (specified in <E_atoms>) from the
-    total energy of the simulation cell <dislocated_cell> (<E_disloc>).
-    '''
-    
-    # extract the relaxed energy of the dislocated cell
-    E_dis, units = atm.extract_energy(basename, program, relax=True)
-    
-    # calculate the energy of the atoms in a perfect crystal
-    E_perf = 0.
-    for atom in dislocated_cell:
-        E_perf += E_atoms[atom.getSpecies()]
+    if method == 'compare':
+        # check that the user has supplied energies for perfect cells
+        if perf_grid == None: # may be better to check type
+            raise TypeError("Undislocated energies cannot be <None>.") 
+        else:
+            # test that <perf_grid> has the right dimensions
+            if np.shape(energy_grid) != np.shape(perf_grid):
+                raise ValueError("Dimensions of gridded energies are incompatible.")
+                
+        for discell, perfcell in zip(energy_grid, perf_grid):
+            # make sure that supercell dimensions match
+            if discell[0] != perfcell[0] or discell[1] != perfcell[1]:  
+                raise ValueError("Incompatible cell dimensions")
+                
+            E_excess.append([discell[0], discell[1], discell[2]-perfcell[2]])
         
-    E_excess = E_dis - E_perf
-    return E_excess, units
+    elif method == 'edge':
+        # check that the user has supplied atomic energies
+        if Edict == None:
+            raise TypeError("<Edict> not defined.")
+        if parse_fn == None:
+            raise AttributeError("<parse_fn> not defined.")
+            
+        for discell in energy_grid:
+            # extract atoms in simulation cell
+            temp_crystal = cry.Crystal()
+            sysinfo = parse_fn('{}.{}'.format(discell[-1], in_suffix), temp_crystal)
+            
+            # calculate total energy of atoms in cell if no dislocations were
+            # present
+            Eperf = 0.
+            for atom in temp_crystal:
+                Eperf += Edict[atom.getSpecies()]
+                
+            E_excess.append([discell[0], discell[1], discell[2] - Eperf])
+    else:
+        raise ValueError("{} is not a valid method for calculating the excess" +
+                         " energy of a dislocation multipole.".format(method))
+    
+    return E_excess
   
-def gridded_energies(basename, program, suffix, i_index, j_index=None, 
-                                              gridded=False, relax=True):
+def gridded_energies(basename, program, suffix, i_index, j_index=None, gridded=False,
+                                                                        relax=True):
     '''Read in energies from several supercells with sizes specified by <i_array>
     and <j_index>. If <j_index> == None, use <i_index> for both indices (ie. x
-    and y).
+    and y). If <store_names> is True, keep track of output filenames for 
     '''
     
     energy_values = []
@@ -459,17 +484,28 @@ def gridded_energies(basename, program, suffix, i_index, j_index=None,
     if gridded:
         for i in i_index:
             for j in j_index:
-                cellname = '{}.{}.{}.{}'.format(basename, i, j, suffix)
-                Eij, units = atm.extract_energy(cellname, program, relax=relax)
-                # record supercell size and energy
-                energy_values.append([i, j, Eij])
-    else:
-        for i, j in zip(i_index, j_index):
-            cellname = '{}.{}.{}.{}'.format(basename, i, j, suffix)
-            Eij, units = atm.extract_energy(cellname, program, relax=relax)
-            energy_values.append([i, j, Eij])
+                cellname = '{}.{}.{}'.format(basename, i, j)
+                Eij, units = atm.extract_energy('{}.{}'.format(cellname, suffix),
+                                                            program, relax=relax)
+                
+                # record supercell energy 
+                energy_values.append([i, j, Eij, cellname])
+    else: # not gridded
+        # check that i_index and j_index have the same length
+        if len(i_index) != len(j_index):
+            raise ValueError("i and j indices must have the same length.")
             
-    return energy_values, units     
+        for i, j in zip(i_index, j_index):
+            cellname = '{}.{}.{}'.format(basename, i, j)
+            Eij, units = atm.extract_energy('{}.{}'.format(cellname, suffix), 
+                                                        program, relax=relax)
+            
+            if 'ry' in units.lower(): # convert to eV
+                Eij = 13.60569172
+                
+            energy_values.append([i, j, Eij, cellname])
+            
+    return energy_values    
    
 def multipole_energy(sides, Ecore, A, K, b, rcore):
     '''Function that gives the energy of a supercell with a dislocation multipole
