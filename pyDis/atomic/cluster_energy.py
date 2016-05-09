@@ -465,7 +465,7 @@ def dis_energy(rmax, rmin, dr, basename, executable, method, b, thick, relax_K=T
     # if rc == None, use the normal value of twice the burgers vector length
     if rc != rc:  
         rc = 2*b
-        
+  
     # Fit core energy and energy coefficient, and write to output
     Ecore, K, cov = fitCoreEnergy(basename, b, thick, rc, fit_K=relax_K, in_K=K,
                                                     using_atomic=using_atomic)
@@ -479,7 +479,7 @@ def dis_energy(rmax, rmin, dr, basename, executable, method, b, thick, relax_K=T
     
     # generate fitted energy function...
     r, E = numericalEnergyCurve(rmax, Ecore, K, b, rc)
-    
+
     # and output to file
     fittedEnergies = open('{}.fitted.energies'.format(basename), 'w') 
     

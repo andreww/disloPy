@@ -533,14 +533,14 @@ class AtomisticSim(object):
             basename = '{}.{:.0f}.{:.0f}'.format(self.control('basename'),
                                                  self.cluster('region1'),
                                                  self.cluster('region2'))  
-            print(self.K)  
+
             ce.dis_energy(self.cluster('rmax'),
                           self.cluster('rmin'),
                           self.cluster('dr'),
                           basename,
                           self.control('executable'),
                           self.cluster('method'),
-                          self.burgers[0],
+                          norm(self.burgers),
                           self.cluster('thickness')*norm(self.base_struc.getC()),
                           relax_K=self.cluster('fit_K'),
                           K=self.K,
@@ -548,6 +548,7 @@ class AtomisticSim(object):
                           rc=self.elast('rcore'),
                           using_atomic=True
                          )
+                         
             print('Finished.')              
             
         else: # supercell calculation
@@ -577,7 +578,7 @@ class AtomisticSim(object):
                                     self.multipole('ny'), relax=False, gridded=self.multipole('grid'))
                 
                 # calculate excess energy of the cell introduced by dislocations    
-                e_excess = mp.excess_energy(edis, 'compare', eperf)
+                dE = mp.excess_energy(edis, 'compare', eperf)
                 
             elif self.multipole('method') == 'edge':
                 # calculate excess energy from energies of atoms in perfect crystal
@@ -585,8 +586,22 @@ class AtomisticSim(object):
                     # prompt use to enter energies for all atoms
                     self.atomic_energies = ce.make_atom_dict()
                     
-                e_excess = mp.excess_energy(edis, 'edge', Edict=self.atomic_energies,
-                               parse_fn=self.parse_fn, in_suffix=self.control('suffix'))
+                dE = mp.excess_energy(edis, 'edge', Edict=self.atomic_energies,
+                        parse_fn=self.parse_fn, in_suffix=self.control('suffix'))
+                        
+            # fit the core energy and other parameters
+            if self.multipole('npoles') == 4:
+                ndis = np.array([2, 2])
+            elif self.multipole('npoles') == 2:
+                if self.multipole('bdir') == 0:
+                    ndis = np.array([2, 1])
+                else:
+                    ndis = np.array([1, 2])
+                    
+            par, err = mp.fit_core_energy_mp(dE, self.base_struc, norm(self.burgers),
+                                              self.elast('rcore'), ndis=ndis)
+                                              
+            print(par)
             
         return
         

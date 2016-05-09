@@ -507,31 +507,35 @@ def gridded_energies(basename, program, suffix, i_index, j_index=None, gridded=F
             
     return energy_values    
    
-def multipole_energy(sides, Ecore, A, K, b, rcore):
+def multipole_energy(spacing, Ecore, A, K, b, rcore, n):
     '''Function that gives the energy of a supercell with a dislocation multipole
-    embedded in it. Used for curve fitting. The variable <sides> is equal to
-    [a1, a2], ie. the side lengths of the supercell.
+    embedded in it. Used for curve fitting. The distances a1 and a2 between the
+    individual dislocations in the supercell are derived from <sides>.
     '''
-    
-    a1, a2 = sides
-    
+
+    a1, a2 = spacing
+
     #!!! need to check factors of pi
-    E = Ecore + K*b**2*(np.log(abs(a1)/(2*rcore))+A*abs(a1)/abs(a2))
+    E = n*Ecore + n*K*b**2*(np.log(abs(a1)/(rcore))+A*abs(a1)/abs(a2))
+    
     return E 
     
-def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev'):
+def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev', A=None,
+                                                    ndis=np.array([2, 2])):
     '''Fits core energy of a dislocation using the excess energies <dEij> of 
-    dislocations in simulation cells of varying sizes. 
+    dislocations in simulation cells of varying sizes. The elements of <ndis>
+    give the number of dislocations along the x and y axes.
     '''
     
-    # extract the cell sizes (in \AA) and energies (in eV)
-    dEij = np.array(dEij)
+    # extract the cell sizes (in \AA) and energies (in eV), and then normalise
+    # to eV/\AA
+    dEij = np.array(dEij)/norm(basestruc.getC())
     
     energies = dEij[:, -1]
     if units.lower() == 'ev':
         pass
     elif 'ry' in units.lower(): # assume Rydberg, can add others later
-        energies /= 13.60569172
+        energies *= 13.60569172
          
     
     # extract cell dimensions
@@ -539,32 +543,35 @@ def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev'):
     for i in range(3):
         dims.append(norm(basestruc.getVector(i)))
         
-    # convert side lengths from lattice units to \AA
-    sides = dEij[:, :2]
-    sides = np.array([[dims[0]*x[0], dims[1]*x[1]] for x in sides])
-    
-    # convert energy to eV/\AA
-    energies /= dims[-1]
+    # convert inter-dislocation spacing from lattice units to \AA
+    if len(ndis) != 2:
+        raise ValueError("Exactly two dimensions to a plane.")
+        
+    n = np.product(ndis)
+        
+    spacing = dEij[:, :2]
+    spacing = np.array([[dims[0]*x[0]/ndis[0], dims[1]*x[1]/ndis[1]] for x in spacing])
+    spacing = spacing.transpose()
     
     # create version of the energy function with specific <b> and maybe <K>
     if K == None and A == None:
         # fit both K and A
-        def fittable_energy(cell_lengths, Ecore, An, Kn):
-            return multipole_energy(cell_lengths, Ecore, An, Kn, b, rcore)
+        def fittable_energy(dis_space, Ecore, An, Kn):
+            return multipole_energy(dis_space, Ecore, An, Kn, b, rcore, n)
     elif K == None:
         # fit K 
-        def fittable_energy(cell_lengths, Ecore, Kn):
-            return multipole_energy(cell_lengths, Ecore, A, Kn, b, rcore)
+        def fittable_energy(dis_space, Ecore, Kn):
+            return multipole_energy(dis_space, Ecore, A, Kn, b, rcore, n)
     elif A == None:
         # fit A
-        def fittable_energy(cell_lengths, Ecore, An):
-            return multipole_energy(cell_lengths, Ecore, An, K, b, rcore)
+        def fittable_energy(dis_space, Ecore, An):
+            return multipole_energy(dis_space, Ecore, An, K, b, rcore, n)
     else: 
         # only fit core energy
-        def fittable_energy(cell_lengths, Ecore):
-            return multipole_energy(cell_lengths, Ecore, A, K, b, rcore)
+        def fittable_energy(dis_space, Ecore):
+            return multipole_energy(dis_space, Ecore, A, K, b, rcore, n)
     
     # fit the core energy and (depending on the input) elastic parameters K and A        
-    par, err = curve_fit(fittable_energy, sides, energies)
+    par, err = curve_fit(fittable_energy, spacing, energies)
     
     return par, err    
