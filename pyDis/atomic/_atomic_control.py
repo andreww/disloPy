@@ -116,7 +116,8 @@ def handle_atomistic_control(param_dict):
                        ('relaxtype', {'default': '', 'type': str}),
                        ('grid', {'default': True, 'type': to_bool}),
                        ('bdir', {'default': 0, 'type': int}),
-                       ('method', {'default': '', 'type': int})
+                       ('method', {'default': '', 'type': int}),
+                       ('fit_K', {'default': True, 'type': to_bool})
                       )
                       
     # cards for the <&cluster> namelist. Remember that the Stroh sextic theory
@@ -465,8 +466,14 @@ class AtomisticSim(object):
         # write the dislocated structure to file
         basename = '{}.{}.{}'.format(self.control('basename'), nx, ny)
         outstream = open('{}.{}'.format(basename, self.control('suffix')), 'w')
+        
+        if self.multipole('relaxtype'):
+            relaxtype = self.multipole('relaxtype')
+        else:
+            relaxtype = None
+            
         self.write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True, 
-              add_constraints=False, relax_type=self.multipole('relaxtype'))
+              add_constraints=False, relax_type=relaxtype)
         
         # run calculations, if requested by the user
         if self.control('run_sim'):
@@ -598,8 +605,12 @@ class AtomisticSim(object):
                 else:
                     ndis = np.array([1, 2])
                     
-            par, err = mp.fit_core_energy_mp(dE, self.base_struc, norm(self.burgers),
-                                              self.elast('rcore'), ndis=ndis)
+            if self.multipole('fit_K'):        
+                par, err = mp.fit_core_energy_mp(dE, self.base_struc, norm(self.burgers),
+                                                        self.elast('rcore'), ndis=ndis)
+            else:
+                par, err = mp.fit_core_energy_mp(dE, self.base_struc, norm(self.burgers),
+                                                self.elast('rcore'), ndis=ndis, K=self.K)
                                               
             print(par)
             

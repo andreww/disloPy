@@ -341,7 +341,7 @@ def edge_dipole(supercell, b, bdir=0):
     
     # cut the simulation cell and compress it to account for removed material 
     cut_supercell(supercell, new_dip)
-    compress_supercell(supercell, bnorm, n=1, bdir=bdir)
+    compress_cell(supercell, bnorm, n=1, bdir=bdir)
     return
     
 def edge_quadrupole(supercell, b, bdir=0):
@@ -367,11 +367,11 @@ def edge_quadrupole(supercell, b, bdir=0):
         
     # create dipoles
     dipole1 = EdgeDipole(xneg1, xpos1, bnorm)
-    dipole2 = EdgeDipoel(xneg2, xpos2, bnorm)
+    dipole2 = EdgeDipole(xneg2, xpos2, bnorm)
     
     # cut the simulation cell and compress it to account for removed material
     cut_supercell(supercell, dipole1, dipole2)
-    compress_supercell(supercell, bnorm, n=2, bdir=bdir) 
+    compress_cell(supercell, bnorm, n=2, bdir=bdir) 
     return
     
 def screw_dipole(supercell, b, screwfield, sij):
@@ -516,7 +516,7 @@ def multipole_energy(spacing, Ecore, A, K, b, rcore, n):
     a1, a2 = spacing
 
     #!!! need to check factors of pi
-    E = n*Ecore + n*K*b**2*(np.log(abs(a1)/(rcore))+A*abs(a1)/abs(a2))
+    E = Ecore + K*b**2/(4*np.pi)*(np.log(abs(a1)/(2*rcore))+A*abs(a1)/abs(a2))
     
     return E 
     
@@ -527,11 +527,21 @@ def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev', A=None,
     give the number of dislocations along the x and y axes.
     '''
     
+    # test to see if <rcore> has been defined; if not, default to 2*b
+    if rcore != rcore:
+        rcore = 2*b
+    
+    # convert inter-dislocation spacing from lattice units to \AA
+    if len(ndis) != 2:
+        raise ValueError("Exactly two dimensions to a plane.")
+        
+    n = np.product(ndis)
+    
     # extract the cell sizes (in \AA) and energies (in eV), and then normalise
     # to eV/\AA
     dEij = np.array(dEij)/norm(basestruc.getC())
-    
-    energies = dEij[:, -1]
+    print(n)
+    energies = dEij[:, -1]/n
     if units.lower() == 'ev':
         pass
     elif 'ry' in units.lower(): # assume Rydberg, can add others later
@@ -542,12 +552,6 @@ def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev', A=None,
     dims = []
     for i in range(3):
         dims.append(norm(basestruc.getVector(i)))
-        
-    # convert inter-dislocation spacing from lattice units to \AA
-    if len(ndis) != 2:
-        raise ValueError("Exactly two dimensions to a plane.")
-        
-    n = np.product(ndis)
         
     spacing = dEij[:, :2]
     spacing = np.array([[dims[0]*x[0]/ndis[0], dims[1]*x[1]/ndis[1]] for x in spacing])

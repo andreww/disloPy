@@ -20,9 +20,9 @@ def main(argv):
     
     struc = cry.Crystal()
     sys_info = qe.parse_qe(basefile, struc)
-    new_struc = cry.superConstructor(struc, dims=np.array([1, 2, 1]))
+    new_struc = cry.superConstructor(struc, dims=np.array([2, 2, 1]))
     new_slab = gsf.make_slab(new_struc, 6, vacuum, d_fix=d_fix, free_atoms=['H'])
-    atm.scale_kpoints(sys_info["cards"]["K_POINTS"], np.array([1, 2, 6]))
+    atm.scale_kpoints(sys_info["cards"]["K_POINTS"], np.array([2, 2, 6]))
 
     # replace here to make new impurity
     dfct = imp.Impurity('Mg', 'water')
@@ -32,7 +32,7 @@ def main(argv):
     # find and replace appropriate atom
     i = sl.replace_at_plane(new_slab, dfct, vacuum=10.)[0]
     sl.impure_faults(new_slab, dfct, i, qe.write_qe, sys_info, 0.2, argv[1], 
-                         dim=1, limits=0.5, vacuum=vacuum, relax='relax')
+                         dim=1, limits=0.25, vacuum=vacuum, relax='relax')
     
 
 if __name__ == "__main__":
