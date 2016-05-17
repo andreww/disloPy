@@ -130,6 +130,28 @@ def extract_parameters(name_dict, card_dict):
             pass
             
     return sys_info
+    
+def add_psps(sim_info, new_psps):
+    '''Add additional pseudopotentials to <sim_info>. Useful for 
+    impurity calculations where impurity atoms are not present in the
+    bulk material. <new_psps> is a list of objects of class <Pseudopotential>.
+    '''
+    
+    for psp in new_psps:
+        sim_info['cards']['ATOMIC_SPECIES'].append(str(psp))
+
+class Pseudopotential(object):
+    '''Holds information for a QE pseudopotential.
+    '''
+    
+    def __init__(self, species, atomic_weight, psp):
+        self.species = species
+        self.weight = atomic_weight
+        self.psp = psp
+
+    def __str__(self):
+        return '  {} {:.4f} {}'.format(self.species, self.weight, 
+                                                     self.psp)
         
 def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
        add_constraints=False, relax_type='scf', impurities=None, do_relax=None):

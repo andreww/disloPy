@@ -47,13 +47,13 @@ class Impurity(cry.Basis):
     def getSite(self):
         return self.__site
         
-    def setSite(self,newSite): 
+    def setSite(self, newSite): 
         self.__site = newSite  
         
     def getName(self):
         return self.__name
         
-    def setName(self,newDefectName):
+    def setName(self, newDefectName):
         self.__name = newDefectName
 
     def site_location(self, new_location, use_displaced=True):
@@ -77,42 +77,105 @@ class Impurity(cry.Basis):
         for atom in self:
             atom.setDisplacedCoordinates(atom.getCoordinates() + 
                                          np.copy(self._sitecoords))
-        
+                                         
 class CoupledImpurity(object):
-    '''Impurity at two or more sites. Relationship with class <Impurity> is
-    #HAS-A# not #IS-A#. NOTE: NOT FINISHED YET!
+    '''Several impurity atoms/vacancies located at multiple 
+    crystallographic sites.
     '''
     
-    def __init__(self,maxDistance=10.):
-        '''<maxDistance> is the maximum diameter of the coupled defect.
+    def __init__(self, impurities=None, sites=None):
+        '''List of impurities and the indices of the sites into which
+        they subsitute.
         '''
         
-        self.__impurities = []
-        self.__diameter = maxDistance
-        
-    def addImpurity(self,newImpurity,impurityName):
-        self.__impurities.append(newImpurity)
-        
-    def getSites(self):
-        return self.__impurities
-        
-    def nSites(self):
-        '''Outputs number of impurities in the defect cluster.
-        '''
-        
-        return len(self.__impurities)
-        
-    def isEmpty(self):
-        '''Tells user if any impurities have been defined -> note that a 
-        vacancy is a object of type <Impurity> to which no atoms have been 
-        added.
-        '''
-        
-        if self.__impurities:
-            return True
+        # if no impurities/sites have been provided, default to empty
+        if impurities == None and sites == None:
+            self.impurities = []
+            self.sites = []
+        elif len(sites) != len(impurities):
+            raise ValueError()
         else:
-            return False
+            self.impurities = impurities
+            self.sites = sites  
+            
+        self.currentindex = 0   
+    
+    def add_impurity(self, new_impurity, site):
+        '''Append a new impurity to the defect cluster.
+        '''
+         
+        self.impurities.append(new_impurity)
+        self.sites.append(site)
+    
+    def __len__(self):
+        return len(self.sites)
+    
+    def set_coordinates(self, simulation_cell, use_displaced=True):
+        '''Sets the site locations for each impurity in the defect
+        cluster by extracting the appropriate coordinates from 
+        <simulation_cell>, using the coordinates in the undeformed cell
+        if <use_displaced> is False.
+        '''
+        #
+        for i, site in enumerate(self.sites):
+            self.impurities[i].site_location(simulation_cell[site], 
+                                        use_displaced=use_displaced)
+                                        
+    def __iter__(self):
+        return self
+        
+    def next(self):
+        if self.currentindex >= len(self.sites):
+            # reset iteration state
+            self.currentindex = 0
+            raise StopIteration
+        else:
+            self.currentindex += 1
+            return (self.sites[self.currentindex-1], self.impurities[self.currentindex-1])
+            
+    def total_atoms(self):
+        '''Counts the total number of impurity atoms in the defect cluster.
+        '''
+        
+        natoms = 0
+        # count atoms in each Impurity
+        for impurity in self:
+            natoms += len(impurity[-1])
+        
+        return natoms
+            
+### FUNCTIONS TO INSERT IMPURITIES INTO A STRUCTURE ###
 
+def cell_defect(supercell, defect, siteindex, use_displaced=True):
+    '''Inserts the provided defect (+ site) into the supercell.
+    '''
+    
+    # switch off atom to be replaced
+    supercell[site].switchOutputMode()
+    
+    # set coordinates of defect
+    defect.site_location(supercell[site], use_displaced=use_displaced)
+    
+    if len(impurity) == 0:
+        # impurity is empty => vacuum
+        pass
+    else:
+        for atom in impurity:
+            # make displaced coordinates the base coordinates, for compatibility
+            new_atom = atom.copy()
+            new_atom.setCoordinates(new_atom.getDisplacedCoordinates())
+            supercell.addAtom(new_atom)
+            
+    return
+    
+def cell_defect_cluster(supercell, defect_cluster, use_displaced=True):
+    '''Inserts the provided defect cluster into the supercell.
+    '''
+    
+    for defect in defect_cluster:
+        cell_defect(supercell, defect[-1], defect[0], use_displaced=use_displaced) 
+    
+    return
 
 ### IMPURITIES IN CLUSTERS (IE. 1D-PERIODIC CELLS) ###
     
