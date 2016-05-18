@@ -474,5 +474,4 @@ def readGulpCluster(cluster_name):
     
 # LAMMPS specific routines -> not implemented yet
 
-# DL_POLY specific routines -> not implemented yet
-            
+# DL_POLY specific routines -> not implemented yet            

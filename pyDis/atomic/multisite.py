@@ -9,9 +9,13 @@ from numpy.linalg import norm
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import qe_utils as qe
+from pyDis.atomic import gulpUtils as gulp
+from pyDis.atomic import castep_utils as castep
+from pyDis.atomic import transmutation as mutate
 
-def periodic_distance(atom1, atom2, lattice, perfect=True):
-    '''Calculates the smale
+def periodic_distance(atom1, atom2, lattice, use_displaced=True):
+    '''Calculates the smallest distance between <atom1> and any periodic image
+    of <atom2> (including the one defined by the lattice vector (0, 0, 0))
     '''
     
     # cell lengths
@@ -20,13 +24,13 @@ def periodic_distance(atom1, atom2, lattice, perfect=True):
         scale[i] = norm(lattice[i])
     
     # extract appropriate coordinates
-    if perfect:
-        x1 = scale*atom1.getCoordinates()
-        x2 = scale*atom2.getCoordinates()
-    else: 
-        # use defected coordinates
+    if use_displaced:
         x1 = scale*atom1.getDisplacedCoordinates()
         x2 = scale*atom2.getDisplacedCoordinates()
+    else: 
+        # use defected coordinates
+        x1 = scale*atom1.getCoordinates()
+        x2 = scale*atom2.getCoordinates()
     
     # calculate distance between atom 1 and the closest periodic image of atom 2
     mindist = np.inf
@@ -35,11 +39,63 @@ def periodic_distance(atom1, atom2, lattice, perfect=True):
             for k in [-1, 0, 1]:
                 d = np.array([i, j, k])
                 d = scale*d
-                dist = np.linalg.norm(x1-(x2 + d))
+                dist = norm(x1-(x2 + d))
                 if dist < mindist:
                     mindist = dist
                     
     return mindist
+    
+def closest_atom_oftype(atomtype, atom, supercell, use_displaced=True):
+    '''Locates the closest atom of species <atomtype> to <atom> in the 
+    provided <supercell>. Primarily useful for locating hydroxyl oxygens.
+    '''
+    
+    lattice = supercell.getLattice()
+    
+    mindist = np.inf
+    index = -1
+    
+    for i, atom2 in enumerate(supercell):
+        if atom2.getSpecies() != atomtype:
+            # wrong species, carry on
+            continue
+        # else
+        dist = periodic_distance(atom, atom2, lattice, use_displaced=use_displaced)
+
+        if dist < mindist:
+            mindist = dist
+            index = i
+
+    return index
+    
+def hydroxyl_oxygens(hydrous_defect, site, supercell, hydroxyl_str,
+                                program='gulp', oxy_str='O'):
+    '''Locate the hydroxyl oxygens for molecular mechanics simulations
+    and create hydroxyl oxygens (species <hydroxyl_str>) to insert into
+    the simulation cell. 
+    '''
+    
+    hydrous_defect.site_location(supercell[site])
+
+    hydroxyls = []
+    hydroxyl_indices = []
+    
+    for H in hydrous_defect:
+        # add an impurity of type <hydroxyl_str> to <hydroxyls>
+        if program.lower() == 'gulp':
+            hydroxyls.append(gulp.GulpAtom(hydroxyl_str))
+        else:
+            hydroxyls.append(cry.Atom(hydroxyl_str))
+        
+        # locate index of site containing nearest oxygen atom
+        hydroxyl_indices.append(closest_atom_oftype(oxy_str, H,
+                                                     supercell))
+
+    # create <CoupledImpurity> containing all hydroxyl ions
+    hydroxyl_atoms = mutate.CoupledImpurity(impurities=hydroxyls, sites=hydroxyl_indices)
+
+    return hydroxyl_atoms
+
     
 def locate_bonded(site, siteindex, bondatom, supercell, nbonds):
     bondlist = []

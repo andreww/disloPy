@@ -50,6 +50,9 @@ def impure_faults(slab_cell, impurity, site, write_fn, sys_info, resolution,
     to be replaced by the impurity 
     '''
 
+    mutate.cell_defect(slab_cell, impurity, site, use_displaced=True)
+    
+    '''
     slab_cell[site].switchOutputMode()
     
     # calculate coordinates of the <impurity> atoms and insert them into the 
@@ -66,7 +69,8 @@ def impure_faults(slab_cell, impurity, site, write_fn, sys_info, resolution,
             new_atom = atom.copy()
             new_atom.setCoordinates(new_atom.getDisplacedCoordinates())
             slab_cell.addAtom(new_atom)
-
+    '''
+    
     # create input files for generalised stacking fault calculations
     if dim == 1:
         gsf.gamma_line(slab_cell, line_vec, resolution, write_fn, sys_info, 
@@ -75,10 +79,38 @@ def impure_faults(slab_cell, impurity, site, write_fn, sys_info, resolution,
     else: # dim == 2
         gsf.gamma_surface(slab_cell, resolution, write_fn, sys_info, mkdir=mkdir,
                                  basename=basename, suffix=suffix, limits=limits)
-
+                                 
+    # return the slab to its original state
+    mutate.undo_defect(slab_cell, impurity, sites=site)
+    
+    '''
     # return <index>th atom to slab and delete all impurity atoms
     slab_cell[site].switchOutputMode()
     for i in range(len(impurity)):
         del slab_cell[-1]
-
+    '''
+    return
+    
+def cluster_faults(slab_cell, defectcluster, write_fn, sys_info, resolution, 
+                      basename, dim=2, limits=(1,1), mkdir=False, vacuum=0., 
+                      suffix='in', line_vec=np.array([1., 0., 0.]), relax=None):
+    '''Insert a defect cluster into a supercell and then calculate gamma
+    line/surface energies.
+    '''
+    
+    # insert the defect cluster into the simulation cell
+    mutate.cell_defect_cluster(slab_cell, defectcluster, use_displaced=True)
+      
+    # create input files for generalised stacking fault calculations
+    if dim == 1:
+        gsf.gamma_line(slab_cell, line_vec, resolution, write_fn, sys_info, 
+                       limits=limits, vacuum=vacuum, basename=basename, suffix=suffix,
+                       mkdir=False, relax=relax)
+    else: # dim == 2
+        gsf.gamma_surface(slab_cell, resolution, write_fn, sys_info, mkdir=mkdir,
+                                 basename=basename, suffix=suffix, limits=limits)
+    
+    # return the slab to its original state
+    mutate.undo_defect(slab_cell, defectcluster)
+    
     return
