@@ -20,7 +20,7 @@ class Impurity(cry.Basis):
     GULP
     '''
     
-    def __init__(self, site, defect_name, sitecoords=None):
+    def __init__(self, site, defect_name, sitecoords=None, use_displaced=True):
         '''<site> tells us which site this Impurity occupies. <defectName>
         is the name used to identify this defect type (eg. hydrogarnet for
         4 hydrogens in a silicon vacancy).
@@ -29,8 +29,6 @@ class Impurity(cry.Basis):
         cry.Basis.__init__(self)
         self.__site = site
         self.__name = defect_name
-        # by default, the defect is not assigned to a specific site
-        self._sitecoords = sitecoords 
         
     def write_impurity(self, outstream, lattice=np.identity(3), to_cart=False,
                                                         add_constraints=False):
@@ -106,11 +104,26 @@ class CoupledImpurity(object):
          
         self.impurities.append(new_impurity)
         self.sites.append(site)
-    
+            
     def __len__(self):
+        '''Counts the total number of impurity atoms in the defect cluster.
+        '''
+        
+        natoms = 0
+        # count atoms in each Impurity
+        for impurity in self:
+            natoms += len(impurity[-1])
+        
+        return natoms
+    
+    def nsites(self):
+        '''Gives the total number of sites in the structure which are replaced
+        with a defect.
+        '''
+        
         return len(self.sites)
     
-    def set_coordinates(self, simulation_cell, use_displaced=True):
+    def site_locations(self, simulation_cell, use_displaced=True):
         '''Sets the site locations for each impurity in the defect
         cluster by extracting the appropriate coordinates from 
         <simulation_cell>, using the coordinates in the undeformed cell
@@ -133,47 +146,58 @@ class CoupledImpurity(object):
             self.currentindex += 1
             return (self.sites[self.currentindex-1], self.impurities[self.currentindex-1])
             
-    def total_atoms(self):
-        '''Counts the total number of impurity atoms in the defect cluster.
-        '''
-        
-        natoms = 0
-        # count atoms in each Impurity
-        for impurity in self:
-            natoms += len(impurity[-1])
-        
-        return natoms
-            
 ### FUNCTIONS TO INSERT IMPURITIES INTO A STRUCTURE ###
 
-def cell_defect(supercell, defect, siteindex, use_displaced=True):
-    '''Inserts the provided defect (+ site) into the supercell.
+def cell_defect(simcell, defect, site, use_displaced=True):
+    '''Inserts the provided defect (+ site) into the simulation cell.
     '''
     
     # switch off atom to be replaced
-    supercell[site].switchOutputMode()
+    simcell[site].switchOutputMode()
     
     # set coordinates of defect
-    defect.site_location(supercell[site], use_displaced=use_displaced)
+    defect.site_location(simcell[site], use_displaced=use_displaced)
     
-    if len(impurity) == 0:
+    if len(defect) == 0:
         # impurity is empty => vacuum
         pass
     else:
-        for atom in impurity:
+        for atom in defect:
             # make displaced coordinates the base coordinates, for compatibility
             new_atom = atom.copy()
             new_atom.setCoordinates(new_atom.getDisplacedCoordinates())
-            supercell.addAtom(new_atom)
+            simcell.addAtom(new_atom)
             
     return
     
-def cell_defect_cluster(supercell, defect_cluster, use_displaced=True):
+def cell_defect_cluster(simcell, defect_cluster, use_displaced=True):
     '''Inserts the provided defect cluster into the supercell.
     '''
     
-    for defect in defect_cluster:
-        cell_defect(supercell, defect[-1], defect[0], use_displaced=use_displaced) 
+    for site, defect in defect_cluster:
+        cell_defect(simcell, defect, site, use_displaced=use_displaced)
+        
+    return
+    
+def undo_defect(simcell, defect_thingy, sites=None):
+    '''Removes all trace of a defect from a simulation cell by resetting the
+    output mode of atoms that are in the perfect material and deleting any
+    impurity atoms that may have been added to the <Crystal>/<Basis> object.
+    <defect_thingy> may be an <Impurity> or a <CoupledImpurity>.
+    '''
+    
+    # delete all impurity atoms
+    for i in range(len(defect_thingy)):
+        del simcell[-1]
+        
+    # switch original atoms in the defect sites back on
+    if sites != None:
+        # single site impurity
+        simcell[sites].switchOutputMode()
+    else:
+        # coupled defect
+        for site in defect_thingy.sites:
+            simcell[site].switchOutputMode()
     
     return
 
