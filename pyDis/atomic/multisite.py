@@ -92,10 +92,12 @@ def hydroxyl_oxygens(hydrous_defect, site, supercell, hydroxyl_str,
                                                      supercell))
 
     # create <CoupledImpurity> containing all hydroxyl ions
-    hydroxyl_atoms = mutate.CoupledImpurity(impurities=hydroxyls, sites=hydroxyl_indices)
+    hydroxyl_O = mutate.CoupledImpurity(impurities=hydroxyls, sites=hydroxyl_indices)
+    
+    # merge the hydrogen atoms in the defect with the hydroxyl defects
+    full_defect = mutate.merge_coupled(hydrous_defect, hydroxyl_O)
 
-    return hydroxyl_atoms
-
+    return full_defect
     
 def locate_bonded(site, siteindex, bondatom, supercell, nbonds):
     bondlist = []

@@ -53,6 +53,12 @@ class Impurity(cry.Basis):
         
     def setName(self, newDefectName):
         self.__name = newDefectName
+        
+    def __str__(self):
+        thisstr = ''
+        for atom in self:
+            thisstr += '{}\n'.format(atom)
+        return thisstr
 
     def site_location(self, new_location, use_displaced=True):
         '''Sets the origin of the <Impurity> to <new_location>. Typically, this
@@ -98,7 +104,7 @@ class CoupledImpurity(object):
             
         self.currentindex = 0   
     
-    def add_impurity(self, new_impurity, site):
+    def add_impurity(self, site, new_impurity):
         '''Append a new impurity to the defect cluster.
         '''
          
@@ -122,6 +128,12 @@ class CoupledImpurity(object):
         '''
         
         return len(self.sites)
+        
+    def __str__(self):
+        thisstr = ''
+        for site, impurity in self:
+            thisstr += '{}\n{}'.format(site, impurity)
+        return thisstr
     
     def site_locations(self, simulation_cell, use_displaced=True):
         '''Sets the site locations for each impurity in the defect
@@ -145,6 +157,19 @@ class CoupledImpurity(object):
         else:
             self.currentindex += 1
             return (self.sites[self.currentindex-1], self.impurities[self.currentindex-1])
+            
+def merge_coupled(*defect_clusters):
+    '''Creates a single <CoupledImpurity> from a collection of <CoupledImpurity>s.
+    '''
+    
+    new_cluster = CoupledImpurity()
+    
+    # add all single-site defects from each cluster to new_cluster
+    for cluster in defect_clusters:
+        for site, impurity in cluster:
+            new_cluster.add_impurity(site, impurity)
+    
+    return new_cluster
             
 ### FUNCTIONS TO INSERT IMPURITIES INTO A STRUCTURE ###
 
@@ -257,19 +282,19 @@ def calculateImpurity(sysInfo,regionI,regionII,radius,defect,gulpExec='./gulp',
             if not useAtom:
                 continue           
             
-        print("Replacing atom %s..." % str(atom))
+        print("Replacing atom {}...".format(str(atom)))
         
         # need to work out some schema for the outstream
         coords = atom.getCoordinates()
-        outName = '%s.%s.%.6f.%.6f.%.6f' % (defect.getName(),defect.getSite(),
-                                                  coords[0],coords[1],coords[2])
+        outName = '{}.{}.{:.6f}.{:.6f}.{:.6f}'.format(defect.getName(), defect.getSite(),
+                                                          coords[0], coords[1], coords[2])
         outStream = open(outName+'.gin','w')
         
         # write header information
         #outStream.write('opti conv qok eregion bfgs\n')
         # for testing, do single point calculations
-        outStream.write('opti conv qok eregion %s\n' % minimizer)
-        outStream.write('maxcyc %d\n' % maxcyc)
+        outStream.write('opti conv qok eregion {}\n'.format(minimizer))
+        outStream.write('maxcyc {}\n'.format(maxcyc))
         outStream.write('pcell\n')
         outStream.write(sysInfo[1])
             
