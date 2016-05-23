@@ -34,12 +34,46 @@ def cartToFrac(cartCoords, cellVectors):
         newCoords[i] = numer/denom
     return newCoords
     
-def cellToCart(cellParameters):
+def cell2cart(a, b, c, alpha, beta, gamma):
     '''Converts list of six cell parameters (a,b,c,alpha,beta,gamma)
-    to three lattice vectors x1,x2,x3, with x3 || z.
+    to three lattice vectors x1, x2, x3, with x3 || z.
     '''
     
-    pass
+    if abs(alpha - 90.0) < 1e-12:
+        sina = 1.0
+        cosa = 0.0
+    else:
+        sina = np.sin(np.radians(alpha))
+        cosa = np.cos(np.radians(alpha))
+    if abs(beta-90.0) < 1e-12:
+        sinb = 1.0
+        cosb = 0.0
+    else:
+        sinb = np.sin(np.radians(beta))
+        cosb = np.cos(np.radians(beta))
+    if abs(gamma-90.0) < 1e-12:
+        sing = 1.0
+        cosg = 0.0
+    else:
+        sing = np.sin(np.radians(gamma))
+        cosg = np.cos(np.radians(gamma))
+        
+    c_x = 0.0
+    c_y = 0.0
+    c_z = c
+        
+    b_x = 0.0
+    b_y = b*sina
+    b_z = b*cosa
+        
+    a_z = a*cosb
+    a_y = a*(cosg - cosa*cosb)/sina
+    trm1 = a_y/a
+    a_x = a*np.sqrt(1.0 - cosb**2 - trm1**2)
+        
+    return np.array([[a_x, a_y, a_z],    
+                     [b_x, b_y, b_z],
+                     [c_x, c_y, c_z]])
     
 # define classes
 
@@ -83,7 +117,7 @@ class Atom(object):
         return np.copy(self._constraints)
         
     def __str__(self):
-        return '%s %.3f %.3f %.3f' % (self.__species, self.__coordinates[0],
+        return '{} {:.3f} {:.3f} {:.3f}'.format(self.__species, self.__coordinates[0],
                                     self.__coordinates[1], self.__coordinates[2])
         
     def rotate(self, ax=np.array([1, 0, 0]), theta=0.0):
@@ -139,6 +173,32 @@ class Atom(object):
     def getDisplacedCoordinates(self):
         return np.copy(self.__displacedCoordinates)
         
+    def to_cart(self, lattice):
+        '''Expressions the atomic position in cartesian coordinates.
+        '''
+        
+        # get coordinates in perfect and deformed material (in cartesian coordinates)
+        newcoords = fracToCart(self.getCoordinates(), lattice.getLattice())
+        newdisp = fracToCart(self.getDisplacedCoordinates(), lattice.getLattice())
+        
+        self.setCoordinates(newcoords)
+        self.setDisplacedCoordinates(newdisp)
+        
+        return 
+        
+    def to_cell(self, lattice):
+        '''Transforms the atomic coordinates from cartesian to cell coordinates.
+        '''
+        
+        # get coordinates in terms of the cell parameters
+        newcoords = cartToFrac(self.getCoordinates(), lattice.getLattice())
+        newdisp = cartToFrac(self.getDisplacedCoordinates(), lattice.getLattice())
+        
+        self.setCoordinates(newcoords)
+        self.setDisplacedCoordinates(newdisp)
+        
+        return 
+        
     def writeToOutput(self):
         '''Tells us whether or not to write <atom> to output.
         '''
@@ -169,7 +229,7 @@ class Atom(object):
         typicall either the print function or an I/O stream.
         '''
         
-        atomFormat = '%s %.6f %.6f %.6f'
+        atomFormat = '{} {:.6f} {:.6f} {:.6f}'
         
         # test to see if atom should be output
         if not self.writeToOutput():
@@ -182,12 +242,12 @@ class Atom(object):
         else:
             coords = self.getCoordinates()
             
-        write_function(atomFormat % (self.getSpecies(), coords[0], coords[1],
+        write_function(atomFormat.format(self.getSpecies(), coords[0], coords[1],
                                                             coords[2]))
                                                             
         # add constraints, if necessary
         if add_constraints:
-            write_function(' %d %d %d\n' % (self._constraints[0], self._constraints[1],
+            write_function(' {} {} {}\n'.format(self._constraints[0], self._constraints[1],
                                                                  self._constraints[2]))
         else:
             write_function('\n')
@@ -289,6 +349,14 @@ class Lattice(object):
         self.__a = otherLattice.getA()
         self.__b = otherLattice.getB()
         self.__c = otherLattice.getC()
+        
+    def __str__(self):
+        newstr = ''
+        lattice_form = '{:.6f} {:.6f} {:.6f}\n'
+        for vec in [self.__a, self.__b, self.__c]:
+            newstr += lattice_form.format(vec[0], vec[1], vec[2])
+            
+        return newstr
         
 class Basis(object):
     '''Define a basis -> ie. a set of atoms to serve as basic repeating
@@ -599,39 +667,4 @@ def extractDistinctSpecies(inputBasis):
              
     return atSpecies
     
-def cell2cart(a, b, c, alpha, beta, gamma):
-    if abs(alpha - 90.0) < 1e-12:
-        sina = 1.0
-        cosa = 0.0
-    else:
-        sina = np.sin(np.radians(alpha))
-        cosa = np.cos(np.radians(alpha))
-    if abs(beta-90.0) < 1e-12:
-        sinb = 1.0
-        cosb = 0.0
-    else:
-        sinb = np.sin(np.radians(beta))
-        cosb = np.cos(np.radians(beta))
-    if abs(gamma-90.0) < 1e-12:
-        sing = 1.0
-        cosg = 0.0
-    else:
-        sing = np.sin(np.radians(gamma))
-        cosg = np.cos(np.radians(gamma))
-        
-    c_x = 0.0
-    c_y = 0.0
-    c_z = c
-        
-    b_x = 0.0
-    b_y = b*sina
-    b_z = b*cosa
-        
-    a_z = a*cosb
-    a_y = a*(cosg - cosa*cosb)/sina
-    trm1 = a_y/a
-    a_x = a*np.sqrt(1.0 - cosb**2 - trm1**2)
-        
-    return np.array([[a_x, a_y, a_z],    
-                     [b_x, b_y, b_z],
-                     [c_x, c_y, c_z]])
+

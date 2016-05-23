@@ -5,13 +5,14 @@ cluster.
 from __future__ import print_function
 
 import numpy as np
-import numpy.linalg as L
-import sys
-import os
-
-import crystal as cry
-import gulpUtils as gulp
 import re
+import sys
+sys.path.append('/home/richard/code_bases/dislocator2/')
+
+from  numpy.linalg import norm
+
+from pyDis.atomic import crystal as cry
+from pyDis.atomic import gulpUtils as gulp
 
 class Impurity(cry.Basis):
     '''An impurity. May be a single defect (eg. a Ca atom in Mg2SiO4
@@ -20,7 +21,8 @@ class Impurity(cry.Basis):
     GULP
     '''
     
-    def __init__(self, site, defect_name, sitecoords=None, use_displaced=True):
+    def __init__(self, site, defect_name, sitecoords=None, use_displaced=True, 
+                                                             updateatoms=False):
         '''<site> tells us which site this Impurity occupies. <defectName>
         is the name used to identify this defect type (eg. hydrogarnet for
         4 hydrogens in a silicon vacancy).
@@ -29,6 +31,13 @@ class Impurity(cry.Basis):
         cry.Basis.__init__(self)
         self.__site = site
         self.__name = defect_name
+        
+        if sitecoords != None:
+            # set the location of the impurity
+            self.site_location(sitecoords, use_displaced=use_displaced, 
+                                                updateatoms=updateatoms)
+        else:
+            self._sitecoords = None
         
     def write_impurity(self, outstream, lattice=np.identity(3), to_cart=False,
                                                         add_constraints=False):
@@ -59,8 +68,15 @@ class Impurity(cry.Basis):
         for atom in self:
             thisstr += '{}\n'.format(atom)
         return thisstr
+        
+    def to_cell_coords(self, lattice):
+        '''Converts the coordinates of all atoms to lattice units.
+        '''
+        
+        for atom in self:
+            atom.to_cell(lattice)
 
-    def site_location(self, new_location, use_displaced=True):
+    def site_location(self, new_location, use_displaced=True, updateatoms=True):
         '''Sets the origin of the <Impurity> to <new_location>. Typically, this
         will be the coordinates of the <Atom> for which the <Impurity> is 
         substituting. If <use_displaced>, use the displaced coordinates of the 
@@ -77,10 +93,39 @@ class Impurity(cry.Basis):
         else:
             self._sitecoords = np.copy(new_location)
 
-        # set displaced coordinates equal to coordinates in actual structure
+        if updateatoms:
+            # set displaced coordinates equal to coordinates in actual structure
+            self.atomic_site_coords()
+                                             
+    def atomic_site_coords(self):
+        '''Calculate coordinates of atoms in terms of the simulation cell using
+        the coordinates of the defect site.
+        '''
+        
+        if self._sitecoords == None:
+            raise TypeError("Cannot calculate site coordinates if site is <None>.")
+        else:
+            for atom in self:
+                atom.setDisplacedCoordinates(atom.getCoordinates() + 
+                                            np.copy(self._sitecoords)) 
+        
+        return
+                                         
+    def copy(self, updateatoms=False):
+        '''Creates a copy of the <Impurity> object.
+        '''
+        
+        new_imp = Impurity(self.__site, self.__name, sitecoords=self._sitecoords)
+        
+        # add atoms to the new Impurity
         for atom in self:
-            atom.setDisplacedCoordinates(atom.getCoordinates() + 
-                                         np.copy(self._sitecoords))
+            new_imp.addAtom(atom)
+            
+        if updateatoms and (self._sitecoords != None):
+            # calculate defect coordinates for a specific site
+            self.atomic_site_coords()
+        
+        return new_imp
                                          
 class CoupledImpurity(object):
     '''Several impurity atoms/vacancies located at multiple 
@@ -99,7 +144,10 @@ class CoupledImpurity(object):
         elif len(sites) != len(impurities):
             raise ValueError()
         else:
-            self.impurities = impurities
+            self.impurities = []
+            for imp in impurities:
+                self.impurities.append(imp.copy())
+                
             self.sites = sites  
             
         self.currentindex = 0   
@@ -108,7 +156,7 @@ class CoupledImpurity(object):
         '''Append a new impurity to the defect cluster.
         '''
          
-        self.impurities.append(new_impurity)
+        self.impurities.append(new_impurity.copy())
         self.sites.append(site)
             
     def __len__(self):
@@ -157,6 +205,15 @@ class CoupledImpurity(object):
         else:
             self.currentindex += 1
             return (self.sites[self.currentindex-1], self.impurities[self.currentindex-1])
+            
+    def to_cell_coords(self, lattice):
+        '''Converts the coordinates of all atoms contained in the 
+        impurities that make up <cluster> from cartesian to cell
+        coordinates.
+        '''
+        
+        for imp in self:
+            imp[1].to_cell_coords(lattice)
             
 def merge_coupled(*defect_clusters):
     '''Creates a single <CoupledImpurity> from a collection of <CoupledImpurity>s.
@@ -267,7 +324,7 @@ def calculateImpurity(sysInfo,regionI,regionII,radius,defect,gulpExec='./gulp',
         if atom.getSpecies() != defect.getSite():
             continue
         # 2. Is the atom within <radius> of the dislocation line?
-        if L.norm(atom.getCoordinates()[1:]) > radius:
+        if norm(atom.getCoordinates()[1:]) > radius:
             continue  
               
         # check <constraints>
