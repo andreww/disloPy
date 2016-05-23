@@ -82,20 +82,23 @@ def hydroxyl_oxygens(hydrous_defect, site, supercell, hydroxyl_str,
     
     for H in hydrous_defect:
         # add an impurity of type <hydroxyl_str> to <hydroxyls>
+        new_hydrox = mutate.Impurity('O', 'hydroxyl oxygen')
         if program.lower() == 'gulp':
-            hydroxyls.append(gulp.GulpAtom(hydroxyl_str))
+            new_hydrox.addAtom(gulp.GulpAtom(hydroxyl_str))
         else:
-            hydroxyls.append(cry.Atom(hydroxyl_str))
+            new_hydrox.addAtom(cry.Atom(hydroxyl_str))
+        
+        hydroxyls.append(new_hydrox.copy())
         
         # locate index of site containing nearest oxygen atom
         hydroxyl_indices.append(closest_atom_oftype(oxy_str, H,
                                                      supercell))
 
     # create <CoupledImpurity> containing all hydroxyl ions
-    hydroxyl_O = mutate.CoupledImpurity(impurities=hydroxyls, sites=hydroxyl_indices)
+    full_defect = mutate.CoupledImpurity(impurities=hydroxyls, sites=hydroxyl_indices)
     
     # merge the hydrogen atoms in the defect with the hydroxyl defects
-    full_defect = mutate.merge_coupled(hydrous_defect, hydroxyl_O)
+    full_defect.add_impurity(site, hydrous_defect)
 
     return full_defect
     

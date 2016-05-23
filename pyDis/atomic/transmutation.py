@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-'''Contains functions required to introduce defects into a 1D-periodic 
-cluster.
+'''Contains functions required to introduce defects into simulation cells.
 '''
 from __future__ import print_function
 
@@ -16,9 +15,8 @@ from pyDis.atomic import gulpUtils as gulp
 
 class Impurity(cry.Basis):
     '''An impurity. May be a single defect (eg. a Ca atom in Mg2SiO4
-    forsterite) or a cluster (eg. four protons in the hydrogarnet defect).
-    This class supports impurities at a single site. Currently set up for 
-    GULP
+    forsterite) or contain several atoms/ions (eg. four protons in the hydrogarnet 
+    defect). This class supports impurities at a single site. 
     '''
     
     def __init__(self, site, defect_name, sitecoords=None, use_displaced=True, 
@@ -528,7 +526,7 @@ def parseConstraint(constraintFile):
         except NameError:
             continue
         else:
-            minVal,maxVal = cons.group('min'),cons.group('max')
+            minVal, maxVal = cons.group('min'), cons.group('max')
          
             typeOfConstraint = typeOfConstraint.lower()
             try:
