@@ -47,21 +47,28 @@ def read_numerical_gsf(filename):
             
     return np.array(gsf), units
    
-def spline_fit1d(num_gsf, b, a, angle=np.pi/2., two_planes=True, units='ev'):
+def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True, units='ev'):
     '''Fits a bivariate spline to a numerical gsf energies along a line (ie.
-    fits a gamma line). 
+    fits a gamma line). <a> is the length of the cell axis along the gamma line
+    (typically the Burgers vector), and <b> is the length of the third axis 
+    (after <a> and the normal vector).
     '''
-
+    '''
     # extract gsf vectors and energies from <num_gsf>
     x_vals = num_gsf[:, 0]
     x_vals = b*x_vals/x_vals.max()
+    E_vals = num_gsf[:, 1]
+    '''
+    
+    # extract gsf vectors and energies from <num_gsf>
+    x_vals = get_axis(num_gsf, 0, a)
     E_vals = num_gsf[:, 1]
     
     # convert energies to eV/\AA^2
     if units.lower() == 'ev':
         pass
     elif units.lower() in 'rydberg':
-        E_vals *= 13.6057
+        E_vals *= 13.6057   
     E_vals -= E_vals.min()
     E_vals /= a*b*abs(np.sin(angle))
     if two_planes:
