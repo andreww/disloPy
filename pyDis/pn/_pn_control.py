@@ -186,7 +186,8 @@ def handle_pn_control(param_dict):
                   ('angle', {'default':np.pi/2, 'type':float}),
                   ('map_ux', {'default':'remap: (ux, uy) -> ux', 'type':str}),
                   ('map_uy', {'default':'remap: (ux, uy) -> uy', 'type':str}),
-                  ('gamma_shift', {'default':0., 'type':float})
+                  ('gamma_shift', {'default':0., 'type':float}),
+                  ('has_vacuum', {'default':False, 'type':to_bool})
                  )
 
     # cards for the <&properties> namelist
@@ -373,11 +374,16 @@ class PNSim(object):
         if n_columns == 2:
             self.gsf = fg.spline_fit1d(gsf_grid, self.surf('x_length'), 
                                                  self.surf('y_length'),
-                                                 angle=self.surf('angle'))
+                                                 angle=self.surf('angle'),
+                                                 units=self.units,
+                                                 hasvac=self.surf('has_vacuum'))
         elif n_columns == 3: # 2-dimensional misfit function
             base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), 
                                                   self.surf('y_length'),
-                                                  angle=self.surf('angle'))
+                                                  angle=self.surf('angle'),
+                                                  units=self.units,
+                                                  hasvac=self.surf('has_vacuum'))
+                                                  
             temp_gsf = fg.new_gsf(base_func, self.surf('map_ux'), 
                                              self.surf('map_uy'))
             if self.control('dimensions') == 1: 

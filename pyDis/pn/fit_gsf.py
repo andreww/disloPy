@@ -41,13 +41,13 @@ def read_numerical_gsf(filename):
             gsf.append([float(value) for value in data])
             
     # check that units were contained in file
-    if unit_match == None:
+    if units == None:
         print("Warning: no energy units specified. Defaulting to eV")
         units = 'ev'
             
     return np.array(gsf), units
    
-def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True, units='ev'):
+def spline_fit1d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
     '''Fits a bivariate spline to a numerical gsf energies along a line (ie.
     fits a gamma line). <a> is the length of the cell axis along the gamma line
     (typically the Burgers vector), and <b> is the length of the third axis 
@@ -68,10 +68,14 @@ def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True, units='ev'):
     if units.lower() == 'ev':
         pass
     elif units.lower() in 'rydberg':
-        E_vals *= 13.6057   
+        E_vals *= 13.6057
+           
     E_vals -= E_vals.min()
     E_vals /= a*b*abs(np.sin(angle))
-    if two_planes:
+    if hasvac:
+        pass
+    else:
+        # 3D periodic -> cell contains two stacking faults
         E_vals /= 2.
     
     # fit gamma line and create periodic function
@@ -82,7 +86,7 @@ def spline_fit1d(num_gsf, a, b, angle=np.pi/2., two_planes=True, units='ev'):
           
     return gamma
 
-def spline_fit2d(num_gsf, a, b, angle=np.pi/2., two_planes=True):
+def spline_fit2d(num_gsf, a, b, angle=np.pi/2., two_planes=True, units='ev'):
     '''extract coordinates of calculations, and gs-energies at each point
     grid values are given in integer values -> need to convert to \AA
     '''
@@ -96,10 +100,16 @@ def spline_fit2d(num_gsf, a, b, angle=np.pi/2., two_planes=True):
     E_vals = num_gsf[:, 2].reshape((len(x_vals), len(y_vals)))
     E_vals -= E_vals.min()
     E_vals /= a*b*abs(np.sin(angle))
-    if two_planes:
-        # two slip planes present in simulation cell -> set <two_planes> to False
-        # if a vacuum layer is used.
-        E_vals *= 0.5
+    if units.lower() == 'ev':
+        pass
+    elif units.lower() in 'rydberg':
+        E_vals *= 13.6057
+        
+    if hasvac:
+        pass
+    else:
+        # 3D periodic -> cell contains two stacking faults
+        E_vals /= 2.
     
     g_spline = RectBivariateSpline(x_vals, y_vals, E_vals)
     
