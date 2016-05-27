@@ -143,8 +143,7 @@ def handle_pn_control(param_dict):
     # cards for the <&control> namelist 
     control_cards = (('gsf_file', {'default':None, 'type':str}),
                      ('output', {'default':'pyDisPN.out', 'type':str}),
-                     ('title_line', {'default':'Peierls-Nabarro model',
-                                                           'type':str}),
+                     ('title_line', {'default':'Peierls-Nabarro model', 'type':str}),
                      ('n_iter', {'default':1000, 'type':int}),
                      ('dimensions', {'default':2, 'type':int}),
                      ('max_x', {'default':100, 'type':int}),

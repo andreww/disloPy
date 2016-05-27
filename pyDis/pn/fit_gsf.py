@@ -86,7 +86,7 @@ def spline_fit1d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
           
     return gamma
 
-def spline_fit2d(num_gsf, a, b, angle=np.pi/2., two_planes=True, units='ev'):
+def spline_fit2d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
     '''extract coordinates of calculations, and gs-energies at each point
     grid values are given in integer values -> need to convert to \AA
     '''
