@@ -196,8 +196,8 @@ def handle_pn_control(param_dict):
     
     # cards for the <&stress> namelist
     stress_cards = (('calculate_stress', {'default':True, 'type':to_bool}),
-                    ('dtau', {'default':0.0005, 'type':int}),
-                    ('use_GPa', {'default':True, 'type':int}),
+                    ('dtau', {'default':0.0005, 'type':float}),
+                    ('use_GPa', {'default':True, 'type':to_bool}),
                     ('threshold', {'default':15., 'type':float})
                    )
     
