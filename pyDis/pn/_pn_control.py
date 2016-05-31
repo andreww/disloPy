@@ -501,17 +501,16 @@ class PNSim(object):
         boiler_plate = 'Peierls-Nabarro calculation with pyDis - a Python' + \
                        ' interface for atomistic modelling of dislocations\n'                       
         outstream.write(boiler_plate)
-        outstream.write('%s\n\n' % self.control('title_line'))
+        outstream.write('{}\n\n'.format(self.control('title_line')))
         
         # write parameters used in the simulation
         outstream.write('SIMULATION PARAMETERS:\n')
-        outstream.write('Dimensions: %d\n' % self.control('dimensions'))
-        outstream.write('Dislocation type: %s\n' % self.control('disl_type'))
-        outstream.write('Burgers vector: %.3f ang.\n' % self.struc('burgers'))
-        outstream.write('Interlayer spacing: %.3f ang.\n' % self.struc('spacing'))
-        outstream.write('Number of iterations: %d\n' % self.control('n_iter'))
-        outstream.write('Number of atomic planes used: %d\n' % 
-                                                    (2*self.control('max_x')+1))
+        outstream.write('Dimensions: {}\n'.format(self.control('dimensions')))
+        outstream.write('Dislocation type: {}\n'.format(self.control('disl_type')))
+        outstream.write('Burgers vector: {:.3f} ang.\n'.format(self.struc('burgers')))
+        outstream.write('Interlayer spacing: {:.3f} ang.\n'.format(self.struc('spacing')))
+        outstream.write('Number of iterations: {}\n'.format(self.control('n_iter')))
+        outstream.write('Number of atomic planes used: {}\n'.format(2*self.control('max_x')+1))
         
         # energy coefficients -> only write relevant coefficient if 1D
         if self.control('dimensions') == 2:
@@ -532,19 +531,19 @@ class PNSim(object):
             
             outstream.write('A\n')
             for A in self.par[:self.control('n_funcs')/2]:
-                outstream.write('%.3f ' % A)
+                outstream.write('{:.3f} '.format(A))
             outstream.write('\n')
             
             outstream.write('x0\n')
             for x0 in self.par[self.control('n_funcs'):self.control('n_funcs')+
                                                      self.control('n_funcs')/2]:
-                outstream.write('%.3f ' % x0)
+                outstream.write('{:.3f} '.format(x0))
             outstream.write('\n')
             
             outstream.write('c\n')
             for c in self.par[2*self.control('n_funcs'):2*self.control('n_funcs')+
                                                         self.control('n_funcs')/2]:
-                outstream.write('%.3f ' % c)
+                outstream.write('{:.3f} '.format(c))
             outstream.write('\n')
 
             # write parameters for screw component of displacement
@@ -552,18 +551,18 @@ class PNSim(object):
             
             outstream.write('A\n')
             for A in self.par[self.control('n_funcs')/2:self.control('n_funcs')]:
-                outstream.write('%.3f ' % A)
+                outstream.write('{:.3f} '.format(A))
             outstream.write('\n')
             
             outstream.write('x0\n')
             for x0 in self.par[self.control('n_funcs')+self.control('n_funcs')/2:
                                                         2*self.control('n_funcs')]:
-                outstream.write('%.3f ' % x0)
+                outstream.write('{:.3f} '.format(x0))
             outstream.write('\n')
             
             outstream.write('c\n')
             for c in self.par[2*self.control('n_funcs')+self.control('n_funcs')/2:]:
-                outstream.write('%.3f ' % c)
+                outstream.write('{:.3f} '.format(c))
             outstream.write('\n')
 
         elif self.control('dimensions') == 1:
@@ -571,48 +570,48 @@ class PNSim(object):
 
             outstream.write('A\n')
             for A in self.par[:self.control('n_funcs')]:
-                outstream.write('%.3f ' % A)
+                outstream.write('{:.3f} '.format(A))
             outstream.write('\n')
             
             outstream.write('x0\n')
             for x0 in self.par[self.control('n_funcs'):2*self.control('n_funcs')]:
-                outstream.write('%.3f ' % x0)
+                outstream.write('{:.3f} '.format(x0))
             outstream.write('\n')
             
             outstream.write('c\n')
             for c in self.par[2*self.control('n_funcs'):]:
-                outstream.write('%.3f ' % c)
+                outstream.write('{:.3f} '.format(c))
             outstream.write('\n')
         
         outstream.write('\n\n')
         
         # write results
         outstream.write('Results:\n')
-        outstream.write('E = %.3f eV\n' % self.E)
+        outstream.write('E = {:.3f} eV\n'.format(self.E))
         if self.stress('calculate_stress'):
             if self.stress('use_GPa'):
                 units = 'GPa'
-                outstream.write('Minimum Peierls stress = %.3f %s\n' % 
-                                                    (self.taup[0], units))
-                outstream.write('Maximum Peierls stress = %.3f %s\n' %
-                                                    (self.taup[1], units))
-                outstream.write('Average Peierls stress = %.3f %s\n' %
-                                                    (self.taup_av, units))
+                outstream.write('Minimum Peierls stress = {:.3f} {}\n'.format(
+                                                         self.taup[0], units))
+                outstream.write('Maximum Peierls stress = {:.3f} {}\n'.format(
+                                                         self.taup[1], units))
+                outstream.write('Average Peierls stress = {:.3f} {}\n'.format(
+                                                         self.taup_av, units))
             else:
                 units = 'eV/ang.^3'
-                outstream.write('Minimum Peierls stress = %.6f %s\n' % 
-                                                    (self.taup[0], units))
-                outstream.write('Maximum Peierls stress = %.6f %s\n' %
-                                                    (self.taup[1], units))
-                outstream.write('Average Peierls stress = %.6f %s\n' %
-                                                    (self.taup_av, units))
+                outstream.write('Minimum Peierls stress = {:.6f} {}\n'.format( 
+                                                          self.taup[0], units))
+                outstream.write('Maximum Peierls stress = {:.6f} {}\n'.format(
+                                                          self.taup[1], units))
+                outstream.write('Average Peierls stress = {:.6f} {}\n'.format(
+                                                          self.taup_av, units))
                                                     
-            outstream.write('Peierls barrier: %.3f eV/Ang\n' % self.wp_av)
+            outstream.write('Peierls barrier: {:.3f} eV/Ang\n'.format(self.wp_av))
             
         if self.prop('max_rho'):
-            outstream.write('Maximum density: %.3f\n' % self.max_density)
+            outstream.write('Maximum density: {:.3f}\n'.format(self.max_density))
         if self.prop('width'):
-            outstream.write('Dislocation width: %.3f ang.\n' % abs(self.dis_width))
+            outstream.write('Dislocation width: {:.3f} ang.\n'.format(abs(self.dis_width)))
             
         outstream.write('\n\n**Finished**')
         outstream.close()

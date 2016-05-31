@@ -616,6 +616,12 @@ class AtomisticSim(object):
             
         return
         
+        def write_output(self):
+            '''Writes relevant output information to <control('output')>.
+            '''
+            
+            return
+        
 def main(filename):
     new_simulation = AtomisticSim(filename)
     
