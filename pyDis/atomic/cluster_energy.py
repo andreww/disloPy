@@ -496,7 +496,7 @@ def dis_energy(rmax, rmin, dr, basename, executable, method, b, thick, relax_K=T
     # remove single point calculation files
     os.system('rm -f sp.*')
     
-    return Ecore, KGPa
+    return (Ecore, KGPa), (np.sqrt(cov[0, 0]), errKGPa)
         
 ### COMMAND LINE/INTERACTIVE USE FUNCTIONS ###   
     

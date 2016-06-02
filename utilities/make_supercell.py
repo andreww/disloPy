@@ -62,8 +62,8 @@ def main():
         raise ValueError("{} is not a supported atomistic simulation code".format(args.prog))
                 
     sys_info = read_fn(args.unitcell, base_struc)
-    atm.scale_kpoints(sys_info['cards']['K_POINTS'], 
-                              np.array(args.dims))
+    if ab_initio:
+        atm.scale_kpoints(sys_info['cards']['K_POINTS'], np.array(args.dims))
                               
     supercell = cry.superConstructor(base_struc, np.array(args.dims))
     

@@ -116,7 +116,8 @@ def handle_atomistic_control(param_dict):
                        ('relaxtype', {'default': '', 'type': str}),
                        ('grid', {'default': True, 'type': to_bool}),
                        ('bdir', {'default': 0, 'type': int}),
-                       ('method', {'default': '', 'type': int}),
+                       ('alignment', {'default': 0, 'type': int}),
+                       ('method', {'default': '', 'type': str}),
                        ('fit_K', {'default': True, 'type': to_bool})
                       )
                       
@@ -249,6 +250,10 @@ class AtomisticSim(object):
         if self.sim['atoms'] != None:
             # process provided atomic energies
             self.atomic_energies = atom_namelist(self.sim)
+        else:
+            # no atomic energies provided. If these are required later, program
+            # will prompt the user to enter values.
+            self.atomic_energies = None
         
         # functions for easy access to namelist variables
         self.control = lambda card: self.sim['control'][card]
@@ -453,7 +458,8 @@ class AtomisticSim(object):
         elif self.elast('disl_type') == 'screw':
             if self.multipole('npoles') == 2:
                 # dipole
-                mp.screw_dipole(supercell, self.burgers, self.ufield, self.sij)
+                mp.screw_dipole(supercell, self.burgers, self.ufield, self.sij, 
+                                           alignment=self.multipole('alignment'))
             elif self.multipole('npoles') == 4:
                 # quadrupole
                 mp.screw_quadrupole(supercell, self.burgers, self.ufield, self.sij)
@@ -534,27 +540,27 @@ class AtomisticSim(object):
             if self.cluster('method') == 'edge':
                 if self.atomic_energies == None: 
                     # prompt user to enter atomic symbols and energies
-                    self.atomic_energies = ce.make_atom_dict() 
+                    self.atomic_energies = ce.atom_dict_interactive() 
                           
             # run single point calculation
             basename = '{}.{:.0f}.{:.0f}'.format(self.control('basename'),
                                                  self.cluster('region1'),
                                                  self.cluster('region2'))  
 
-            ce.dis_energy(self.cluster('rmax'),
-                          self.cluster('rmin'),
-                          self.cluster('dr'),
-                          basename,
-                          self.control('executable'),
-                          self.cluster('method'),
-                          norm(self.burgers),
-                          self.cluster('thickness')*norm(self.base_struc.getC()),
-                          relax_K=self.cluster('fit_K'),
-                          K=self.K,
-                          atom_dict=self.atomic_energies,
-                          rc=self.elast('rcore'),
-                          using_atomic=True
-                         )
+            par, err = ce.dis_energy(self.cluster('rmax'),
+                                     self.cluster('rmin'),
+                                     self.cluster('dr'),
+                                     basename,
+                                     self.control('executable'),
+                                     self.cluster('method'),
+                                     norm(self.burgers),
+                                     self.cluster('thickness')*norm(self.base_struc.getC()),
+                                     relax_K=self.cluster('fit_K'),
+                                     K=self.K,
+                                     atom_dict=self.atomic_energies,
+                                     rc=self.elast('rcore'),
+                                     using_atomic=True
+                                    )
                          
             print('Finished.')              
             

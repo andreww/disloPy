@@ -374,14 +374,21 @@ def edge_quadrupole(supercell, b, bdir=0):
     compress_cell(supercell, bnorm, n=2, bdir=bdir) 
     return
     
-def screw_dipole(supercell, b, screwfield, sij):
+def screw_dipole(supercell, b, screwfield, sij, alignment=0):
     '''Screw dislocation dipole in <supercell>. Note that setting <screwfield>
     to be something other than a screw dislocation, you can technically use this
-    for an arbitrary displacement field.
+    for an arbitrary displacement field. <alignment> tells us which axis the dipole
+    should be aligned along. 
     '''
     
-    xneg = [0.5, 0.25]
-    xpos = [0.5, 0.75]
+    if alignment == 0: # dipole along x-axis
+        xneg = [0.25, 0.5]
+        xpos = [0.75, 0.5]
+    elif alignment == 1: # dipole along y-axis
+        xneg = [0.5, 0.25]
+        xpos = [0.5, 0.75]
+    else:    
+        raise ValueError("{} is not a valid dipole axis index.")
     
     cores = np.array([xneg, xpos])
     burgers = np.array([-b, b])
