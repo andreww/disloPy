@@ -12,6 +12,20 @@ from pyDis.atomic import castep_utils as castep
 from pyDis.atomic import atomistic_utils as atm
 from pyDis.atomic import crystal as cry
 
+def to_bool(in_str):
+    '''Routine to convert <in_str>, which may take the values "True" or "False", 
+    a boolean (needed because bool("False") == True)
+    '''
+    
+    bool_vals = {"True":True, "False":False}
+    
+    try:
+        new_value = bool_vals[in_str]
+    except KeyError:
+        raise ValueError("{} is not a boolean value.".format(in_str))
+        
+    return new_value
+
 def input_options():
     '''Parse command line options to determine base structure, supercell size,
     and the atomic simulation code being used.
@@ -28,10 +42,12 @@ def input_options():
           default=np.ones(3, dtype=int), help='Supercell size (length 3 array)')
     options.add_argument('-o', '--output_file', type=str, dest='supercell_name',
                          default='supercell.in', help='Name of output file.')
-    options.add_argument('-r', '--relax', type=str, dest='relax', default=True,
+    options.add_argument('-r', '--relax', type=to_bool, dest='relax', default=True,
                          help='Used for fixed cell gulp calculation.')
     options.add_argument('-c', '--calc', type=str, dest='calc_type', default=None,
-                         help='Specify calculation type (eg. relax, scf, etc.)')   
+                         help='Specify calculation type (eg. relax, scf, etc.)') 
+    options.add_argument('-prop', '--properties', type=to_bool, dest='prop', 
+                         default=False, help='Calculate cell properties in GULP.')  
                          
     return options 
 
@@ -69,7 +85,7 @@ def main():
     
     outstream = open(args.supercell_name, 'w')
     write_fn(outstream, supercell, sys_info, defected=False, do_relax=args.relax,
-                                                    relax_type=args.calc_type)
+                                        relax_type=args.calc_type, prop=args.prop)
 
 if __name__ == "__main__":
     main()

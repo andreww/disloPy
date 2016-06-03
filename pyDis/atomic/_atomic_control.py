@@ -490,7 +490,7 @@ class AtomisticSim(object):
         if self.multipole('method') == 'compare':
             outstream = open('{}.{}.{}'.format('ndf', basename, self.control('suffix')), 'w')
             self.write_fn(outstream, supercell, self.sys_info, to_cart=False,
-                      defected=False, add_constraints=False, do_relax=False)
+                      defected=False, add_constraints=False, do_relax=False, prop=False)
 
             # run single point calculation, if requested
             if self.control('run_sim'):

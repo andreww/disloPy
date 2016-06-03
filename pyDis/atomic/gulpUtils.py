@@ -183,7 +183,7 @@ class GulpAtom(cry.Atom):
         atoms' locations is (z, x, y). Critically, this means that the
         '''
 
-        atom_format = '%s %s %.6f %.6f %.6f'
+        atom_format = '{} {} {:.6f} {:.6f} {:.6f}'
 
         # test to see if atom should be output
         if not self.writeToOutput():
@@ -196,12 +196,12 @@ class GulpAtom(cry.Atom):
         else:
             coords = self.getCoordinates()
 
-        outstream.write(atom_format % (self.getSpecies(), 'core', coords[0],
+        outstream.write(atom_format.format(self.getSpecies(), 'core', coords[0],
                                                  coords[1], coords[2]))
 
         if add_constraints:
             # add constraints if non-trivial
-            outstream.write(' 1.0 %d %d %d\n' % (self.get_constraints()[0],
+            outstream.write(' 1.0 {} {} {}\n'.format(self.get_constraints()[0],
                           self.get_constraints()[1], self.get_constraints()[2]))
         else:
             outstream.write('\n')
@@ -221,7 +221,7 @@ class GulpAtom(cry.Atom):
             new_shel_coords = coords + shel_cor_dist
             # determine type of shell (ie. Dick-Overhauser shell model or BSM
             shell_type = ('bshe' if self.isBreathingShell() else 'shel')
-            outstream.write(atom_format % (self.getSpecies(), shell_type,
+            outstream.write(atom_format.format(self.getSpecies(), shell_type,
                                   new_shel_coords[0], new_shel_coords[1],
                                                       new_shel_coords[2]))
 
@@ -267,18 +267,18 @@ def writeSuper(cell, sys_info, outFile, relax='conv', coordinateType='frac',
     '''
 
     # files to hold the perfect and dislocated crystals
-    perOutStream = open('ndf.' + outFile + '.gin', 'w')
-    disOutStream = open('dis.' + outFile + '.gin', 'w')
+    perOutStream = open('ndf.{}.gin'.format(outFile), 'w')
+    disOutStream = open('dis.{}.gin'.format(outFile), 'w')
 
     for outstream in [perOutStream, disOutStream]:
         if outstream == perOutStream:
             # do not use displaced coordinates
             defected=False
-            basename = 'dis.%s' % outFile
+            basename = 'dis.{}'.format(outFile)
         elif outstream == disOutStream:
             # use displaced coordinates
             defected=True
-            basename = 'ndf.%s' % outFile
+            basename = 'ndf.{}'.format(outFile)
 
         write_gulp(outstream, cell, sys_info, defected=defected, to_cart=False,
                                 add_constraints=add_constraints, relax=defected)
@@ -332,8 +332,8 @@ atomLine = re.compile(r'([A-Z][a-z]?\d*)\s+(core|c|shel|s|bshe|bcor)' + \
 #speciesLine = re.compile('^([A-Z][a-z]?\d*?)\s+(core|c|shel|s|bshe|bcor)' + \
 #                                                          '\s+-?\d+\.\d+\s*$')
 
-def preamble(outstream, maxiter=500, relax=True, relax_type='conv',
-                                          polymer=False, molq=False):
+def preamble(outstream, maxiter=500, do_relax=True, relax_type='conv',
+                                   polymer=False, molq=False, prop=True):
     '''Writes overall simulation parameters (relaxation algorithm, maximum 
     number of iterations, etc.) to <outstream>.
     
@@ -343,7 +343,7 @@ def preamble(outstream, maxiter=500, relax=True, relax_type='conv',
     '''
 
     # construct the control line  
-    if relax:
+    if do_relax:
         if relax_type is None:
             outstream.write('opti qok bfgs')
         else:
@@ -356,7 +356,7 @@ def preamble(outstream, maxiter=500, relax=True, relax_type='conv',
         
     if polymer:
         outstream.write(' eregion\n') # DO NOT TRY TO CALCULATE PROPERTIES
-    else:
+    elif prop:
         outstream.write(' prop\n')
 
     # maximum allowable number of relaxation steps. Our default is somewhat 
@@ -365,7 +365,7 @@ def preamble(outstream, maxiter=500, relax=True, relax_type='conv',
     return
     
 def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart=True,
-                         add_constraints=False, relax_type='conv', impurities=None):
+                    add_constraints=False, relax_type='conv', impurities=None, prop=True):
     '''Writes the crystal <gulp_struc> to <outstream>. If <defected> is True,
     then it uses the displaced coordinates, otherwise it uses the regular atomic
     coordinates (ie. their locations in a perfect crystal with the provided
@@ -390,7 +390,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
     # write simulation cell geometry to file
     if struc_type in rod_classes:
         # polymer cell -> write cell height
-        preamble(outstream, relax=do_relax, polymer=True, relax_type=relax_type)
+        preamble(outstream, do_relax=do_relax, polymer=True, relax_type=relax_type)
         height = struc.getHeight()
         outstream.write('pcell\n')
         outstream.write('{:.6f} 0\n'.format(height))
@@ -418,14 +418,15 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
         writeRegion(struc.getRegionIIAtoms(), cell_lattice, outstream, 2, defected)
     else:
         # write lattice vectors
-        preamble(outstream, relax=do_relax, relax_type=relax_type) 
+        preamble(outstream, do_relax=do_relax, relax_type=relax_type, prop=prop) 
         writeVectors(struc.getLattice(), outstream)
         
         if relax_type is None:
             # give strain optimization flags
             outstream.write('0 0 0 0 0 0\n')
             # GULP requires that optimization flags be set for all atoms
-            add_constraints = True
+            if do_relax:
+                add_constraints = True
 
         # write atoms to output.
         outstream.write('frac\n')
@@ -446,7 +447,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
 
     # write system specific simulation parameters (interatomic potentials, etc.)
     for line in sys_info:
-        outstream.write('%s\n' % line)
+        outstream.write('{}\n'.format(line))
         
     # add restart lines and close the output file
     restart(outstream)
@@ -466,11 +467,11 @@ def restart(outstream, every=10):
     
     # write dump lines
     if not every:
-        outstream.write('dump every %d %s.grs\n' % (every, basename))
+        outstream.write('dump every {} {}.grs\n'.format(every, basename))
     else:
         # dump restart file only at the end of the calculation
-        outstream.write('dump %s.grs\n' % (basename))
-    outstream.write('output xyz %s' % basename)
+        outstream.write('dump {}.grs\n'.format(basename))
+    outstream.write('output xyz {}'.format(basename))
     return
 
 def parse_gulp(filename, crystalStruc, path='./'):
@@ -594,17 +595,17 @@ def writeRegion(region_basis, lattice, outstream, regionNumber, disloc,
     # output atoms to file, remembering to put them in cluster ordering, ie.
     # (z,x,y)
     if regionNumber == 1:
-        outstream.write("%s region 1\n" % coordType)
+        outstream.write("{} region 1\n".format(coordType))
         for atom in region_basis:
             atom.clusterOrder()
             atom.write(outstream, lattice, defected=disloc, to_cart=use_cart)
     elif regionNumber == 2:
-        outstream.write("%s region 2 rigid\n" % coordType)
+        outstream.write("{} region 2 rigid\n".format(coordType))
         for atom in region_basis:
             atom.clusterOrder()
             atom.write(outstream, lattice, defected=disloc, to_cart=use_cart)
     else:
-        raise ValueError('%s is not a valid region.')
+        raise ValueError('{} is not a valid region.'.format(regionNumber))
 
     return
 
@@ -614,7 +615,7 @@ def writeVectors(cellVectors, outstream):
 
     outstream.write('vectors\n')
     for i in range(3):
-        outstream.write('%.5f %.5f %.5f\n' % (cellVectors[i][0],
+        outstream.write('{:.5f} {:.5f} {:.5f}\n'.format(cellVectors[i][0],
                              cellVectors[i][1], cellVectors[i][2]))
     return
 

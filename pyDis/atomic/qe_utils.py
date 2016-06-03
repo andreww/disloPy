@@ -154,8 +154,9 @@ class Pseudopotential(object):
                                                      self.psp)
         
 def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
-       add_constraints=False, relax_type='scf', impurities=None, do_relax=None):
-    '''Writes crystal structure contained in <qe_struc> to <outstream>.
+       add_constraints=False, relax_type='scf', impurities=None, do_relax=None, prop=None):
+    '''Writes crystal structure contained in <qe_struc> to <outstream>.<prop> is
+    a dummy variable to make input consistent with <write_gulp>.
     '''
     
     # begin by writing namelists
