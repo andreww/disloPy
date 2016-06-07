@@ -3,14 +3,15 @@ from __future__ import print_function
 
 import numpy as np
 import sys
-import numpy.linalg as L
+from numpy.linalg import norm
 
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import qe_utils as qe
 from pyDis.atomic import gulpUtils as gulp
-from pyDis.atomic import castep_utils as cas
+from pyDis.atomic import castep_utils as castep
+from pyDis.atomic import atomistic_utils as atm
 
 
 def permutation(i, j, k):
@@ -25,10 +26,29 @@ def permutation(i, j, k):
         sign = int(i>j) + int(i>k) + int(j>k)
         return sign
         
-def partition_lattice():
-    '''Partitions a collection of atoms into domains to facilitate efficient 
-    search.
+def partition_lattice(struc, ndomains=None, domain_size=None):
+    '''Partitions a atoms in a crystal into domains to facilitate efficient 
+    search. If specified, <ndomains> should be a 3x1 array specifying the number 
+    of domains along each dimension. <domain_size>, if specified, gives the 
+    maximum side length of a domain (in whatever units are used to express the
+    cell lengths). Priority is <ndomains> > <domain_size>.
     '''
+    
+    if ndomains != None:
+        # use the specified domain decomposition
+        pass
+    elif domain_size != None:
+        # generate domains from the specified domain size
+        ndomains = np.ones(3, dtype=int)
+        for x in struc.getLattice():
+            ndomains = atm.ceiling(norm(x)/domain_size)
+    else:
+        raise AttributeError("<ndomains> or <domain_size> must be specified.")
+    
+    for atom in base_lattice:
+        # test which region the atom is in
+        # assign atom to a particular region
+        
     
     pass
 
@@ -50,7 +70,7 @@ def associate_bonds(Q, P, phi_max=np.pi/6):
     angles = np.zeros((len(Q), len(Q)))
     for i, P_i in enumerate(P):
         for j, Q_j in enumerate(Q):
-            phi = np.arccos(np.dot(Q_j, P_i)/(L.norm(Q_j)*L.norm(P_i)))
+            phi = np.arccos(np.dot(Q_j, P_i)/(norm(Q_j)*norm(P_i)))
             angles[i, j] = phi
             
     # work out closest bond in perfect crystal for each bond in the dislocated
@@ -81,9 +101,9 @@ def associate_bonds(Q, P, phi_max=np.pi/6):
             # determine which of the Q_{j} is closest in length to P_{i}
             min_dist = np.inf
             best = -1
-            P_length = np.linalg.norm(P_i)
+            P_length = norm(P_i)
             for j in indices_i:
-                dist = P_length - np.linalg.norm(Q[j])
+                dist = P_length - norm(Q[j])
                 if dist < min_dist:
                     min_dist = dist
                     best = j
@@ -208,13 +228,13 @@ for i, q1 in enumerate(Q):
     for j, q2 in enumerate(Q[i+1:]):
         # test to make sure bond q1->q2 is shorter than some threshold
         # value
-        if L.norm(q2-q1) > MAX_BOND_DIST:
+        if norm(q2-q1) > MAX_BOND_DIST:
             continue
         print("Testing pair ({}, {}): ".format(i, j+i+1))
         min_index = np.nan
         min_angle = np.inf
         for k, bond in enumerate(P):
-            cos_phi = np.dot(q2-q1, bond)/(L.norm(q2-q1)*L.norm(bond))
+            cos_phi = np.dot(q2-q1, bond)/(norm(q2-q1)*norm(bond))
             phi = abs(np.arccos(cos_phi))
             if phi < min_angle:
                 min_angle = abs(phi)
@@ -224,9 +244,9 @@ for i, q1 in enumerate(Q):
         else:
             print("Angle {} with bond {}.".format(min_angle, min_index))
             count_bonds[i].append({'pair': (i,j+i+1), 'bond': min_index,
-                             'length': L.norm(q2-q1), 'vector':np.copy(q2-q1)})
+                             'length': norm(q2-q1), 'vector':np.copy(q2-q1)})
             count_bonds[i+j+1].append({'pair': (j+i+1,i), 'bond': min_index,
-                            'length': L.norm(q2-q1), 'vector': np.copy(q2-q1)})
+                            'length': norm(q2-q1), 'vector': np.copy(q2-q1)})
     
 Q_ord = []
 P_ord = []
@@ -249,9 +269,9 @@ for site in count_bonds:
             # length to P_i
             P_temp.append(P_i)
             min_index = 0
-            min_dist = L.norm(vectors[indices_i[0]]-P_i)
+            min_dist = norm(vectors[indices_i[0]]-P_i)
             for j in indices_i[1:]:
-                new_dist = L.norm(vectors[j]-P_i)
+                new_dist = norm(vectors[j]-P_i)
                 if new_dist < min_dist:
                     min_index = j
                     min_dist = new_dist
@@ -276,7 +296,7 @@ for i in range(len(test_cry)):
                 #print("{} {} + {}: {:.6f}".format(i, j, k-1, d))
                 nbonds += 1
                 bonds.append(d)
-    r = np.linalg.norm(atom1.getCoordinates()[1:])
+    r = norm(atom1.getCoordinates()[1:])
     dev[i, 0] = r
     dev[i, 1] = np.std(bonds)
     mean_bl[i, 0] = r

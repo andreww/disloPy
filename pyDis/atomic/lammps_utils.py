@@ -51,7 +51,7 @@ def read_atomic_data(datalines, thiscrystal, atom_ids):
     numbers n the data. file to a specific atomic species (eg. 1 <==> Mg).
     '''
     
-    atom_form = re.compile(r'')
+    atom_form = re.compile(r'\d+\s+(?P<typ>\d+)(?P<coords>(?:\s+-?\d+\.\d+){3})')
     
     for line in datalines:
         atom_match = atom_form.match(line)
