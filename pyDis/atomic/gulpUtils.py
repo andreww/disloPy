@@ -25,7 +25,7 @@ class GulpAtom(cry.Atom):
     '''
 
     def __init__(self, atomicSymbol, coordinates=np.zeros(3)):
-        '''Greates an atom object with additional properties relating to the
+        '''Creates an atom object with additional properties relating to the
         realization of atoms in GULP.
         '''
 

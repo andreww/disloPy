@@ -22,19 +22,35 @@ from pyDis.atomic import crystal as cry
 # currently supported atomistic simulation codes
 supported_codes = ('gulp', 'castep', 'qe')
 
-def read_file(filename,path='./', return_str=False):
-    '''Reads a file and prepares it for parsing. Has the option to return the
+def ignore_comments(rawline):
+    '''Removes comments from the end of a LAMMPS input line.
+    '''
 
+    if not ('#' in rawline):
+        # no comment in line, return as is
+        return rawline
+
+    commentindex = rawline.index('#')
+    newline = rawline[:commentindex]
+
+    return newline
+
+def read_file(filename, path='./', return_str=False, nocomment=True):
+    '''Reads a file and prepares it for parsing. Has the option to return the
     output as a single string (with newline characters included), which can be
-    useful if the structure of the input file makes regex easy (eg. CASTEP, QE)
+    useful if the structure of the input file makes regex easy (eg. CASTEP, QE).
+    If <nocomment> is True, removes all trailing comments from lines.
     '''
 
     lines = []
-    with open('%s%s' % (path, filename)) as input_file:
+    with open('{}{}'.format(path, filename)) as input_file:
         for line in input_file:
-            temp = line.rstrip()
-            if temp:
-                lines.append(temp)
+            line = line.rstrip()
+
+            # remove trailing comments
+            line = ignore_comments(line)
+            if line:
+                lines.append(line)
 
     if return_str:
         all_lines = ''

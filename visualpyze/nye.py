@@ -46,11 +46,12 @@ def partition_lattice(struc, ndomains=None, domain_size=None):
         raise AttributeError("<ndomains> or <domain_size> must be specified.")
     
     for atom in base_lattice:
-        # test which region the atom is in
+        # test to determine to which region the atom should be assigned
+        
         # assign atom to a particular region
         
     
-    pass
+    return
 
 def coordination(atom, lattice):
     '''Locates atoms in coordination sphere.
@@ -174,7 +175,7 @@ def domain_decomp(crystal_structure, scale):
     # <scale>. Note that adjacent atoms can be found in different, albeit neighbouring
     # domains.
     
-    
+   return 
     
 def iterate_through_atoms(structure, P):
     '''Iterate through all atoms in the dislocated structure to compute variation
