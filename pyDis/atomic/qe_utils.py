@@ -6,10 +6,11 @@ from __future__ import print_function
 import re
 import numpy as np
 import sys
-sys.path.append('/home/richitensor/programs/pyDis/')
+sys.path.append('/home/richard/code_bases/dislocator2/')
 
-import crystal as cry
-import atomistic_utils as util
+from pyDis.atomic import crystal as cry
+from pyDis.atomic import atomistic_utils as util
+from pyDis.atomic import transmutation as mutate
 
 namelists= ['&control','&system','&electrons','&ions','&cell']
 cards = ['CELL_PARAMETERS','ATOMIC_SPECIES','ATOMIC_POSITIONS','CONSTRAINTS',
@@ -19,7 +20,7 @@ def parse_qe(filename, qe_struc, path='./'):
     '''Parses qe file <filename> and extracts structure to
     <qe_struc>.
     '''
-    #
+    
     qe_lines = util.read_file(filename, path)
     # extract cards and namelists
     # begin by extracting indices of card and namelist block entries
@@ -159,7 +160,18 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
     a dummy variable to make input consistent with <write_gulp>.
     '''
     
-    # begin by writing namelists
+    
+        
+    # if isolated/coupled defects have been supplied, add these to the structure
+    if impurities != None:
+        if mutate.is_single(impurities):
+            mutate.cell_defect(qe_struc, impurities, use_displaced=True)
+        elif mutate.is_coupled(impurities):
+            mutate.cell_defect_cluster(qe_struc, impurities, use_displaced=True)
+        else:
+            raise TypeError("Supplied defect not of type <Impurity>/<CoupledImpurity>")
+    
+    # write namelists
     for block in namelists:
         outstream.write(' {}\n'.format(block))
         for variable in sys_info['namelists'][block]:
@@ -204,4 +216,9 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
         outstream.write(' {}\n'.format(sys_info['cards']['K_POINTS']['shift']))
         
     outstream.close()
+    
+    # finally, remove any impurity atoms that have been appended to <qe_struc>
+    if impurities != None:
+        mutate.undo_defect(qe_struc, impurities)
+    
     return

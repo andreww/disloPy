@@ -4,10 +4,11 @@ from __future__ import print_function
 import re
 import numpy as np
 import sys
-sys.path.append('/home/richitensor/programs/pyDis/')
+sys.path.append('/home/richard/code_bases/dislocator2/')
 
-import crystal as cry
-import atomistic_utils as util
+from pyDis.atomic import crystal as cry
+from pyDis.atomic import atomistic_utils as util
+from pyDis.atomic import transmutation as mutate
 
 class CastepBasis(cry.Basis):
     '''Subclass of <cry.Basis> with additional functionality to accommodate 
@@ -188,6 +189,15 @@ def write_castep(outstream, cas_struc, sys_info, defected=True, to_cart=False,
     #!!! fixed-cell relaxation to a SCF calculation) without the user having
     #!!! to edit the .param (.cell?) file directly?
     '''
+    
+    # insert defect(s), if supplied
+    if impurities != None:
+        if mutate.is_single(impurities):
+            mutate.cell_defect(cas_struc, impurities, use_displaced=True)
+        elif mutate.is_coupled(impurities):
+            mutate.cell_defect_cluster(cas_struc, impurities, use_displaced=True)
+        else:
+            raise TypeError("Supplied defect not of type <Impurity>/<CoupledImpurity>")
 
     # begin by writing the cell block
     outstream.write('%BLOCK LATTICE_CART\n')
@@ -200,6 +210,7 @@ def write_castep(outstream, cas_struc, sys_info, defected=True, to_cart=False,
     # can this be done using <cas_struc.write(outstream, defected=defected)> ?
     for atom in cas_struc:
         atom.write(outstream.write, defected=defected)
+        
     outstream.write('%ENDBLOCK POSITIONS_FRAC\n\n')
 
     # write constraints
@@ -223,4 +234,8 @@ def write_castep(outstream, cas_struc, sys_info, defected=True, to_cart=False,
     param_file = open(param_name, 'w')
     param_file.write(sys_info['param'])
     param_file.close()
+    
+    # remove any defects that have been inserted
+    if impurities != None:
+        mutate.undo_defect(cas_struc, impurities)
     return

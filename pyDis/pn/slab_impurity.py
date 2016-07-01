@@ -49,27 +49,10 @@ def impure_faults(slab_cell, impurity, site, write_fn, sys_info, resolution,
     inserted at the specified atomic sites. <site> gives the index of the atom
     to be replaced by the impurity 
     '''
+    
+    impurity.setSite(site)
 
-    mutate.cell_defect(slab_cell, impurity, site, use_displaced=True)
-    
-    '''
-    slab_cell[site].switchOutputMode()
-    
-    # calculate coordinates of the <impurity> atoms and insert them into the 
-    # slab
-    impurity.site_location(slab_cell[site])
-    if len(impurity) == 0:
-        # impurity contains no atoms => we are inserting a vacancy
-        pass
-    else:
-        for atom in impurity:
-            # need to make the displaced coordinates the base coordinates, so
-            # that the form of an impurity is brought in line with the form of
-            # an atom
-            new_atom = atom.copy()
-            new_atom.setCoordinates(new_atom.getDisplacedCoordinates())
-            slab_cell.addAtom(new_atom)
-    '''
+    mutate.cell_defect(slab_cell, impurity, use_displaced=True)
     
     # create input files for generalised stacking fault calculations
     if dim == 1:
@@ -81,14 +64,8 @@ def impure_faults(slab_cell, impurity, site, write_fn, sys_info, resolution,
                                  basename=basename, suffix=suffix, limits=limits)
                                  
     # return the slab to its original state
-    mutate.undo_defect(slab_cell, impurity, sites=site)
+    mutate.undo_defect(slab_cell, impurity)
     
-    '''
-    # return <index>th atom to slab and delete all impurity atoms
-    slab_cell[site].switchOutputMode()
-    for i in range(len(impurity)):
-        del slab_cell[-1]
-    '''
     return
     
 def cluster_faults(slab_cell, defectcluster, write_fn, sys_info, resolution, 

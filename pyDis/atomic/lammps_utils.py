@@ -42,8 +42,12 @@ class LammpsAtom(cry.Atom):
         # check that an index has been provided
         if self._index < 1:
                 raise AttributeError("Cannot find value of atom index.")
-
-        atom_format = '{} {} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}'
+        
+        if q != None:
+            # using charges -> need to include q
+            atom_format = '{} {} {:.6f} {:.6f} {:.6f} {:.6f}'
+        else:
+            atom_format = '{} {} {:.6f} {:.6f} {:.6f}'
 
         # write coordinates and/or constraints of atom
         if defected:
@@ -51,8 +55,12 @@ class LammpsAtom(cry.Atom):
         else:
             coords = self.getCoordinates()
 
-        outstream.write(atom_format.format(self._index, self.getSpecies(), self.q,
-                                            coords[0], coords[1], coords[2]))
+        if q != None:
+            outstream.write(atom_format.format(self._index, self.getSpecies(), 
+                                      self.q, coords[0], coords[1], coords[2]))
+        else:
+            outstream.write(atom_format.format(self._index, self.getSpecies(),
+                                        coords[0], coords[1], coords[2]))
 
         if add_constraints:
             # add constraints if non-trivial 
@@ -103,12 +111,14 @@ def parse_lammps(basename, unit_cell, use_data=False, datafile=None, path='./'):
     # regex to find cell lengths, cell angles, and atoms
     # atom line has the format atom-ID atom-type q (charge) x y z
     lattice_reg = re.compile('^\s*0+\.0+(?:e\+0+)?\s+(?P<x>\d+\.\d+)(?:e\+0+)?' +
-                                                '\s+(?P<vec>\w)lo\s+\whi')
-    
+                                                '\s+(?P<vec>\w)lo\s+\whi')    
     atom_reg = re.compile('^\s*\d+\s+(?P<i>\d+)\s+(?P<q>-?\d+\.\d+)' +
                             '(?P<coords>(?:\s+-?\d+\.\d+){3})')
 
-    angle_reg = re.compile('\s*(?P<angles>-?\d+\.?\d*(?:\s+-?\d+\.?\d*){2})\s+xy\s+xz\s+yz')
+    # regex to find the projection of the b and c lattice vectors onto the x (b)
+    # and x and y (c) axes, because LAMMPS is weird. What's wrong with a 3x3 array?
+    tilt_reg = re.compile('\s*(?P<proj>-?\d+\.?\d*(?:e\+\d+)?(?:\s+-?\d+\.?\d*'+'
+                                '(?:e\+\d+)?){2})\s+xy\s+xz\s+yz')
 
     
     # check that the user has passed a data.* file if <use_data> is True
@@ -117,9 +127,7 @@ def parse_lammps(basename, unit_cell, use_data=False, datafile=None, path='./'):
 
     struc_file = atm.read_file(basename, path=path)
 
-    after_lattice = False
-    after_atoms = False
-    cell_lengths = np.zeros(3)
+    cell_lengths = np.zeros(3) 
 
     for line in struc_file:
         # try to match lattice
@@ -138,32 +146,51 @@ def parse_lammps(basename, unit_cell, use_data=False, datafile=None, path='./'):
             atommatch = atom_reg.match(line)
             if atommatch:
                 # parse coordinates
-                coords = np.array([float(x) for atommatch.group('coords').split()])
+                coords = np.array([float(x) for x in atommatch.group('coords').split()])
                 new_atom = LammpsAtom(atommatch.group('i'), coords, 
                                     q=float(atommatch.group('q')))
                 
                 unit_cell.addAtom(new_atom)
             else:
-                # look for angles
-                angmatch = angle_reg.match(line)
+                # look for skews
+                tiltmatch = tilt_reg.match(line)
+                if tiltmatch:
+                    projections = [float(x) for x in tiltmatch.group('proj').split()]
+
+    # construct lattice vectors and set latt vecs of <unit_cell> 
+    x = np.array([cell_lengths[0], 0., 0.])
+    y = np.array([projections[0], cell_lengths[1], 0.])
+    z = np.array([projections[1], projections[2], cell_lengths[2]])
+
+    unit_cell.setVector(x, 0)
+    unit_cell.setVector(y, 1)
+    unit_cell.setVector(z, 2)
 
     sys_info = None
     return sys_info
 
-def write_lammps(outstream, lmp_struc, sys_info, atom_ids, defected=True, 
-                   to_cart=False, add_constraints=False, impurities=None,  
-                          relax_type=None, use_data=False, datafile=None):
-    '''Writes structure contained in <lmp_struc> to <outstream>. If <use_data>
-    is True, write the atomic coordinates to a separate data.* file
+def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_cart=True,
+                    add_constraints=False, relax_type='conv', impurities=None):
+    '''Writes structure contained in <lmp_struc> to <outstream>. Note that,
+    because atomic coordinates in LAMMPS are, by default, given in cartesian
+    coordinates, the write function here sets the default value of <to_cart>
+    to be <True>.
     '''
-    
-    if use_data:
-        # check that a data.* filename has been provided
-        if datafile == None:
-            raise NameError("No data.* file defined.")
-            
-    datastream = open(datafile, 'w')
-            
+
+
+    outstream.write('This is the first line of a LAMMPS file')
+
+    # calculate total number of atoms in <lmp_struc> plus any impurities
+    n_atoms = len()
+
+    # index to keep track of how many atoms have been written to file (makes it
+    # easier to keep track of impurities)
+    current_index = 1
+    lattice = lmp_struc.getLattice()
+
+    outstream.write('Atoms\n')
     for i, atom in enumerate(lmp_struc):
+        lmp_struc.write('{} '.format(i))
+        atom.write(outstream, lattice=lattice, defected=defected, to_cart=to_cart)
 
     pass

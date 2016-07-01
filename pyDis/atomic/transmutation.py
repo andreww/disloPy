@@ -20,8 +20,9 @@ class Impurity(cry.Basis):
     '''
     
     def __init__(self, site, defect_name, sitecoords=None, use_displaced=True, 
-                                                             updateatoms=False):
-        '''<site> tells us which site this Impurity occupies. <defectName>
+                                            updateatoms=False, site_index=None):
+        '''<site> tells us which site this Impurity occupies (eg. Mg.). 
+        <defectName>, while <site_index> gives its index.
         is the name used to identify this defect type (eg. hydrogarnet for
         4 hydrogens in a silicon vacancy).
         '''
@@ -36,6 +37,8 @@ class Impurity(cry.Basis):
                                                 updateatoms=updateatoms)
         else:
             self._sitecoords = None
+            
+        self.site_index = site_index
         
     def write_impurity(self, outstream, lattice=np.identity(3), to_cart=False,
                                                         add_constraints=False):
@@ -113,7 +116,8 @@ class Impurity(cry.Basis):
         '''Creates a copy of the <Impurity> object.
         '''
         
-        new_imp = Impurity(self.__site, self.__name, sitecoords=self._sitecoords)
+        new_imp = Impurity(self.__site, self.__name, sitecoords=self._sitecoords,
+                                    site_index=self.site_index)
         
         # add atoms to the new Impurity
         for atom in self:
@@ -124,6 +128,19 @@ class Impurity(cry.Basis):
             self.atomic_site_coords()
         
         return new_imp
+        
+    def set_index(self, new_site_index):
+        '''Sets the index of the specific site in a <Lattice> or <Crystal>
+        that the <Impurity> replaces.
+        '''
+            
+        self.site_index = new_site_index
+            
+     def get_index(self):
+        '''Retrieves the index of the site to be replaced.
+        '''
+                
+        return self.site_index
                                          
 class CoupledImpurity(object):
     '''Several impurity atoms/vacancies located at multiple 
@@ -228,12 +245,12 @@ def merge_coupled(*defect_clusters):
             
 ### FUNCTIONS TO INSERT IMPURITIES INTO A STRUCTURE ###
 
-def cell_defect(simcell, defect, site, use_displaced=True):
+def cell_defect(simcell, defect, use_displaced=True):
     '''Inserts the provided defect (+ site) into the simulation cell.
     '''
     
     # switch off atom to be replaced
-    simcell[site].switchOutputMode()
+    simcell[site.get_index].switchOutputMode()
     
     # set coordinates of defect
     defect.site_location(simcell[site], use_displaced=use_displaced)
@@ -255,11 +272,11 @@ def cell_defect_cluster(simcell, defect_cluster, use_displaced=True):
     '''
     
     for site, defect in defect_cluster:
-        cell_defect(simcell, defect, site, use_displaced=use_displaced)
+        cell_defect(simcell, defect, use_displaced=use_displaced)
         
     return
     
-def undo_defect(simcell, defect_thingy, sites=None):
+def undo_defect(simcell, defect_thingy):
     '''Removes all trace of a defect from a simulation cell by resetting the
     output mode of atoms that are in the perfect material and deleting any
     impurity atoms that may have been added to the <Crystal>/<Basis> object.
@@ -272,6 +289,8 @@ def undo_defect(simcell, defect_thingy, sites=None):
         
     # switch original atoms in the defect sites back on
     if sites != None:
+        if is_single(defect_thingy):
+            simcell[defect_thingy.site_index] == 
         # single site impurity
         simcell[sites].switchOutputMode()
     else:
@@ -400,6 +419,24 @@ def calculateCoupledImpurity(sysInfo,regionI,regionII,radius,defectCluster,
         raise TypeError('Invalid impurity type.')
                    
     return
+    
+def is_single(testobject):
+    '''Tests to see if <testobject> is an isolated impurity.
+    '''
+    
+    if type(testobject) == Impurity:
+        return True
+    else:
+        return False
+        
+def is_coupled(testobject):
+    '''Tests to see if <testobject> is a coupled impurity.
+    '''
+    
+    if type(testobject) == CoupledImpurity:
+        return True
+    else:
+        return False
 
     
 # POSSIBLE CONSTRAINTS

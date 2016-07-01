@@ -9,11 +9,13 @@ import numpy as np
 import re
 import sys
 import subprocess
+sys.path.append('/home/richard/code_bases/dislocator2/')
 
-import crystal as cry
-import atomistic_utils as util
+from pyDis.atomic import crystal as cry
+from pyDis.atomic import atomistic_utils as util
+from pyDis.atomic import transmutation as mutate
 
-from rodSetup import __dict__ as rod_classes
+from pyDis.rodSetup import __dict__ as rod_classes
 
 # Functions to write different GULP input files
 
