@@ -411,7 +411,7 @@ class Basis(object):
         integer then it will return the object self._atoms[key].
         '''
 
-        if isinstance(key,slice):
+        if isinstance(key, slice):
             # return a <Basis> object
             sub_basis = Basis()
             for atom in self._atoms[key]:

@@ -162,7 +162,7 @@ def nameBits(baseName):
     naming single-point calculation input files.
     '''
     
-    baseFormat = re.match(r'(\w+)\.\d+\.(\d+)', baseName)
+    baseFormat = re.match(r'([\w.]+)\.\d+\.(\d+)', baseName)
     systemName = baseFormat.group(1)
     RII = baseFormat.group(2) 
     

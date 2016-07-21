@@ -159,9 +159,7 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
     '''Writes crystal structure contained in <qe_struc> to <outstream>.<prop> is
     a dummy variable to make input consistent with <write_gulp>.
     '''
-    
-    
-        
+            
     # if isolated/coupled defects have been supplied, add these to the structure
     if impurities != None:
         if mutate.is_single(impurities):

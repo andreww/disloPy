@@ -15,7 +15,7 @@ from pyDis.atomic import crystal as cry
 from pyDis.atomic import atomistic_utils as util
 from pyDis.atomic import transmutation as mutate
 
-from pyDis.rodSetup import __dict__ as rod_classes
+from pyDis.atomic.rodSetup import __dict__ as rod_classes
 
 # Functions to write different GULP input files
 
@@ -367,7 +367,8 @@ def preamble(outstream, maxiter=500, do_relax=True, relax_type='conv',
     return
     
 def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart=True,
-                    add_constraints=False, relax_type='conv', impurities=None, prop=True):
+                    add_constraints=False, relax_type='conv', impurities=None, prop=True,
+                                                pfractional=False):
     '''Writes the crystal <gulp_struc> to <outstream>. If <defected> is True,
     then it uses the displaced coordinates, otherwise it uses the regular atomic
     coordinates (ie. their locations in a perfect crystal with the provided
@@ -387,7 +388,16 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
         print("Class of <struc> not found.")
         sys.exit(1)
         
-    #!!! write some code here to determine if we need to set molq = True 
+    # insert impurities, if supplied. If <defected> is False, we are using the
+    # perfect (ie. dislocation-free) cell, and so we DO NOT make use of the 
+    # displaced coordinates when setting the coordinates of the impurity atoms
+    if impurities != None:
+        if mutate.is_single(impurities):
+            mutate.cell_defect(struc, impurities, use_displaced=defected)
+        elif mutate.is_coupled(impurities):
+            mutate.cell_defect_cluster(struc, impurities, use_displaced=defected)
+        else:
+            raise TypeError("Supplied defect not of type <Impurity>/<CoupledImpurity>")   
 
     # write simulation cell geometry to file
     if struc_type in rod_classes:
@@ -399,25 +409,16 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
         cell_lattice = struc.getBaseCell().getLattice()
 
         # write atoms to output
-        writeRegion(struc.getRegionIAtoms(), cell_lattice, outstream, 1, defected)
-
-        # write impurities to output. IMPORTANT: Make sure that the internal 
-        # coordinates of the atoms in the Impurity (ie. coordinates relative to 
-        # the atom for which they are substituting) conform to the coordinate
-        # system used in the simulation. 
-        if impurities is not None:
-            if not isiter(impurities):
-                # single impurity
-                impurities.write_impurity(outstream, lattice=cell_lattice,
-                              to_cart=False, add_constraints=add_constraints)
-            else: # list of impurities
-                for defect in impurities:
-                    defect.write_impurity(outstream, lattice=cell_lattice,
-                              to_cart=False, add_constraints=add_constraints)
-            #for atom in impurities:
-            #    atom.write(outstream, lattice=struc.getLattice(), defected=defected,
-            #                                        add_constraints=add_constraints) 
-        writeRegion(struc.getRegionIIAtoms(), cell_lattice, outstream, 2, defected)
+        if pfractional:
+            writeRegion(struc.getRegionIAtoms(), cell_lattice, outstream, 1, 
+                                           defected, coordType='pfractional')
+            writeRegion(struc.getRegionIIAtoms(), cell_lattice, outstream, 2, 
+                                            defected, coordType='pfractional')
+        else: # cartesian
+            writeRegion(struc.getRegionIAtoms(), cell_lattice, outstream, 1, 
+                                                                    defected)
+            writeRegion(struc.getRegionIIAtoms(), cell_lattice, outstream, 2,
+                                                                     defected)
     else:
         # write lattice vectors
         preamble(outstream, do_relax=do_relax, relax_type=relax_type, prop=prop) 
@@ -436,17 +437,6 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
             atom.write(outstream, lattice=struc.getLattice(), defected=defected,
                           to_cart=to_cart, add_constraints=add_constraints)
 
-        # write impurity atoms to output
-        if impurities is not None:
-            if not isiter(impurities):
-                # single impurity
-                impurities.write_impurity(outstream, lattice=cell_lattice,
-                              to_cart=to_cart, add_constraints=add_constraints)
-            else: # list of impurities
-                for defect in impurities:
-                    defect.write_impurity(outstream, lattice=cell_lattice,
-                              to_cart=to_cart, add_constraints=add_constraints)
-
     # write system specific simulation parameters (interatomic potentials, etc.)
     for line in sys_info:
         outstream.write('{}\n'.format(line))
@@ -454,6 +444,10 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
     # add restart lines and close the output file
     restart(outstream)
     outstream.close()
+    
+    # undo defect insertion
+    if impurities != None:
+        mutate.undo_defect(struc, impurities)
 
     return
 
@@ -492,7 +486,10 @@ def parse_gulp(filename, crystalStruc, path='./'):
     i = 0
 
     for i, line in enumerate(gulp_lines):
-        if line.strip() in 'vectors':
+        if line.startswith('#'):
+            # this line is a comment, skip it
+            continue
+        elif line.strip() in 'vectors':
             #can read in vectors directly
             for j in range(3):
                 temp = gulp_lines[i+1+j].split()
@@ -506,6 +503,10 @@ def parse_gulp(filename, crystalStruc, path='./'):
             cellVectors = cry.cellToCart(cellParameters)
             for j in range(3):
                 crystalStruc.setVector(cellVectors[j], j)
+        elif line.strip() in 'pcell':
+            # reading in a 1D-periodic cluster -> record the cell height
+            cell_height = float(gulp_lines[i+1].strip())
+            crystalStruc.setC(np.array([0., 0., cell_height]))
         else:
             foundAtoms = atomLine.match(line)
             if foundAtoms:
@@ -519,7 +520,8 @@ def parse_gulp(filename, crystalStruc, path='./'):
             elif (not atomsNotFound) and (not foundAtoms):
                 # Locates the end of the atomic line section
                 if ('dump' not in line) and ('switch' not in line):
-                    sysInfo.append(line)
+                    if not re.match('\s*\w+\s*region\s*\d+', line):
+                        sysInfo.append(line)
 
     for element in allAtoms:
         for atom in allAtoms[element]['atoms']:
@@ -702,4 +704,125 @@ def run_gulp(gulp_exec, basename):
 
     gin.close()
     gout.close()
+    return
+    
+### ROUTINES FOR CALCULATING DEFECT ENERGY SURFACES IN A CYLINDER
+
+def calculateImpurity(sysInfo, gulpcluster, radius, defect, gulpExec='./gulp',
+                   constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
+                                                                do_calc=False):
+    '''Iterates through all atoms in <relaxedCluster> within distance <radius>
+    of the dislocation line, and sequentially replaces one atom of type 
+    <replaceType> with an impurity <newType>. dRMin is the minimum difference
+    between <RI> and <radius>. Ensures that the impurity is not close to region
+    II, where internal strain would not be relaxed. <constraints> contains any 
+    additional tests we may perform on the atoms, eg. if the thickness is > 1,
+    we may wish to restrict substituted atoms to have z (x0) coordinates in the
+    range [0,0.5) ( % 1). The default algorithm used to relax atomic coordinates
+    is BFGS but, because of the N^2 scaling of the memory required to store the 
+    Hessian, other solvers (eg. CG or numerical BFGS) should be used for large
+    simulation cells.
+    
+    Tests to ensure that radius < (RI - dRMin) to be performed in the calling 
+    routine (ie. <impurityEnergySurface> should only be called if radius < 
+    (RI-dRMin) is True. 
+    '''
+    
+    # dummy variables for lattice and toCart. Due to the way the program
+    # is set up, disloc is set equal to false, as the atoms are displaced 
+    # and relaxed BEFORE we read them in
+    lattice = np.identity(3)
+    toCart = False
+    disloc = False
+    coordType = 'pfractional'
+    
+    # test to see if <defect> is located at a single site
+    if type(defect) is Impurity:
+        pass
+    else:
+        raise TypeError('Invalid impurity type.')
+        
+    for i, atom in enumerate(regionI):
+        # check conditions for substitution:
+        # 1. Is the atom to be replaced of the right kind?
+        if atom.getSpecies() != defect.getSite():
+            continue
+        # 2. Is the atom within <radius> of the dislocation line?
+        if norm(atom.getCoordinates()[1:]) > radius:
+            continue  
+              
+        # check <constraints>
+        if constraints is None:
+            pass
+        else:
+            for test in constraints:
+                useAtom = test(atom) 
+                if not useAtom:
+                    print("Skipping atom {}.".format(i))
+                    break
+            if not useAtom:
+                continue   
+            else:    
+                print("Replacing atom {}...".format(str(atom)))
+        
+        # set the coordinates and site index of the impurity
+        defect.site_location(atom)
+        defect.set_index(i)
+        
+        # create .gin file for the calculation
+        outName = '{}.{}.{:.6f}.{:.6f}.{:.6f}'.format(defect.getName(), defect.getSite(),
+                                                          coords[0], coords[1], coords[2])
+        outStream = open(outName+'.gin','w')
+        
+        # write header information
+        #outStream.write('opti conv qok eregion bfgs\n')
+        # for testing, do single point calculations
+        outStream.write('opti conv qok eregion {}\n'.format(minimizer))
+        outStream.write('maxcyc {}\n'.format(maxcyc))
+        outStream.write('pcell\n')
+        outStream.write(sysInfo[1])
+            
+        # record that the atom should not be written to output, and retrieve
+        # coordinates of site
+        atom.switchOutputMode()
+        
+        # write non-substituted atoms + defect to outStream
+        gulp.writeRegion(regionI,lattice,outStream,1,disloc,toCart,coordType)
+        defect.write_impurity(outStream, atom)
+        gulp.writeRegion(regionII,lattice,outStream,2,disloc,toCart,coordType)
+        
+        # switch output mode of <atom> back to <write>
+        atom.switchOutputMode()
+        
+        # finally, write interatomic potentials, etc. to file
+        for line in sysInfo[2:]:
+            outStream.write(line)
+        
+        # specify output of relaxed defect structure
+        gulp.restart(outName, outStream)
+        gulp.run_gulp(gulpExec,outName)
+                    
+    return
+    
+def calculateCoupledImpurity(sysInfo,regionI,regionII,radius,defectCluster,
+                                        gulpExec='./gulp',constraints=None):
+    '''As above, but for an impurity cluster with defects at multiple sites.
+    '''
+    
+    # dummy variables for lattice and toCart. Due to the way the program
+    # is set up, disloc is set equal to false, as the atoms are displaced 
+    # and relaxed BEFORE we read them in
+    lattice = np.identity(3)
+    toCart = False
+    disloc = False
+    coordType = 'pfractional'
+    
+    # test to see if <defect> is located at a single site
+    if type(defectCluster) is CoupledImpurity:
+        ### NOT YET IMPLEMENTED ###
+        print('Coupled defects have not been implemented yet.')
+        pass
+    else:
+        raise TypeError('Invalid impurity type.')
+                   
     return

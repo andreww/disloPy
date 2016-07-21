@@ -238,4 +238,5 @@ def write_castep(outstream, cas_struc, sys_info, defected=True, to_cart=False,
     # remove any defects that have been inserted
     if impurities != None:
         mutate.undo_defect(cas_struc, impurities)
+        
     return

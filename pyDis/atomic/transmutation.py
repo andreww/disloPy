@@ -11,7 +11,6 @@ sys.path.append('/home/richard/code_bases/dislocator2/')
 from  numpy.linalg import norm
 
 from pyDis.atomic import crystal as cry
-from pyDis.atomic import gulpUtils as gulp
 
 class Impurity(cry.Basis):
     '''An impurity. May be a single defect (eg. a Ca atom in Mg2SiO4
@@ -136,7 +135,7 @@ class Impurity(cry.Basis):
             
         self.site_index = new_site_index
             
-     def get_index(self):
+    def get_index(self):
         '''Retrieves the index of the site to be replaced.
         '''
                 
@@ -160,19 +159,24 @@ class CoupledImpurity(object):
             raise ValueError()
         else:
             self.impurities = []
-            for imp in impurities:
-                self.impurities.append(imp.copy())
-                
-            self.sites = sites  
+            for i, imp in enumerate(impurities):
+                new_imp = imp.copy()
+                imp.set_index(sites[i])
+                self.impurities.append(new_imp) 
             
         self.currentindex = 0   
     
-    def add_impurity(self, site, new_impurity):
+    def add_impurity(self, impurity, site=None):
         '''Append a new impurity to the defect cluster.
         '''
-         
-        self.impurities.append(new_impurity.copy())
-        self.sites.append(site)
+        
+        new_imp = impurity.copy() 
+        
+        # if the index of the site differs from that of <impurity>, change index
+        if site != None:
+            new_imp.set_index(site)
+            
+        self.impurities.append(new_imp)
             
     def __len__(self):
         '''Counts the total number of impurity atoms in the defect cluster.
@@ -190,7 +194,10 @@ class CoupledImpurity(object):
         with a defect.
         '''
         
-        return len(self.sites)
+        return len(self)
+        
+    def __getitem__(self, key):
+        return self.impurities[key]
         
     def __str__(self):
         thisstr = ''
@@ -204,10 +211,10 @@ class CoupledImpurity(object):
         <simulation_cell>, using the coordinates in the undeformed cell
         if <use_displaced> is False.
         '''
-        #
-        for i, site in enumerate(self.sites):
-            self.impurities[i].site_location(simulation_cell[site], 
-                                        use_displaced=use_displaced)
+        
+        for impurity in self:
+            impurity.site_location(simulation_cell[impurity.get_index()], 
+                                            use_displaced=use_displaced)
                                         
     def __iter__(self):
         return self
@@ -238,8 +245,8 @@ def merge_coupled(*defect_clusters):
     
     # add all single-site defects from each cluster to new_cluster
     for cluster in defect_clusters:
-        for site, impurity in cluster:
-            new_cluster.add_impurity(site, impurity)
+        for impurity in cluster:
+            new_cluster.add_impurity(impurity.copy())
     
     return new_cluster
             
@@ -250,7 +257,7 @@ def cell_defect(simcell, defect, use_displaced=True):
     '''
     
     # switch off atom to be replaced
-    simcell[site.get_index].switchOutputMode()
+    simcell[site.get_index()].switchOutputMode()
     
     # set coordinates of defect
     defect.site_location(simcell[site], use_displaced=use_displaced)
@@ -271,7 +278,7 @@ def cell_defect_cluster(simcell, defect_cluster, use_displaced=True):
     '''Inserts the provided defect cluster into the supercell.
     '''
     
-    for site, defect in defect_cluster:
+    for defect in defect_cluster:
         cell_defect(simcell, defect, use_displaced=use_displaced)
         
     return
@@ -288,136 +295,12 @@ def undo_defect(simcell, defect_thingy):
         del simcell[-1]
         
     # switch original atoms in the defect sites back on
-    if sites != None:
-        if is_single(defect_thingy):
-            simcell[defect_thingy.site_index] == 
-        # single site impurity
-        simcell[sites].switchOutputMode()
-    else:
-        # coupled defect
-        for site in defect_thingy.sites:
-            simcell[site].switchOutputMode()
+    if is_single(defect_thingy):
+        simcell[defect_thingy.get_index()].switchOutputMode()
+    else: # coupled cluster
+        for dfct in defect_thingy:
+            simcell[dfct.get_index()].switchOutputMode()
     
-    return
-
-### IMPURITIES IN CLUSTERS (IE. 1D-PERIODIC CELLS) ###
-    
-def calculateImpurity(sysInfo,regionI,regionII,radius,defect,gulpExec='./gulp',
-                                   constraints=None,minimizer='bfgs',maxcyc=100):
-    '''Iterates through all atoms in <relaxedCluster> within distance <radius>
-    of the dislocation line, and sequentially replaces one atom of type 
-    <replaceType> with an impurity <newType>. dRMin is the minimum difference
-    between <RI> and <radius>. Ensures that the impurity is not close to region
-    II, where internal strain would not be relaxed. <constraints> contains any 
-    additional tests we may perform on the atoms, eg. if the thickness is > 1,
-    we may wish to restrict substituted atoms to have z (x0) coordinates in the
-    range [0,0.5) ( % 1). The default algorithm used to relax atomic coordinates
-    is BFGS but, because of the N^2 scaling of the memory required to store the 
-    Hessian, other solvers (eg. CG or numerical BFGS) should be used for large
-    simulation cells.
-    
-    Tests to ensure that radius < (RI - dRMin) to be performed in the calling 
-    routine (ie. <impurityEnergySurface> should only be called if radius < 
-    (RI-dRMin) is True. 
-    '''
-    
-    # dummy variables for lattice and toCart. Due to the way the program
-    # is set up, disloc is set equal to false, as the atoms are displaced 
-    # and relaxed BEFORE we read them in
-    lattice = np.identity(3)
-    toCart = False
-    disloc = False
-    coordType = 'pfractional'
-    
-    # test to see if <defect> is located at a single site
-    if type(defect) is Impurity:
-        pass
-    else:
-        raise TypeError('Invalid impurity type.')
-        
-    for atom in regionI:
-        # check conditions for substitution:
-        # 1. Is the atom to be replaced of the right kind?
-        if atom.getSpecies() != defect.getSite():
-            continue
-        # 2. Is the atom within <radius> of the dislocation line?
-        if norm(atom.getCoordinates()[1:]) > radius:
-            continue  
-              
-        # check <constraints>
-        if constraints is None:
-            pass
-        else:
-            for test in constraints:
-                useAtom = test(atom) 
-                if not useAtom:
-                    print("Skipping atom.")
-                    break
-            if not useAtom:
-                continue           
-            
-        print("Replacing atom {}...".format(str(atom)))
-        
-        # need to work out some schema for the outstream
-        coords = atom.getCoordinates()
-        outName = '{}.{}.{:.6f}.{:.6f}.{:.6f}'.format(defect.getName(), defect.getSite(),
-                                                          coords[0], coords[1], coords[2])
-        outStream = open(outName+'.gin','w')
-        
-        # write header information
-        #outStream.write('opti conv qok eregion bfgs\n')
-        # for testing, do single point calculations
-        outStream.write('opti conv qok eregion {}\n'.format(minimizer))
-        outStream.write('maxcyc {}\n'.format(maxcyc))
-        outStream.write('pcell\n')
-        outStream.write(sysInfo[1])
-            
-        # record that the atom should not be written to output, and retrieve
-        # coordinates of site
-        atom.switchOutputMode()
-        
-        # write non-substituted atoms + defect to outStream
-        gulp.writeRegion(regionI,lattice,outStream,1,disloc,toCart,coordType)
-        defect.write_impurity(outStream, atom)
-        gulp.writeRegion(regionII,lattice,outStream,2,disloc,toCart,coordType)
-        
-        # switch output mode of <atom> back to <write>
-        atom.switchOutputMode()
-        
-        # finally, write interatomic potentials, etc. to file
-        for line in sysInfo[2:]:
-            outStream.write(line)
-        
-        # specify output of relaxed defect structure
-        gulp.restart(outName, outStream)
-            
-        # close output file and run calculation
-        outStream.close()
-        gulp.run_gulp(gulpExec,outName)
-                    
-    return
-    
-def calculateCoupledImpurity(sysInfo,regionI,regionII,radius,defectCluster,
-                                        gulpExec='./gulp',constraints=None):
-    '''As above, but for an impurity cluster with defects at multiple sites.
-    '''
-    
-    # dummy variables for lattice and toCart. Due to the way the program
-    # is set up, disloc is set equal to false, as the atoms are displaced 
-    # and relaxed BEFORE we read them in
-    lattice = np.identity(3)
-    toCart = False
-    disloc = False
-    coordType = 'pfractional'
-    
-    # test to see if <defect> is located at a single site
-    if type(defectCluster) is CoupledImpurity:
-        ### NOT YET IMPLEMENTED ###
-        print('Coupled defects have not been implemented yet.')
-        pass
-    else:
-        raise TypeError('Invalid impurity type.')
-                   
     return
     
 def is_single(testobject):
@@ -571,24 +454,4 @@ def parseConstraint(constraintFile):
             except:
                 continue
             else:
-                pass
-            
-                       
-# GULP specific routines
-
-def readGulpCluster(cluster_name):
-    '''Reads in the relaxed GULP cluster in <clusterName>.grs.
-    '''
-    
-    # Basis objects to hold RI and RII
-    regionI = cry.Basis()
-    regionII = cry.Basis()
-    
-    # extract atomic coordinates to <Basis> objects
-    gulp.extractRegions(cluster_name+'.grs',regionI,regionII)
-    
-    return regionI,regionII
-    
-# LAMMPS specific routines -> not implemented yet
-
-# DL_POLY specific routines -> not implemented yet            
+                pass        

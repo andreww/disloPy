@@ -31,7 +31,8 @@ def main(argv):
     
     # find and replace appropriate atom
     i = sl.replace_at_plane(new_slab, dfct, vacuum=10.)[0]
-    sl.impure_faults(new_slab, dfct, i, qe.write_qe, sys_info, 0.2, argv[1], 
+    dfct.set_index(i)
+    sl.impure_faults(new_slab, dfct, qe.write_qe, sys_info, 0.2, argv[1], 
                          dim=1, limits=0.25, vacuum=vacuum, relax='relax')
     
 

@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import numpy as np
+import re
 import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
@@ -68,41 +69,75 @@ def closest_atom_oftype(atomtype, atom, supercell, use_displaced=True):
 
     return index
     
-def hydroxyl_oxygens(hydrous_defect, site, supercell, hydroxyl_str,
-                                program='gulp', oxy_str='O'):
-    '''Locate the hydroxyl oxygens for molecular mechanics simulations
-    and create hydroxyl oxygens (species <hydroxyl_str>) to insert into
-    the simulation cell. 
+def hydrogens_index(coupled_defect):
+    '''Checks a coupled defect to find the index of the hydrogen-containing site.
+    This is relevant specifically for cases where the hydrous defect is not neutral,
+    and is being charge-balanced by another chemical impurity (eg. {Ti}.._{Mg} 
+    with {2H}''_{Si}, forming the titanoclinohumite defect. We assume that the 
+    use has supplied a <CoupledImpurity>, and that only one site contains hydrogen
     '''
     
-    hydrous_defect.site_location(supercell[site])
-
-    hydroxyls = []
-    hydroxyl_indices = []
+    # regex for Hydrogen, which may be numbered
+    h_reg = re.compile(r'H\d*')
     
+    # find index of H containing site    
+    for i, site in enumerate(coupled_defect):
+        for atom in site:
+            is_h = h_reg.match(atom.getSpecies())
+            if is_h:
+                return i
+    
+    # return NaN, which can then be handled by the user            
+    return np.nan
+    
+def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str,
+                                program='gulp', oxy_str='O'):
+    '''Locate the hydroxyl oxygens for molecular mechanics simulations and 
+    create hydroxyl oxygens (species <hydroxyl_str>) to insert into the simulation 
+    cell. We assume that the coordinates of the hydrogen atoms have been set.
+    '''
+
+    hydroxyl_oxys = []
+    
+    # if <hydrous_defect> is a <CoupledImpurity>, locate the site containing
+    # hydrogen
+    if mutate.is_coupled(hydrous_defect):
+        hydrogen_site = hydrous_defect[hydrogens_index(hydrous_defect)] 
+    
+    # find hydroxyl oxygens
     for H in hydrous_defect:
         # add an impurity of type <hydroxyl_str> to <hydroxyls>
-        new_hydrox = mutate.Impurity('O', 'hydroxyl oxygen')
+        new_hydrox = mutate.Impurity(oxy_str, 'hydroxyl oxygen')
         if program.lower() == 'gulp':
             new_hydrox.addAtom(gulp.GulpAtom(hydroxyl_str))
         else:
             new_hydrox.addAtom(cry.Atom(hydroxyl_str))
-        
-        hydroxyls.append(new_hydrox.copy())
-        
+              
         # locate index of site containing nearest oxygen atom
-        hydroxyl_indices.append(closest_atom_oftype(oxy_str, H,
-                                                     supercell))
+        site_index = closest_atom_oftype(oxy_str, H, supercell)
+        new_hydrox.set_index(site_index)
+        
+        hydroxyl_oxys.append(new_hydrox.copy())
 
-    # create <CoupledImpurity> containing all hydroxyl ions
-    full_defect = mutate.CoupledImpurity(impurities=hydroxyls, sites=hydroxyl_indices)
+    # create <CoupledImpurity> to hold hydroxyl oxygens
+    full_defect = mutate.CoupledImpurity()
     
-    # merge the hydrogen atoms in the defect with the hydroxyl defects
-    full_defect.add_impurity(site, hydrous_defect)
+    # ...which we now add to <full_defect>
+    for imp in hydroxyl_oxys:
+        full_defect.add_impurity(imp)
+    
+    # finally, add the hydrogen atoms in the defect with the hydroxyl defects
+    if mutate.is_single(hydrous_defect):
+        full_defect.add_impurity(hydrous_defect)
+    else: # coupled defect, eg. Ti-clinohumite defect
+        full_defect = mutate.merge_coupled(hydrous_defect, full_defect)
 
     return full_defect
     
 def locate_bonded(site, siteindex, bondatom, supercell, nbonds):
+    '''Locates atoms bonded to a particular site.
+    '''
+    
     bondlist = []
     bonddist = []
     for i, atom in enumerate(supercell):

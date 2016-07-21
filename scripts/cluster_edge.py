@@ -70,7 +70,8 @@ if (__name__ == "__main__"):
     disBurgers = np.array([b])
     disCores = np.array([[0.,0.]]) 
     
-    gulpCluster = rs.TwoRegionCluster(gulpStruc,eta,Rmax,RI,RII,thickness)    
+    gulpCluster = rs.TwoRegionCluster(unitCell=gulpStruc, centre=eta, R=Rmax,
+                                regionI=RI, regionII=RII, thickness=thickness)    
     gulpCluster.applyField(df.isotropicEdgeField,disCores,disBurgers,Sij=0.14,
                                             branch=[0.,-1])  
     #gulpCluster.applyField(df.isotropicScrewField,disCores,disBurgers,Sij=1.684)

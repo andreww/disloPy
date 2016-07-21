@@ -42,15 +42,13 @@ def replace_at_plane(slab_cell, impurity, plane=0.5, vacuum=0.,
 
     return to_substitute
 
-def impure_faults(slab_cell, impurity, site, write_fn, sys_info, resolution, 
+def impure_faults(slab_cell, impurity, write_fn, sys_info, resolution, 
                       basename, dim=2, limits=(1,1), mkdir=False, vacuum=0., 
                       suffix='in', line_vec=np.array([1., 0., 0.]), relax=None):
     '''Runs gamma surface calculations with an impurity (or impurity cluster)
     inserted at the specified atomic sites. <site> gives the index of the atom
     to be replaced by the impurity 
     '''
-    
-    impurity.setSite(site)
 
     mutate.cell_defect(slab_cell, impurity, use_displaced=True)
     
