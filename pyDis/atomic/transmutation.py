@@ -257,10 +257,10 @@ def cell_defect(simcell, defect, use_displaced=True):
     '''
     
     # switch off atom to be replaced
-    simcell[site.get_index()].switchOutputMode()
+    simcell[defect.get_index()].switchOutputMode()
     
     # set coordinates of defect
-    defect.site_location(simcell[site], use_displaced=use_displaced)
+    defect.site_location(simcell[defect.get_index()], use_displaced=use_displaced)
     
     if len(defect) == 0:
         # impurity is empty => vacuum

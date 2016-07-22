@@ -66,7 +66,7 @@ if (__name__ == "__main__"):
     sysOut.close()
     
     eta = np.array([etax,etay])
-    b = np.array([L.norm(gulpStruc.getB()),0.,0.])
+    b = np.array([L.norm(gulpStruc.getA()),0.,0.])
     disBurgers = np.array([b])
     disCores = np.array([[0.,0.]]) 
     

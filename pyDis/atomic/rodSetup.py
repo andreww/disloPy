@@ -38,6 +38,7 @@ class PeriodicCluster(cry.Basis):
                     self.addAtom(atom)
                     
                 self._height=height*thickness
+                self._baseCell = cry.Lattice()
         else:    
             if periodic_atoms != None:
                 raise Warning("Disregarding <periodic_atoms> and relying on " +

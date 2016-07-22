@@ -380,6 +380,8 @@ def preamble(outstream, maxiter=500, do_relax=True, relax_type='conv',
         outstream.write(' eregion\n') # DO NOT TRY TO CALCULATE PROPERTIES
     elif prop:
         outstream.write(' prop\n')
+    else:
+        outstream.write('\n')
 
     # maximum allowable number of relaxation steps. Our default is somewhat 
     # smaller than the default in the GULP source code
@@ -421,6 +423,9 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
 
     # write simulation cell geometry to file
     if struc_type in rod_classes:
+        if impurities != None:
+            struc.specifyRegions()
+            
         # polymer cell -> write cell height
         preamble(outstream, do_relax=do_relax, polymer=True, relax_type=relax_type)
         height = struc.getHeight()
@@ -459,7 +464,12 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
 
     # write system specific simulation parameters (interatomic potentials, etc.)
     for line in sys_info:
-        outstream.write('{}\n'.format(line))
+        if 'output' in line:
+            continue
+        elif 'dump' in line:
+            continue
+        else:
+            outstream.write('{}\n'.format(line))
         
     # add restart lines and close the output file
     restart(outstream)
@@ -468,6 +478,8 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
     # undo defect insertion
     if impurities != None:
         mutate.undo_defect(struc, impurities)
+        if struc_type in rod_classes:
+            struc.specifyRegions()
 
     return
 
@@ -750,7 +762,7 @@ def cluster_from_grs(filename, rI, rII, r=None):
     
     return new_cluster, sysinfo
 
-def calculateImpurity(sysInfo, gulpcluster, radius, defect, gulpExec='./gulp',
+def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
                                                                 do_calc=False):
     '''Iterates through all atoms in <relaxedCluster> within distance <radius>
@@ -776,25 +788,26 @@ def calculateImpurity(sysInfo, gulpcluster, radius, defect, gulpExec='./gulp',
     lattice = np.identity(3)
     toCart = False
     disloc = False
-    coordType = 'pfractional'
+    coordType = 'pcell'
     
     # test to see if <defect> is located at a single site
-    if type(defect) is Impurity:
+    if type(defect) is mutate.Impurity:
         pass
     else:
         raise TypeError('Invalid impurity type.')
         
-    for i, atom in enumerate(regionI):
+    use_indices = []    
+    for i, atom in enumerate(gulpcluster):
         # check conditions for substitution:
         # 1. Is the atom to be replaced of the right kind?
         if atom.getSpecies() != defect.getSite():
             continue
         # 2. Is the atom within <radius> of the dislocation line?
-        if norm(atom.getCoordinates()[1:]) > radius:
+        if norm(atom.getCoordinates()[:-1]) > radius:
             continue  
               
         # check <constraints>
-        if constraints is None:
+        if constraints == None:
             pass
         else:
             for test in constraints:
@@ -803,46 +816,34 @@ def calculateImpurity(sysInfo, gulpcluster, radius, defect, gulpExec='./gulp',
                     print("Skipping atom {}.".format(i))
                     break
             if not useAtom:
-                continue   
-            else:    
-                print("Replacing atom {}...".format(str(atom)))
+                continue       
+        if noisy:        
+            print("Replacing atom {} (index {})...".format(str(atom), i)) 
         
+        # record that atom <i> is to be replaced      
+        use_indices.append(i)        
+        
+    for i in use_indices:        
         # set the coordinates and site index of the impurity
+        atom = gulpcluster[i]
         defect.site_location(atom)
         defect.set_index(i)
         
         # create .gin file for the calculation
-        outName = '{}.{}.{:.6f}.{:.6f}.{:.6f}'.format(defect.getName(), defect.getSite(),
-                                                          coords[0], coords[1], coords[2])
-        outStream = open(outName+'.gin','w')
+        coords = atom.getCoordinates()
+        #outname = '{}.{}.{:.6f}.{:.6f}.{:.6f}'.format(defect.getName(), defect.getSite(),
+        #                                                  coords[0], coords[1], coords[2])
+        outname = '{}.{}.{}'.format(defect.getName(), defect.getSite(), defect.get_index())
+        outstream = open(outname+'.gin','w')
         
-        # write header information
-        #outStream.write('opti conv qok eregion bfgs\n')
-        # for testing, do single point calculations
-        outStream.write('opti conv qok eregion {}\n'.format(minimizer))
-        outStream.write('maxcyc {}\n'.format(maxcyc))
-        outStream.write('pcell\n')
-        outStream.write(sysInfo[1])
-            
-        # record that the atom should not be written to output, and retrieve
-        # coordinates of site
-        atom.switchOutputMode()
-        
-        # write non-substituted atoms + defect to outStream
-        gulp.writeRegion(regionI,lattice,outStream,1,disloc,toCart,coordType)
-        defect.write_impurity(outStream, atom)
-        gulp.writeRegion(regionII,lattice,outStream,2,disloc,toCart,coordType)
-        
-        # switch output mode of <atom> back to <write>
-        atom.switchOutputMode()
-        
-        # finally, write interatomic potentials, etc. to file
-        for line in sysInfo[2:]:
-            outStream.write(line)
-        
-        # specify output of relaxed defect structure
-        gulp.restart(outName, outStream)
-        gulp.run_gulp(gulpExec,outName)
+        # write structure to output file, including the coordinates of the 
+        # impurity atom(s)
+        write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False, 
+                                                                 impurities=defect)
+                                                                 
+        # run calculation, if requested by user
+        if do_calc:
+            run_gulp(gulpexec, outname)
                     
     return
     
