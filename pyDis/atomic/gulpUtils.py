@@ -11,9 +11,12 @@ import sys
 import subprocess
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
+from numpy.linalg import norm
+
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import atomistic_utils as util
 from pyDis.atomic import transmutation as mutate
+from pyDis.atomic import rodSetup as rs
 
 from pyDis.atomic.rodSetup import __dict__ as rod_classes
 
@@ -122,6 +125,23 @@ class GulpAtom(cry.Atom):
         # test to see if atom has a shell, if True, normalise its coordinates
         if self.hasShell():
             self.normaliseShelCoordinates(cellA, cellB, cellC)
+        return
+        
+    def to_cart(self, lattice):
+        '''Expressions the atomic position in cartesian coordinates.
+        '''
+        
+        # get coordinates in perfect and deformed material (in cartesian coordinates)
+        newcoords = cry.fracToCart(self.getCoordinates(), lattice.getLattice())
+        newdisp = cry.fracToCart(self.getDisplacedCoordinates(), lattice.getLattice())
+        
+        self.setCoordinates(newcoords)
+        self.setDisplacedCoordinates(newdisp)
+        
+        if self.hasShell():
+            newshell = cry.fracToCart(self.getShell(), lattice.getLattice())
+            self.setShell(newshell)
+        
         return
 
     def clusterOrder(self):
@@ -707,6 +727,28 @@ def run_gulp(gulp_exec, basename):
     return
     
 ### ROUTINES FOR CALCULATING DEFECT ENERGY SURFACES IN A CYLINDER
+
+def cluster_from_grs(filename, rI, rII, r=None):
+    '''Reads in the .grs file output after a successful cluster-based dislocation
+    simulation and use it to construct a <TwoRegionCluster>.
+    '''
+    
+    # read in the .grs file and convert it to cartesian coordinates
+    grs_struc = cry.Crystal()
+    sysinfo = parse_gulp(filename, grs_struc)
+    
+    for atom in grs_struc:
+        # arrange coords in order x, y, z
+        atom.from_cluster()
+        # convert z from pcell units to length units
+        atom.to_cart(grs_struc)
+        
+    # create the cluster
+    height = norm(grs_struc.getC())        
+    new_cluster = rs.TwoRegionCluster(R=rI, regionI=rI, regionII=rII, height=height,
+                                            periodic_atoms=grs_struc)                            
+    
+    return new_cluster, sysinfo
 
 def calculateImpurity(sysInfo, gulpcluster, radius, defect, gulpExec='./gulp',
                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
