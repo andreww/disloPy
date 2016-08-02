@@ -190,9 +190,15 @@ class Atom(object):
         '''Transforms the atomic coordinates from cartesian to cell coordinates.
         '''
         
+        # if <lattice> is a <Crystal> or <Lattice> object, extract lattice vectors.
+        if type(lattice) == Crystal:
+            lattice = lattice.getLattice()
+        elif type(lattice) == Lattice:
+            lattice = lattice.getLattice()
+        
         # get coordinates in terms of the cell parameters
-        newcoords = cartToFrac(self.getCoordinates(), lattice.getLattice())
-        newdisp = cartToFrac(self.getDisplacedCoordinates(), lattice.getLattice())
+        newcoords = cartToFrac(self.getCoordinates(), lattice)
+        newdisp = cartToFrac(self.getDisplacedCoordinates(), lattice)
         
         self.setCoordinates(newcoords)
         self.setDisplacedCoordinates(newdisp)

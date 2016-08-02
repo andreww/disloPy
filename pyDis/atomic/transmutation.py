@@ -90,6 +90,19 @@ class Impurity(cry.Basis):
                 self._sitecoords = new_location.getDisplacedCoordinates()
             else: # use perfect coordinates
                 self._sitecoords = new_location.getCoordinates()
+        elif isinstance(new_location, cry.Basis) or isinstance(new_location, cry.Crystal):
+            # ONLY WORKS IF <site_index> is defined
+            if self.site_index == None:
+                raise AttributeError("Cannot use <Crystal> or <Basis> object to set" +
+                                 " the site location if <site_index> is undefined.")
+                                 
+            # otherwise, use <site_index> to extract site location
+            new_loc = new_location[self.site_index]
+            if use_displaced:
+                # use displaced coordinates of provided atom
+                self._sitecoords = new_loc.getDisplacedCoordinates()
+            else: # perfect coords.
+                self._sitecoords = new_loc.getCoordinates()
         else:
             self._sitecoords = np.copy(new_location)
 
@@ -161,7 +174,10 @@ class CoupledImpurity(object):
             self.impurities = []
             for i, imp in enumerate(impurities):
                 new_imp = imp.copy()
-                imp.set_index(sites[i])
+                # set site index, if provided
+                if sites != None:
+                    imp.set_index(sites[i])
+                    
                 self.impurities.append(new_imp) 
             
         self.currentindex = 0   
@@ -185,7 +201,7 @@ class CoupledImpurity(object):
         natoms = 0
         # count atoms in each Impurity
         for impurity in self:
-            natoms += len(impurity[-1])
+            natoms += len(impurity)
         
         return natoms
     
@@ -201,8 +217,8 @@ class CoupledImpurity(object):
         
     def __str__(self):
         thisstr = ''
-        for site, impurity in self:
-            thisstr += '{}\n{}'.format(site, impurity)
+        for impurity in self:
+            thisstr += '{}\n{}'.format(impurity.get_index(), impurity)
         return thisstr
     
     def site_locations(self, simulation_cell, use_displaced=True):
@@ -220,13 +236,13 @@ class CoupledImpurity(object):
         return self
         
     def next(self):
-        if self.currentindex >= len(self.sites):
+        if self.currentindex >= len(self.impurities):
             # reset iteration state
             self.currentindex = 0
             raise StopIteration
         else:
             self.currentindex += 1
-            return (self.sites[self.currentindex-1], self.impurities[self.currentindex-1])
+            return self.impurities[self.currentindex-1]
             
     def to_cell_coords(self, lattice):
         '''Converts the coordinates of all atoms contained in the 
@@ -260,7 +276,7 @@ def cell_defect(simcell, defect, use_displaced=True):
     simcell[defect.get_index()].switchOutputMode()
     
     # set coordinates of defect
-    defect.site_location(simcell[defect.get_index()], use_displaced=use_displaced)
+    defect.site_location(simcell, use_displaced=use_displaced)
     
     if len(defect) == 0:
         # impurity is empty => vacuum

@@ -116,7 +116,8 @@ def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str,
         # locate index of site containing nearest oxygen atom
         site_index = closest_atom_oftype(oxy_str, H, supercell)
         new_hydrox.set_index(site_index)
-        
+        new_hydrox.site_location(supercell)
+
         hydroxyl_oxys.append(new_hydrox.copy())
 
     # create <CoupledImpurity> to hold hydroxyl oxygens
