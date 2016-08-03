@@ -78,6 +78,10 @@ def cluster_faults(slab_cell, defectcluster, write_fn, sys_info, resolution,
       
     # create input files for generalised stacking fault calculations
     if dim == 1:
+        if not (type(limits) == int or type(limits) == float):
+            # assume <limits> is an iterable -> take first element
+            limits = limits[0]
+            
         gsf.gamma_line(slab_cell, line_vec, resolution, write_fn, sys_info, 
                        limits=limits, vacuum=vacuum, basename=basename, suffix=suffix,
                        mkdir=False, relax=relax)

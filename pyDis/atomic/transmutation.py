@@ -168,7 +168,7 @@ class CoupledImpurity(object):
         if impurities == None and sites == None:
             self.impurities = []
             self.sites = []
-        elif len(sites) != len(impurities):
+        elif (sites != None and impurities != None) and (len(sites) != len(impurities)):
             raise ValueError()
         else:
             self.impurities = []
@@ -251,7 +251,7 @@ class CoupledImpurity(object):
         '''
         
         for imp in self:
-            imp[1].to_cell_coords(lattice)
+            imp.to_cell_coords(lattice)
             
 def merge_coupled(*defect_clusters):
     '''Creates a single <CoupledImpurity> from a collection of <CoupledImpurity>s.

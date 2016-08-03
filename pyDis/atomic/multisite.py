@@ -19,6 +19,9 @@ def periodic_distance(atom1, atom2, lattice, use_displaced=True):
     of <atom2> (including the one defined by the lattice vector (0, 0, 0))
     '''
     
+    if type(lattice) == cry.Crystal:
+        lattice = lattice.getLattice()
+        
     # cell lengths
     scale = np.zeros(3)
     for i in range(3):
@@ -40,13 +43,59 @@ def periodic_distance(atom1, atom2, lattice, use_displaced=True):
             for k in [-1, 0, 1]:
                 d = np.array([i, j, k])
                 d = scale*d
-                dist = norm(x1-(x2 + d))
+                vec = x1-(x2 + d)
+                dist = norm(vec)
                 if dist < mindist:
                     mindist = dist
+                    minvec = vec
                     
-    return mindist
+    return mindist, minvec
     
-def closest_atom_oftype(atomtype, atom, supercell, use_displaced=True):
+def as_unit(vector):
+    '''Returns a unit vector with the same orientation as <vector>.
+    '''
+    
+    vector = np.array(vector)
+    # make sure that <vector> is not the zero vector
+    if abs(norm(vector)) < 1e-6:
+        raise ValueError("Direction of zero vector undefined.")
+        
+    return vector/norm(vector)
+    
+def closest_atom_in_direction(atomindex, supercell, direction, use_displaced=True,
+                                                    atomtype=None):
+    '''Finds the closest atom in the specified direction.
+    '''
+    
+    # convert direction vector to unit length
+    unit_dir = as_unit(direction)
+    
+    # get species of atom for which we are searching
+    if atomtype == None:
+        # use type of <atomindex>
+        atomtype = supercell[atomindex].getSpecies()
+    
+    mindist = np.inf
+    closest_index = np.nan
+    for i, atom in enumerate(supercell):
+        # check that <atom> is not the same as the one at <atomindex>, and that
+        # it is of the correct species
+        if i == atomindex or atom.getSpecies() != atomtype:
+            continue
+        
+        # calculate the direction and magnitude of the shortest distance between
+        # atom <atomindex> and any periodic repeat of <atom>
+        dist, vec = periodic_distance(atom, supercell[atomindex], supercell)
+        unit_vec = as_unit(vec)
+        
+        # check to see if <atom> is the closest atom (along <direction>) so far
+        if dist-1e-6 < mindist and abs(np.dot(unit_vec, unit_dir) - 1) < 1e-6:
+                mindist = dist
+                closest_index = i
+
+    return closest_index 
+    
+def closest_atom_oftype(atomindex, supercell, use_displaced=True):
     '''Locates the closest atom of species <atomtype> to <atom> in the 
     provided <supercell>. Primarily useful for locating hydroxyl oxygens.
     '''
@@ -56,12 +105,14 @@ def closest_atom_oftype(atomtype, atom, supercell, use_displaced=True):
     mindist = np.inf
     index = -1
     
+    atomtype = supercell[atomindex].getSpecies()
+    
     for i, atom2 in enumerate(supercell):
         if atom2.getSpecies() != atomtype:
             # wrong species, carry on
             continue
         # else
-        dist = periodic_distance(atom, atom2, lattice, use_displaced=use_displaced)
+        dist, vec = periodic_distance(atom, atom2, supercell, use_displaced=use_displaced)
 
         if dist < mindist:
             mindist = dist
@@ -162,43 +213,6 @@ def locate_bonded(site, siteindex, bondatom, supercell, nbonds):
             # check to see if <atom> is closer than any previously
             # seen by the loop
             pass
-
-
-# code fragments
-
-if __name__ == "__main__":
-    notclose = True
-    for i, x in enumerate(xi[-1::-1]):
-        if z <= x and notclose:
-            notclose = False
-        elif z > x and notclose:
-            print("Not bonded.")
-            break
-        elif z <= x:
-            continue
-        elif z > x and not notclose:
-            print(i, xi[-1-i])
-            break
-            
-    minbonddist = np.inf
-    for atom in testsuper:
-        if atom.getSpecies() != 'O':
-            continue
-        else: 
-            dist = ms.periodic_distance(testsuper[imp_index], atom)
-            if dist < minbonddist:
-                minbonddist = dist
-    
-    maxratio = 1.1            
-    nbonded = 0
-    for atom in testsuper:
-        if atom.getSpecies() != 'O':
-            continue
-        else:
-            dist = ms.periodic_distance(testsuper[imp_index], atom,
-                                        testsuper.getLattice())
-            if dist < maxratio*minbonddist:
-               nbonded += 1
 
 
 
