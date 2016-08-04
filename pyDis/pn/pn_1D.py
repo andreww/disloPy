@@ -294,7 +294,7 @@ def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False
 
         E, x_try = mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K)
         is_valid = check_parameters1d(x_try, N, lims)
- 
+
         if is_valid and (E < Emin):
             Emin = E
             x_opt = x_try[:]

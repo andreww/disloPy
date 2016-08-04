@@ -14,7 +14,7 @@ from pyDis.atomic import gulpUtils as gulp
 from pyDis.atomic import castep_utils as castep
 from pyDis.atomic import transmutation as mutate
 
-def periodic_distance(atom1, atom2, lattice, use_displaced=True):
+def periodic_distance(atom1, atom2, lattice, use_displaced=True, oned=False):
     '''Calculates the smallest distance between <atom1> and any periodic image
     of <atom2> (including the one defined by the lattice vector (0, 0, 0))
     '''
@@ -23,9 +23,14 @@ def periodic_distance(atom1, atom2, lattice, use_displaced=True):
         lattice = lattice.getLattice()
         
     # cell lengths
-    scale = np.zeros(3)
-    for i in range(3):
-        scale[i] = norm(lattice[i])
+    if oned:
+        # construct z-aligned vector with length equal to the cell height
+        scale = np.array([0., 0., lattice.getHeight()])
+    else:
+        # scale is the simulation cell lengths
+        scale = np.zeros(3)
+        for i in range(3):
+            scale[i] = norm(lattice[i])
     
     # extract appropriate coordinates
     if use_displaced:
@@ -38,16 +43,28 @@ def periodic_distance(atom1, atom2, lattice, use_displaced=True):
     
     # calculate distance between atom 1 and the closest periodic image of atom 2
     mindist = np.inf
-    for i in [-1, 0, 1]:
-        for j in [-1, 0, 1]:
-            for k in [-1, 0, 1]:
-                d = np.array([i, j, k])
-                d = scale*d
-                vec = x1-(x2 + d)
-                dist = norm(vec)
-                if dist < mindist:
-                    mindist = dist
-                    minvec = vec
+    if oneD:
+        # 1D-periodic cluster - look only along the axis of the cylinder
+        for i in [-1, 0, 1]:
+            d = np.array([0., 0., i])
+            d = scale*d
+            vec = x1 - (x2+d)
+            dist = norm(vec)
+            if dist < mindist:
+                mindist = dist
+                minvec = vec
+    else: 
+        # 3D-periodic supercell - look at periodic images in all directions
+        for i in [-1, 0, 1]:
+            for j in [-1, 0, 1]:
+                for k in [-1, 0, 1]:
+                    d = np.array([i, j, k])
+                    d = scale*d
+                    vec = x1-(x2 + d)
+                    dist = norm(vec)
+                    if dist < mindist:
+                        mindist = dist
+                        minvec = vec
                     
     return mindist, minvec
     

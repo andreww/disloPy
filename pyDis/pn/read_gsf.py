@@ -33,7 +33,9 @@ def command_line_options():
     options.add_argument("-m", dest="mirror", default='False', help="Reflect (about x if 2D)")
     options.add_argument("-my", dest="mirrory", default='False', help="Reflect about y.")
     options.add_argument("-plot", action="store_true", default=False,
-                            help="Plot gamma line/surface.")                             
+                            help="Plot gamma line/surface.")
+    options.add_argument("-sc", "--scale", type=float, dest="scale", default=1.,
+                            help="Scale the GSF energies by this value.")
     return options
     
 def get_gsf_energy(base_name, program, suffix, i, j=None, indir=False, relax=True):
@@ -152,7 +154,7 @@ def main():
         for i in xrange(args.x_max+1):
             E, units = get_gsf_energy(args.base_name, args.program, args.suffix, 
                                           i, indir=args.indir)
-            energies[i] = E
+            energies[i] = E*args.scale
             
         # record the units in which the cell energy is expressed
         outstream.write("# units {}\n".format(units))
