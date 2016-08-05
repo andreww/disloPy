@@ -80,7 +80,7 @@ def as_unit(vector):
     return vector/norm(vector)
     
 def closest_atom_in_direction(atomindex, supercell, direction, use_displaced=True,
-                                                    atomtype=None):
+                                                    atomtype=None, oned=False):
     '''Finds the closest atom in the specified direction.
     '''
     
@@ -102,7 +102,7 @@ def closest_atom_in_direction(atomindex, supercell, direction, use_displaced=Tru
         
         # calculate the direction and magnitude of the shortest distance between
         # atom <atomindex> and any periodic repeat of <atom>
-        dist, vec = periodic_distance(atom, supercell[atomindex], supercell)
+        dist, vec = periodic_distance(atom, supercell[atomindex], supercell, oned=oned)
         unit_vec = as_unit(vec)
         
         # check to see if <atom> is the closest atom (along <direction>) so far
@@ -112,24 +112,27 @@ def closest_atom_in_direction(atomindex, supercell, direction, use_displaced=Tru
 
     return closest_index 
     
-def closest_atom_oftype(atomindex, supercell, use_displaced=True):
+def closest_atom_oftype(atomindex, supercell, use_displaced=True, oned=False):
     '''Locates the closest atom of species <atomtype> to <atom> in the 
     provided <supercell>. Primarily useful for locating hydroxyl oxygens.
     '''
     
-    lattice = supercell.getLattice()
+    if type(supercell) == cry.Crystal:
+        lattice = supercell.getLattice()
     
     mindist = np.inf
     index = -1
     
     atomtype = supercell[atomindex].getSpecies()
+    atom = supercell[atomindex]
     
     for i, atom2 in enumerate(supercell):
         if atom2.getSpecies() != atomtype:
             # wrong species, carry on
             continue
-        # else
-        dist, vec = periodic_distance(atom, atom2, supercell, use_displaced=use_displaced)
+
+        dist, vec = periodic_distance(atom, atom2, supercell, use_displaced=use_displaced,
+                                                                    oned=oned)
 
         if dist < mindist:
             mindist = dist
@@ -158,8 +161,8 @@ def hydrogens_index(coupled_defect):
     # return NaN, which can then be handled by the user            
     return np.nan
     
-def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str,
-                                program='gulp', oxy_str='O'):
+def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str, program='gulp',
+                                 oxy_str='O', oned=False):
     '''Locate the hydroxyl oxygens for molecular mechanics simulations and 
     create hydroxyl oxygens (species <hydroxyl_str>) to insert into the simulation 
     cell. We assume that the coordinates of the hydrogen atoms have been set.
@@ -182,7 +185,7 @@ def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str,
             new_hydrox.addAtom(cry.Atom(hydroxyl_str))
               
         # locate index of site containing nearest oxygen atom
-        site_index = closest_atom_oftype(oxy_str, H, supercell)
+        site_index = closest_atom_oftype(hydrous_defect.get_index(), supercell, oned=oned)
         new_hydrox.set_index(site_index)
         new_hydrox.site_location(supercell)
 

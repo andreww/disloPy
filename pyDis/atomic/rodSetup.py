@@ -317,8 +317,12 @@ class TwoRegionCluster(PeriodicCluster):
 # FUNCTIONS TO MANIPULATE CLUSTERS
 
 def extend_cluster(base_cluster, new_thickness):
+    '''Creates a new cluster by stacking <new_thickness> layers of <base_cluster>
+    on top of one another.
+    '''
+    
     # create new cluster
-    new_cluster = rs.TwoRegionCluster(regionI=base_cluster._RI,  regionII=base_cluster._RII,
+    new_cluster = TwoRegionCluster(regionI=base_cluster._RI,  regionII=base_cluster._RII,
                                 height=base_cluster.getHeight(), periodic_atoms=base_cluster)
 
     # if thickness == 1, no need to add additional atoms
