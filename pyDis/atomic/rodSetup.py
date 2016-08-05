@@ -124,6 +124,9 @@ class TwoRegionCluster(PeriodicCluster):
         '''Initializes a 1D periodic GULP cluster.
         '''
         
+        if R == None:
+            R = regionII
+        
         PeriodicCluster.__init__(self, unitCell=unitCell, centre=centre, R=R, 
                            thickness=thickness, periodic_atoms=periodic_atoms,
                                                                  height=height)
@@ -310,6 +313,39 @@ class TwoRegionCluster(PeriodicCluster):
         #super(GulpCluster, self).applyField(fieldType, disCores, disBurgers, Sij)
         self.specifyRegions()
         return
+        
+# FUNCTIONS TO MANIPULATE CLUSTERS
+
+def extend_cluster(base_cluster, new_thickness):
+    # create new cluster
+    new_cluster = rs.TwoRegionCluster(regionI=base_cluster._RI,  regionII=base_cluster._RII,
+                                height=base_cluster.getHeight(), periodic_atoms=base_cluster)
+
+    # if thickness == 1, no need to add additional atoms
+    if new_thickness == 1:
+        return new_cluster
+        
+    # axial length vector
+    disp_vec = np.array([0., 0., base_cluster.getHeight()])
+    
+    # add periodic images of atoms in <base_cluster>
+    for atom in base_cluster:
+        for i in range(new_thickness-1):
+            new_atom = atom.copy()
+            
+            # calculate coordinates of new atom
+            x = atom.getCoordinates()
+            xd = atom.getDisplacedCoordinates()
+            new_x = x + (i+1)*disp_vec
+            new_xd = xd + (i+1)*disp_vec
+            new_atom.setCoordinates(new_x)
+            new_atom.setDisplacedCoordinates(new_xd)
+            new_cluster.addAtom(new_atom)
+    
+    # assign atoms to region I/region II
+    new_cluster.specifyRegions()
+    return new_cluster
+
                                 
 '''utility functions for rotating vectors in R^3 (about the x3 axis)
 '''
@@ -356,23 +392,3 @@ def rotation_angle(branch_cut):
     theta_base %= (2*np.pi)
     theta = 3*np.pi/2. - theta_base
     return theta
-                                            
-        
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
