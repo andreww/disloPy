@@ -847,8 +847,8 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                     
     return
     
-def calculateCoupledImpurity(sysInfo,regionI,regionII,radius,defectCluster,
-                                        gulpExec='./gulp',constraints=None):
+def calculateCoupledImpurity(sysInfo, regionI, regionII, radius, defectCluster,
+                                        gulpExec='./gulp', constraints=None):
     '''As above, but for an impurity cluster with defects at multiple sites.
     '''
     

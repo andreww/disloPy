@@ -58,7 +58,7 @@ if (__name__ == "__main__"):
     sysInfo = gulp.parse_gulp(gulpName,gulpStruc)
     
     ### TEMPORARY
-    #Cij = aniso.readCij('uo2')
+    #Cij = aniso.readCij('mgo')
     #uField = aniso.makeAnisoField(Cij)
     ### \TEMPORARY
     
@@ -82,7 +82,7 @@ if (__name__ == "__main__"):
                                 regionI=RI, regionII=RII, thickness=thickness)  
     #gulpCluster.applyField(df.isotropicEdgeField,disCores,disBurgers,Sij=0.30444,
     #                                        branch=[0.,-1])  
-    gulpCluster.applyField(df.isotropicScrewField, disCores, disBurgers, Sij=1.684)
+    gulpCluster.applyField(df.anisotropicScrewField, disCores, disBurgers, Sij=0.8349)
     ### TEMPORARY
     #gulpCluster.applyField(uField,disCores,disBurgers,0.08658,branch=[-1,0],THRESH=1.0)
     ### \TEMPORARY

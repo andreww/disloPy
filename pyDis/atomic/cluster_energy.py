@@ -517,7 +517,8 @@ def energy_command_line():
                             help='Base name for single point calculations.')
     options.add_argument('-exec', type=str, dest='executable', default='',
                             help='Location of the GULP executable.')
-    options.add_argument('-method', choices=['explicit', 'eregion', 'edge'])
+    options.add_argument('-method', choices=['explicit', 'eregion', 'edge'],
+                            default='explicit')
     options.add_argument('-b', type=float, dest='b', default=np.nan, 
                             help='Burgers vector magnitude.')
     options.add_argument('-thick', type=float, dest='thick', default=np.nan, 

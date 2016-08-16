@@ -322,8 +322,9 @@ def extend_cluster(base_cluster, new_thickness):
     '''
     
     # create new cluster
+    new_height = new_thickness*base_cluster.getHeight()
     new_cluster = TwoRegionCluster(regionI=base_cluster._RI,  regionII=base_cluster._RII,
-                                height=base_cluster.getHeight(), periodic_atoms=base_cluster)
+                                height=new_height, periodic_atoms=base_cluster)
 
     # if thickness == 1, no need to add additional atoms
     if new_thickness == 1:

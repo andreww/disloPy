@@ -173,10 +173,12 @@ def hydrogens_index(coupled_defect):
     return np.nan
     
 def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str, program='gulp',
-                                 oxy_str='O', oned=False, to_cart=True):
+                     oxy_str='O', oned=False, to_cart=True, shell_model=False):
     '''Locate the hydroxyl oxygens for molecular mechanics simulations and 
     create hydroxyl oxygens (species <hydroxyl_str>) to insert into the simulation 
-    cell. We assume that the coordinates of the hydrogen atoms have been set.
+    cell. We assume that the coordinates of the hydrogen atoms have been set. If
+    <shell_model> is True, then the polarizability of the hydroxyl oxygens is
+    represented using a Dick-Overhauser shell model.
     '''
 
     hydroxyl_oxys = []
@@ -191,7 +193,12 @@ def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str, program='gulp',
         # add an impurity of type <hydroxyl_str> to <hydroxyls>
         new_hydrox = mutate.Impurity(oxy_str, 'hydroxyl oxygen')
         if program.lower() == 'gulp':
-            new_hydrox.addAtom(gulp.GulpAtom(hydroxyl_str))
+            new_atom = gulp.GulpAtom(hydroxyl_str)
+            if shell_model:
+                # add a polarizable shell with the coordinates of the atom
+                new_atom.addShell(np.zeros(3))
+                
+            new_hydrox.addAtom(new_atom)        
         else:
             new_hydrox.addAtom(cry.Atom(hydroxyl_str))
               
