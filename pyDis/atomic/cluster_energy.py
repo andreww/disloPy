@@ -72,9 +72,10 @@ def atom_dict_interactive():
     
 ### READ AND WRITE ATOMISTIC SIMULATION INPUT/OUTPUT ###
  
-def newRegions(rIPerfect, rIDislocated, rIIPerfect, rIIDislocated, Rnew):
-    '''Creates new <cry.Basis> objects to hold the lists of 
-    region I and region II atoms with a smaller radius <Rnew> 
+def newRegions(rIPerfect, rIDislocated, rIIPerfect, rIIDislocated, Rnew, edge=False):
+    '''Creates new <cry.Basis> objects to hold the lists of region I and region 
+    II atoms with a smaller radius <Rnew>. If <edge> is True, do this only for
+    the dislocated cell, and return emptu bases for the perfect cell.
     '''   
     
     newRI = cry.Basis()
@@ -89,11 +90,13 @@ def newRegions(rIPerfect, rIDislocated, rIIPerfect, rIIDislocated, Rnew):
         if Rxy < Rnew:
             # atom is sufficiently close to dislocation to include in region I
             newRI.addAtom(atom)
-            newRIPerfect.addAtom(rIPerfect[i])
+            if not edge:
+                newRIPerfect.addAtom(rIPerfect[i])
         else:
             # fix atom in region II if Rxy greater than new radius
             newRII.addAtom(atom)
-            newRIIPerfect.addAtom(rIPerfect[i])
+            if not edge:
+                newRIIPerfect.addAtom(rIPerfect[i])
             
     return newRI, newRII, newRIPerfect, newRIIPerfect
     
@@ -289,6 +292,13 @@ def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, use_eregion=True,
     the dislocation explicitly (E(RI)+0.5*E(RI-RII)). 
     '''
     
+    # if atomic energies have been supplied, record that we are using the 
+    # edge method
+    if E_atoms != None:
+        using_edge = True
+    else:
+        using_edge = False
+    
     # open the output file to stream energy data to
     outStream = open(baseName + '.energies', 'w')
     sysInfo = readSystemInfo(baseName)
@@ -302,9 +312,14 @@ def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, use_eregion=True,
     rIDislocated = cry.Basis()
     rIIDislocated = cry.Basis()
     
-    # populate these bases from the input files
-    gulp.extractRegions('ndf.{}.grs'.format(baseName), rIPerfect, rIIPerfect)
+    # populate the bases for regions I and II of the dislocated cell
     gulp.extractRegions('dis.{}.grs'.format(baseName), rIDislocated, rIIDislocated)
+    
+    # unless atomic energies have been supplied (in which case the energy will
+    # be calculated using those instead of a reference, perfect cluster), read
+    # in the associated undislocated cluster.
+    if not using_edge:
+        gulp.extractRegions('ndf.{}.grs'.format(baseName), rIPerfect, rIIPerfect)
 
     # ensure that dRI is > 0
     dRI = abs(dRI)
@@ -326,11 +341,12 @@ def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, use_eregion=True,
         print('Calculating energy', end=' ') 
         
         [newRI, newRII, newRIPerfect, newRIIPerfect] = newRegions(rIPerfect,
-                             rIDislocated, rIIPerfect, rIIDislocated, currentRI)
+                             rIDislocated, rIIPerfect, rIIDislocated, currentRI,
+                                                            edge=using_edge)
 
         derivedName = 'sp.{}.{:.1f}.{}'.format(systemName, currentRI, RIIval)
         
-        if E_atoms != None:
+        if using_edge:
             print('using edge.')
             writeSPSections(newRI, newRII, sysInfo, derivedName, True)
             

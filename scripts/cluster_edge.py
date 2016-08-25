@@ -51,8 +51,8 @@ if (__name__ == "__main__"):
     sysInfo = gulp.parse_gulp(gulpName,gulpStruc)
     
     ### TEMPORARY
-    #Cij = aniso.readCij('quartz_ffsioh')
-    #uField = aniso.makeAnisoField(Cij)
+    cij = aniso.readCij('mgo')
+    uField = aniso.makeAnisoField(cij)
     ### \TEMPORARY
     
     # write a file containing system parameters
@@ -66,17 +66,20 @@ if (__name__ == "__main__"):
     sysOut.close()
     
     eta = np.array([etax,etay])
-    b = np.array([L.norm(gulpStruc.getA()),0.,0.])
+    #b = np.array([L.norm(gulpStruc.getA()),0.,0.])
+    b = np.array([0.,-L.norm(gulpStruc.getB()),0.])
     disBurgers = np.array([b])
     disCores = np.array([[0.,0.]]) 
     
     gulpCluster = rs.TwoRegionCluster(unitCell=gulpStruc, centre=eta, R=Rmax,
                                 regionI=RI, regionII=RII, thickness=thickness)    
-    gulpCluster.applyField(df.isotropicEdgeField,disCores,disBurgers,Sij=0.14,
-                                            branch=[0.,-1])  
+    #gulpCluster.applyField(df.isotropicEdgeField,disCores,disBurgers,Sij=0.14,
+    #                                        branch=[0.,-1])  
+    #gulpCluster.applyField(df.anisotropicEdgeField, disCores, disBurgers, Sij=sij,
+    #                                         branch=[0, -1])
     #gulpCluster.applyField(df.isotropicScrewField,disCores,disBurgers,Sij=1.684)
     ### TEMPORARY
-    #gulpCluster.applyField(uField,disCores,disBurgers,0.08658,branch=[-1,0],THRESH=1.0)
+    gulpCluster.applyField(uField,disCores,disBurgers,0.08658,branch=[-1, 0],THRESH=1.0)
     ### \TEMPORARY
     
     outStream2 = outName+'.%d.%d' % (RI,RII)   
