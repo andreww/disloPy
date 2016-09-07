@@ -79,7 +79,7 @@ def spline_fit1d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
         E_vals /= 2.
     
     # fit gamma line and create periodic function
-    g_spline = interp1d(x_vals, E_vals, kind='cubic')
+    g_spline = interp1d(x_vals, E_vals, kind='linear')
 
     def gamma(x):        
         return g_spline(x % a)  

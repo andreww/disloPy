@@ -146,8 +146,17 @@ def approx_iss1d(gfunc, b):
     dist = b*np.where(gvalues == gvalues.max())[0][0]/100.
     return g_max/dist
     
+def com(rho, r, b, n=1000):
+    av_x = 0
+    dr = 1./(n-1)
+    for i, rhoi in enumerate(rho):
+        av_x += (dr*np.linspace(r[i]+dr, r[i+1], n)*rhoi).sum()
+    
+    return av_x
+
+    
 def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None,
-                                                 dtau=0.001, in_GPa=True, thr=10.):
+                                                 dtau=0.001, in_GPa=True, thr=0.5):
     '''Calculate positive and negative Peierls stresses from optimized
     dislocation misfit profiles.
     '''
@@ -197,11 +206,12 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
             u = uy
     
     rho = pn1.rho(u, r)
-    d_max = (rho*r[1:]/rho.sum()).sum()
-       
+    #d_max = (rho*r[1:]/rho.sum()).sum()
+    cm0 = com(rho, r, b)
     # apply stress to the dislocation, starting with the positive direction
+    new_par = dis_parameters
     for s in stresses:
-        Ed, new_par = stressed_dislocation(dis_parameters, len(dis_parameters)/3, 
+        Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
                             max_x, gsf_func, K, b, spacing, s, disl_type,  dims)
         
         # compare new displacement field to that of original (ie. unstressed)
@@ -218,13 +228,17 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         rhos = pn1.rho(us, r)
         d_current = (rhos*r[1:]/rhos.sum()).sum()
         
-        if abs(d_current-d_max) >= threshold:
+        #if abs(d_current-d_max) >= threshold:
+        #    tau_p_plus = s
+        #    break
+        if abs(com(rhos, r, b) - cm0) >= threshold*spacing:
             tau_p_plus = s
             break
 
     # apply negative stress
+    new_par = dis_parameters
     for s in -stresses:
-        Ed, new_par = stressed_dislocation(dis_parameters, len(dis_parameters)/3, 
+        Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
                              max_x, gsf_func, K, b, spacing, s, disl_type, dims)
         
         # compare with unstressed dislocation                     
@@ -240,7 +254,10 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         rhos = pn1.rho(us, r)
         d_current = (rhos*r[1:]/rhos.sum()).sum()
         
-        if abs(d_current-d_max) >= threshold:
+        #if abs(d_current-d_max) >= threshold:
+        #    tau_p_minus = -s
+        #    break
+        if abs(com(rhos, r, b) - cm0) >= threshold*spacing:
             tau_p_minus = -s
             break
                    

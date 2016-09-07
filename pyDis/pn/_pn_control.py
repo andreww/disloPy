@@ -198,7 +198,7 @@ def handle_pn_control(param_dict):
     stress_cards = (('calculate_stress', {'default':True, 'type':to_bool}),
                     ('dtau', {'default':0.0005, 'type':float}),
                     ('use_GPa', {'default':True, 'type':to_bool}),
-                    ('threshold', {'default':15., 'type':float})
+                    ('threshold', {'default':0.5, 'type':float})
                    )
     
     # list of valid namelists 
@@ -298,12 +298,15 @@ class PNSim(object):
             self.K = coeff.anisotropic_K(self.elast('cij'),
                                          self.elast('b_edge'),
                                          self.elast('b_screw'),
-                                         self.elast('normal')
+                                         self.elast('normal'),
+                                         using_atomic=not(self.elast('in_gpa'))
                                         )
         elif self.elast('coefficients') == 'iso_nu':
-            self.K = coeff.isotropic_nu(self.elast('poisson'), self.elast('shear'))
+            self.K = coeff.isotropic_nu(self.elast('poisson'), self.elast('shear'),
+                                             using_atomic=not(self.elast('in_gpa')))
         elif self.elast('coefficients') == 'iso_bulk':
-            self.K = coeff.isotropic_K(self.elast('bulk'), self.elast('shear'))
+            self.K = coeff.isotropic_K(self.elast('bulk'), self.elast('shear'),
+                                           using_atomic=not(self.elast('in_gpa')))
 
         # if restricting calculation to one component of displacement, extract
         # the appropriate energy coefficient.    
