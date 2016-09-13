@@ -14,7 +14,7 @@ sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
-from scipy.interpolate import RectBivariateSpline, interp1d
+from scipy.interpolate import RectBivariateSpline, interp1d, interp2d
 
 from pyDis.atomic import atomistic_utils as atm
 
@@ -95,7 +95,7 @@ def spline_fit2d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
     #!!! and 2D spline fits.
     x_vals = get_axis(num_gsf, 0, a)
     y_vals = get_axis(num_gsf, 1, b)
-   
+    
     # import energies and convert to eV/\AA^{2}
     E_vals = num_gsf[:, 2].reshape((len(x_vals), len(y_vals)))
     E_vals -= E_vals.min()
@@ -111,7 +111,7 @@ def spline_fit2d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
         # 3D periodic -> cell contains two stacking faults
         E_vals /= 2.
     
-    g_spline = RectBivariateSpline(x_vals, y_vals, E_vals)
+    g_spline = RectBivariateSpline(x_vals, y_vals, E_vals, kx=1, ky=1)
     
     if int(scipy.__version__.split(".")[1]) < 14:
         def gamma(x, y):        
@@ -119,7 +119,7 @@ def spline_fit2d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
     else:
         def gamma(x, y):
             return g_spline(x % a, y % b, grid=False)
-               
+                  
     return gamma
 
 def get_axis(gsf_array, index, length):
