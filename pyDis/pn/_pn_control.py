@@ -186,7 +186,9 @@ def handle_pn_control(param_dict):
                   ('map_ux', {'default':'remap: (ux, uy) -> ux', 'type':str}),
                   ('map_uy', {'default':'remap: (ux, uy) -> uy', 'type':str}),
                   ('gamma_shift', {'default':0., 'type':float}),
-                  ('has_vacuum', {'default':False, 'type':to_bool})
+                  ('has_vacuum', {'default':False, 'type':to_bool}),
+                  ('do_fourier', {'default':False, 'type':to_bool}),
+                  ('fourier_N', {'default':2, 'type': int})
                  )
 
     # cards for the <&properties> namelist
@@ -378,16 +380,21 @@ class PNSim(object):
                                                  self.surf('y_length'),
                                                  angle=self.surf('angle'),
                                                  units=self.units,
-                                                 hasvac=self.surf('has_vacuum'))
+                                                 hasvac=self.surf('has_vacuum'),
+                                                 do_fourier_fit=self.surf('do_fourier'),
+                                                 n_order=self.surf('fourier_N'))
         elif n_columns == 3: # 2-dimensional misfit function
             base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), 
                                                   self.surf('y_length'),
                                                   angle=self.surf('angle'),
                                                   units=self.units,
-                                                  hasvac=self.surf('has_vacuum'))
+                                                  hasvac=self.surf('has_vacuum'),
+                                                  do_fourier_fit=self.surf('do_fourier'),
+                                                  n_order=self.surf('fourier_N'))
                                                   
             temp_gsf = fg.new_gsf(base_func, self.surf('map_ux'), 
                                              self.surf('map_uy'))
+                                             
             if self.control('dimensions') == 1: 
                 # project out the dislocation parallel component
                 # determine which axis to use (0/x if edge, 1/y if screw)

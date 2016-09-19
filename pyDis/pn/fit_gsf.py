@@ -17,6 +17,7 @@ from matplotlib import cm
 from scipy.interpolate import RectBivariateSpline, interp1d, interp2d
 
 from pyDis.atomic import atomistic_utils as atm
+from pyDis.pn import fourier
 
 def read_numerical_gsf(filename):
     '''Reads in a grid of energy values for a gamma line or gamma surface,
@@ -47,7 +48,8 @@ def read_numerical_gsf(filename):
             
     return np.array(gsf), units
    
-def spline_fit1d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
+def spline_fit1d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev',
+                                         do_fourier_fit=False, n_order=2):
     '''Fits a bivariate spline to a numerical gsf energies along a line (ie.
     fits a gamma line). <a> is the length of the cell axis along the gamma line
     (typically the Burgers vector), and <b> is the length of the third axis 
@@ -83,16 +85,22 @@ def spline_fit1d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
 
     def gamma(x):        
         return g_spline(x % a)  
+        
+    # fit a fourier series, if specified by the user
+    if do_fourier_fit:
+        gamma_n = gline_fourier(gamma, n_order, a)
+    else:
+        gamma_n = gamma
           
-    return gamma
+    return gamma_n
 
-def spline_fit2d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
+def spline_fit2d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev',
+                                         do_fourier_fit=False, n_order=2):
     '''extract coordinates of calculations, and gs-energies at each point
     grid values are given in integer values -> need to convert to \AA
     '''
     
-    #!!! Need to change function calls in other modules to accommodate 1D 
-    #!!! and 2D spline fits.
+    # extract values of the intervals along the x and y axes
     x_vals = get_axis(num_gsf, 0, a)
     y_vals = get_axis(num_gsf, 1, b)
     
@@ -119,14 +127,43 @@ def spline_fit2d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev'):
     else:
         def gamma(x, y):
             return g_spline(x % a, y % b, grid=False)
+    
+    # fit a fourier series, if specified by the user
+    if do_fourier_fit:
+        gamma_n = gsurf_fourier(gamma, n_order, a, b)
+    else:
+        gamma_n = gamma
                   
-    return gamma
+    return gamma_n
 
 def get_axis(gsf_array, index, length):
+    '''Returns the energy of the generalised stacking faults along the specified
+    axis.
+    '''
+    
     values = set(gsf_array[:, index])
     values = np.array([x for x in values])
     values *= length/float(values.max())
     return values
+    
+def gsurf_fourier(gsurf_func, n_order, T1, T2):
+    '''Fits a fourier series of order <n_order> to <gsurf_func>, the gamma
+    surface energy function, which is periodic in x and y (with periods <T1> and
+    <T2>, respectively).
+    '''
+    
+    fourier_func = fourier.fourier_series2d(gsurf_func, n_order, T1, T2)
+    
+    return fourier_func
+    
+def gline_fourier(gline_func, n_order, T):
+    '''Fits a fourier series of order <n_order> to the gamma line energy function
+    <gline_func>, which is periodic with period T.
+    '''
+    
+    fourier_func = fourier.fourier_series1d(gline_func, n_order, T)
+
+    return fourier_func
     
 # ROUTINES TO TRANSFORM GAMMA SURFACE INTO COORDINATES WITH \xsi || y
     

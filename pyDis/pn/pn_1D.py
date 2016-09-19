@@ -296,13 +296,21 @@ def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False
         is_valid = check_parameters1d(x_try, N, lims)
 
         if is_valid and (E < Emin):
-            Emin = E
-            x_opt = x_try[:]
-            
-            # if noisy mode has been selected, print current best solution
-            if noisy:
-                print("Current best solution: ".format(x_opt))
-                print("Energy: {:.6f}\n".format(Emin))
+            # check that the new energy is not crazy
+            if Emin < 1.0 and abs(E-Emin) < 10. or Emin > 1.0:
+                Emin = E
+                x_opt = x_try[:]
+                
+                # if noisy mode has been selected, print current best solution
+                if noisy:
+                    print("Current best solution: ".format(x_opt))
+                    print("Energy: {:.6f}\n".format(Emin))
+            else:
+                # energy is not reasonable
+                if noisy:
+                    print("Unreasonable dislocation energy calculated...")
+                else:
+                    pass
             
     return Emin, x_opt
     

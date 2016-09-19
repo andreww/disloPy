@@ -265,24 +265,22 @@ def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
                                                   use_sym, disl_type, b, spacing)
         is_valid = check_parameters2d(x_try, N, lims, disl_type)
         
-        '''
-        is_valid = True
-        for j, param in enumerate(x_try):
-            if pn1.contained_in(param, lims[j]):
-                continue
-            else:
-                is_valid = False
-                break
-        '''
-        
         if is_valid and (E < Emin):
-            Emin = E
-            x_opt = np.copy(x_try)
-            
-            # if noisy mode has been requested, print current best solution
-            if noisy:
-                print("Current best solution: {}".format(x_opt))
-                print("Energy: {:.6f}\n".format(Emin))
+            # check that the new energy is not crazy
+            if Emin < 1.0 and abs(E-Emin) < 10. or Emin > 1.0:
+                Emin = E
+                x_opt = np.copy(x_try)
+                
+                # if noisy mode has been selected, print current best solution
+                if noisy:
+                    print("Current best solution: ".format(x_opt))
+                    print("Energy: {:.6f}\n".format(Emin))
+            else:
+                # energy is not reasonable
+                if noisy:
+                    print("Unreasonable dislocation energy calculated...")
+                else:
+                    pass
             
     return Emin, x_opt
     
