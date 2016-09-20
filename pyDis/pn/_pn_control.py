@@ -244,7 +244,7 @@ def handle_pn_control(param_dict):
     # test to make sure that all of the parameters required for one of isotropic
     # or anisotropic elasticity have been supplied. Should we also test to see
     # which function to use when calculating the energy coefficients?
-    if param_dict['elast']['cij'] != None:
+    if not (param_dict['elast']['cij'] is None):
         # if an elastic constants tensor is given, use anisotropic elasticity
         param_dict['elast']['coefficients'] = 'aniso'
     elif param_dict['elast']['shear'] != None:

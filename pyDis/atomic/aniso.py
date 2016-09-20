@@ -277,7 +277,7 @@ def dyadic(vec1, vec2=None):
     '''Take the dyad product of <vec1> and <vec2>. The dyad product is an 
     '''
     
-    if vec2 == None:
+    if vec2 is None:
         # take the dyad product of <vec1> with itself
         return dyadic(vec1, vec2=vec1)
     else:
