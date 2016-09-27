@@ -53,7 +53,7 @@ def vector(vec_str):
     '''Converts a string of the form "[x1,x2,...,xn]" to a numpy array.
     '''
     
-    vec_regex = re.compile('(\[|\()(?P<contents>(?:\d+\.?\d*,\s*)*(?:\d+\.?\d*))(\]|\))')
+    vec_regex = re.compile('(\[|\()(?P<contents>(?:-?\d+\.?\d*,\s*)*(?:-?\d+\.?\d*))(\]|\))')
     # test to make sure that the entered string conforms to vector
     # notation
     vec_match = vec_regex.match(vec_str)
@@ -93,9 +93,10 @@ def handle_atomistic_control(param_dict):
     # cards for the <&elast> namelist. Note that if dislocations are specified 
     # in the <fields> file, they will overwrite <burgers>. Current options for
     # <field_type> are: aniso(tropic), iso_screw, iso_edge, and aniso_screw.
-    # aniso_edge will be added later.           
+    # aniso_edge will be added later. <normal> is the slip plane normal.
     elast_cards = (('disl_type', {'default': None, 'type': str}),
                    ('burgers', {'default': cry.ei(3), 'type': vector}),
+                   ('normal', {'default': cry.ei(2), 'type': vector}), 
                    ('bulk', {'default': None, 'type': float}),
                    ('shear', {'default': None, 'type': float}),
                    ('poisson', {'default': None, 'type': float}),
@@ -166,7 +167,7 @@ def handle_atomistic_control(param_dict):
             except ValueError:
                 default_val = var[1]['default']
                 # test to see if variable is "mission-critical"
-                if default_val == None:
+                if default_val is None:
                     raise ValueError("No value supplied for mission-critical" +
                                             " variable {}.".format(var[0]))
                 else:
@@ -187,15 +188,15 @@ def handle_atomistic_control(param_dict):
     # or anisotropic elasticity have been supplied. Should we also test to see
     # which function to use when calculating the energy coefficients?
     #!!! Need to think about this
-    if param_dict['elast']['cij'] != None:
+    if not (param_dict['elast']['cij'] is None):
         # if an elastic constants tensor is given, use anisotropic elasticity
         param_dict['elast']['coefficients'] = 'aniso'
-    elif param_dict['elast']['shear'] != None:
+    elif not (param_dict['elast']['shear'] is None):
         # test to see if another isotropic elastic property has been provided. 
         # Preference poisson's ratio over bulk modulus, if both have been provided
-        if param_dict['elast']['poisson']  != None:
+        if not (param_dict['elast']['poisson'] is None):
             param_dict['elast']['coefficients'] = 'iso_nu'
-        elif param_dict['elast']['bulk'] != None:
+        elif not (param_dict['elast']['bulk'] is None):
             param_dict['elast']['coefficients'] = 'iso_bulk'
         else:
             raise AttributeError("No elastic properties have been provided.")
@@ -247,7 +248,7 @@ class AtomisticSim(object):
         self.sim = control_file(filename)
         handle_atomistic_control(self.sim)
         
-        if self.sim['atoms'] != None:
+        if not (self.sim['atoms'] is None):
             # process provided atomic energies
             self.atomic_energies = atom_namelist(self.sim)
         else:
@@ -276,11 +277,12 @@ class AtomisticSim(object):
         
         # elasticity stuff
         if self.elast('coefficients') == 'aniso':
-            self.K = 4*np.pi*coeff.anisotropic_K(self.elast('cij'),
-                                                 self.elast('b_edge'),
-                                                 self.elast('b_screw'),
-                                                 self.elast('normal')
-                                                )
+            # calculate K for the SPECIFIC dislocation (ie. combination of 
+            # Burgers vector and line vector) with which we are concerned
+            self.K = 4*np.pi*coeff.anisotropic_K_b(self.elast('cij'),
+                                                   self.elast('burgers'),
+                                                   self.elast('normal')
+                                                  )
         elif self.elast('coefficients').startswith('iso'):
             # extract edge and screw components
             if 'nu' in self.elast('coefficients'):
@@ -351,7 +353,7 @@ class AtomisticSim(object):
             
         elif self.elast('field_type') == 'iso_edge':
             self.ufield = fields.isotropicEdgeField
-            if self.elast('poisson') != None:
+            if not (self.elast('poisson') is None):
                 self.sij = self.elast('poisson')
             else:
                 self.sij = poisson(self.elast('bulk'), self.elast('shear'))
@@ -501,7 +503,7 @@ class AtomisticSim(object):
         '''
         
         # check that a path to the atomistic program executable has been provided
-        if self.control('executable') == None:
+        if self.control('executable') is None:
             raise ValueError('No executable provided.')
         
         if 'gulp' == self.control('program'):
@@ -538,7 +540,7 @@ class AtomisticSim(object):
             elif self.cluster('method') == 'eregion':
                 self.atomic_energies = None
             if self.cluster('method') == 'edge':
-                if self.atomic_energies == None: 
+                if self.atomic_energies is None: 
                     # prompt user to enter atomic symbols and energies
                     self.atomic_energies = ce.atom_dict_interactive() 
                           
@@ -595,7 +597,7 @@ class AtomisticSim(object):
                 
             elif self.multipole('method') == 'edge':
                 # calculate excess energy from energies of atoms in perfect crystal
-                if self.atomic_energies == None:
+                if self.atomic_energies is None:
                     # prompt use to enter energies for all atoms
                     self.atomic_energies = ce.make_atom_dict()
                     

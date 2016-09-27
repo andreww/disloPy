@@ -56,3 +56,19 @@ def anisotropic_K(Cij, b_edge, b_screw, normal, using_atomic=True):
     Ks = aniso.scalar_k(energy_tensor, b_screw)
 
     return [Ke, Ks]
+    
+def anisotropic_K_b(Cij, b, normal, using_atomic=True):
+    '''Caluculate the energy coefficient for a dislocation with a specific 
+    Burgers vector.
+    '''
+    
+    # solve sextic eigenvalue problem
+    p, A, L = aniso.solve_sextic(Cij, b/norm(b), normal/norm(normal))
+    energy_tensor = aniso.tensor_k(L)
+    
+    # calculate the scalar energy coefficient
+    K  = aniso.scalar_k(energy_tensor, b)
+    
+    return K
+    
+    
