@@ -48,6 +48,39 @@ def array_or_int(dimension):
         raise AttributeError("No cell dimensions found.")
     
     return cell_sizes
+    
+def array_or_float(dimension):
+    '''Determine whether the user is specifiying a single radius, or a range
+    of radii.
+    '''
+    
+    # form of array as above
+    array_string = re.match('(?P<f1>\d+\.?\d*)\s*,\s*(?P<df>\d+\.?\d*)\s*,\s*(?P<f2>\d+\.?\d*)', 
+                                                                       dimension)
+    flt_string = re.match('\d+\.?\d*', dimension)
+    if array_string:
+        f1 = float(array_string.group('f1'))
+        df = float(array_string.group('df'))
+        f2 = float(array_string.group('f2'))
+        
+        # check that input corresponds to a valid array
+        if f2 <= f1:
+            raise ValueError(("Final value ({}) must be greater than initial" +
+                                                  " value ({})").format(f1, f2))
+        elif df <= 0:
+            raise ValueError("Increment ({}) must be positive.".format(df))
+        elif df > (f2 - f1):
+            raise ValueError(("Increment ({}) is too large. Maximum value is " +
+                                                      "{}.").format(df, f2-f1))
+        radii = np.arange(f1, f2+df, df)
+    elif flt_string:
+        # needs to be iterable for ease of handling
+        radii = [float(flt_string.group())]
+    else:
+        raise AttributeError("No values for the cluster radius found.")
+        
+    return radii
+        
 
 def vector(vec_str):
     '''Converts a string of the form "[x1,x2,...,xn]" to a numpy array.
@@ -126,13 +159,12 @@ def handle_atomistic_control(param_dict):
     #  (ie. anisotropic solution) places that branch cut along the negative
     # x-axis. Method for calculating core energy is specified may be edge,
     # eregion or explicit.
-    cluster_cards = (('region1', {'default': None, 'type': float}),
-                     ('region2', {'default': None, 'type': float}),
+    cluster_cards = (('region1', {'default': None, 'type': array_or_float}),
+                     ('region2', {'default': None, 'type': array_or_float}),
                      ('scale', {'default': 1.1, 'type': float}),
                      ('branch_cut', {'default': [0, -1], 'type': vector}),
                      ('thickness', {'default': 1, 'type': int}),
                      ('method', {'default': '', 'type': str}),
-                     ('rmax', {'default': 2, 'type': int}),
                      ('rmin', {'default': 1, 'type': int}),
                      ('dr', {'default': 1, 'type': int}),
                      ('fit_K', {'default': False, 'type': to_bool})
@@ -367,6 +399,19 @@ class AtomisticSim(object):
         return 
         
     def construct_cluster(self):
+        '''Constructs 1D-periodic clusters containing a single dislocation.
+        '''
+        
+        # check that equal numbers of region 1 and region 2 radii have been provided
+        if len(self.cluster('region1')) != len(self.cluster('region2')):
+            raise ValueError('Number of region 1 and 2 radii provided must be equal.')
+        
+        for r1, r2 in zip(self.cluster('region1'), self.cluster('region2')):
+            self.make_cluster(r1, r2)
+        
+        return 
+        
+    def make_cluster(self, r1, r2):
         '''Construct input file for a cluster-based simulation.
         '''
         
@@ -379,8 +424,7 @@ class AtomisticSim(object):
         if self.control('program') == 'gulp': # add option for LAMMPS later            
             #!!! need to work out why I included this bit
             sysout = open('{}.{:.0f}.{:.0f}.sysInfo'.format(self.control('basename'),
-                                                    self.cluster('region1'),
-                                                    self.cluster('region2')), 'w')
+                                                                        r1, r2), 'w')
             sysout.write('pcell\n')
             sysout.write('{:.5f} 0\n'.format(self.cluster('thickness') *
                                              norm(self.base_struc.getC())))
@@ -391,9 +435,9 @@ class AtomisticSim(object):
             
             cluster = rod.TwoRegionCluster(self.base_struc, 
                                            np.zeros(3), 
-                                           self.cluster('region2')*self.cluster('scale'),
-                                           self.cluster('region1'),
-                                           self.cluster('region2'),
+                                           r2*self.cluster('scale'),
+                                           r1,
+                                           r2,
                                            self.cluster('thickness')
                                          )
                                          
@@ -401,9 +445,7 @@ class AtomisticSim(object):
             cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
                                     Sij=self.sij, branch=self.cluster('branch_cut'))
             
-            outname = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), 
-                                                self.cluster('region1'),
-                                                self.cluster('region2'))
+            outname = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)
                                                 
             gulp.write1DCluster(cluster, self.sys_info, outname)
             
@@ -543,28 +585,29 @@ class AtomisticSim(object):
                 if self.atomic_energies is None: 
                     # prompt user to enter atomic symbols and energies
                     self.atomic_energies = ce.atom_dict_interactive() 
-                          
-            # run single point calculation
-            basename = '{}.{:.0f}.{:.0f}'.format(self.control('basename'),
-                                                 self.cluster('region1'),
-                                                 self.cluster('region2'))  
-
-            par, err = ce.dis_energy(self.cluster('rmax'),
-                                     self.cluster('rmin'),
-                                     self.cluster('dr'),
-                                     basename,
-                                     self.control('executable'),
-                                     self.cluster('method'),
-                                     norm(self.burgers),
-                                     self.cluster('thickness')*norm(self.base_struc.getC()),
-                                     relax_K=self.cluster('fit_K'),
-                                     K=self.K,
-                                     atom_dict=self.atomic_energies,
-                                     rc=self.elast('rcore'),
-                                     using_atomic=True
-                                    )
-                         
-            print('Finished.')              
+                    
+            # iterate through all radii       
+            for r1, r2 in zip(self.cluster('region1'), self.cluster('region2')):             
+                # run single point calculations
+                basename = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)  
+                
+                # note that <rmax> is always taken to be the region 1 radius
+                par, err = ce.dis_energy(r1,
+                                         self.cluster('rmin'),
+                                         self.cluster('dr'),
+                                         basename,
+                                         self.control('executable'),
+                                         self.cluster('method'),
+                                         norm(self.burgers),
+                                         self.cluster('thickness')*norm(self.base_struc.getC()),
+                                         relax_K=self.cluster('fit_K'),
+                                         K=self.K,
+                                         atom_dict=self.atomic_energies,
+                                         rc=self.elast('rcore'),
+                                         using_atomic=True
+                                        )
+                             
+                print('Finished.')              
             
         else: # supercell calculation
             # check that valid method has been supplied
