@@ -98,7 +98,7 @@ def vector(vec_str):
     # construct a numpy array from the <contents> of the vector string.
     # Since the magnitude of a burgers vector will, in general, be a floating
     # point number, we convert all elements to floats.
-    vec_element = re.compile('\d+\.?\d*')
+    vec_element = re.compile('-?\d+\.?\d*')
     elements = vec_element.findall(contents)
     base_vector = np.array([float(x) for x in elements])
         
@@ -442,6 +442,7 @@ class AtomisticSim(object):
                                          )
                                          
             # apply displacement field
+            print(self.cluster('branch_cut'))
             cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
                                     Sij=self.sij, branch=self.cluster('branch_cut'))
             
