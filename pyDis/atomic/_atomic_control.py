@@ -339,10 +339,6 @@ class AtomisticSim(object):
         else:
             raise ValueError(("{} does not correspond to a known simulation " +
                                       "type").format(self.control('calc_type')))
-                                      
-        # finally, calculate the dislocation core energy
-        if self.control('calculate_core_energy'):
-            self.core_energy()
             
     def read_unit_cell(self):
         '''Reads the unit cell and sets a few geometrical parameters.
@@ -455,6 +451,10 @@ class AtomisticSim(object):
                 self.run_simulation('dis.{}'.format(outname))
                 self.run_simulation('ndf.{}'.format(outname))
                 
+                # calculate core energy
+                if self.control('calculate_core_energy'):
+                    self.core_energy_cluster(r1, r2)
+                
         print('done')
             
         return
@@ -474,6 +474,10 @@ class AtomisticSim(object):
         else:
             for nx, ny in zip(self.multipole('nx'), self.multipole('ny')):
                 self.make_multipole(nx, ny)
+                
+        if self.control('calculate_core_energy'):
+            # calculate core energy
+            self.core_energy_sc()
         
         return
         
@@ -559,59 +563,53 @@ class AtomisticSim(object):
             
         return
         
-    def core_energy(self):
-        '''Calculate the core energy of the dislocation.
-        
-        Probably need to modify <cluster_energy> and <edge_energy> so that burgers
-        magnitude can be input.
+    def core_energy_cluster(self, r1, r2):
+        '''Calculate the core energy of a dislocation energy in with region I
+        radius <r1> and region II radius <r2>.
         '''
         
-        if not self.control('run_sim'):
-            # must have relaxed the dislocation structure to calculate it E_core
-            pass
-        elif not self.control('calculate_core_energy'):
-            pass      
-        elif self.control('calc_type') == 'cluster':
-            print('Calculating core energy:')
-            # calculate using cluster method
-            if not (self.cluster('method') in ['explicit', 'eregion', 'edge']):
-                raise ValueError(("{} does not correspond to a valid way to " +
-                   "calculate the core energy.").format(self.cluster('method')))
+        print('Calculating core energy:')
+        # calculate using cluster method
+        if not (self.cluster('method') in ['explicit', 'eregion', 'edge']):
+            raise ValueError(("{} does not correspond to a valid way to " +
+                "calculate the core energy.").format(self.cluster('method')))
                    
-            # calculate excess energy due to the presence of a dislocation       
-            if self.cluster('method') == 'explicit':
-                self.atomic_energies = None
-            elif self.cluster('method') == 'eregion':
-                self.atomic_energies = None
-            if self.cluster('method') == 'edge':
-                if self.atomic_energies is None: 
-                    # prompt user to enter atomic symbols and energies
-                    self.atomic_energies = ce.atom_dict_interactive() 
+        # calculate excess energy due to the presence of a dislocation       
+        if self.cluster('method') == 'explicit':
+            self.atomic_energies = None
+        elif self.cluster('method') == 'eregion':
+            self.atomic_energies = None
+        if self.cluster('method') == 'edge':
+            if self.atomic_energies is None: 
+                # prompt user to enter atomic symbols and energies
+                self.atomic_energies = ce.atom_dict_interactive() 
                     
-            # iterate through all radii       
-            for r1, r2 in zip(self.cluster('region1'), self.cluster('region2')):             
-                # run single point calculations
-                basename = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)  
+                     
+        # run single point calculations
+        basename = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)  
                 
-                # note that <rmax> is always taken to be the region 1 radius
-                par, err = ce.dis_energy(r1,
-                                         self.cluster('rmin'),
-                                         self.cluster('dr'),
-                                         basename,
-                                         self.control('executable'),
-                                         self.cluster('method'),
-                                         norm(self.burgers),
-                                         self.cluster('thickness')*norm(self.base_struc.getC()),
-                                         relax_K=self.cluster('fit_K'),
-                                         K=self.K,
-                                         atom_dict=self.atomic_energies,
-                                         rc=self.elast('rcore'),
-                                         using_atomic=True
-                                        )
+        # note that <rmax> is always taken to be the region 1 radius
+        par, err = ce.dis_energy(r1,
+                                 self.cluster('rmin'),
+                                 self.cluster('dr'),
+                                 basename,
+                                 self.control('executable'),
+                                 self.cluster('method'),
+                                 norm(self.burgers),
+                                 self.cluster('thickness')*norm(self.base_struc.getC()),
+                                 relax_K=self.cluster('fit_K'),
+                                 K=self.K,
+                                 atom_dict=self.atomic_energies,
+                                 rc=self.elast('rcore'),
+                                 using_atomic=True
+                                )
                              
-                print('Finished.')              
+        print('Finished.')              
             
-        else: # supercell calculation
+        def core_energy_sc(self):
+            '''Calculates the dislocation core energy from supercell calculations.
+            '''
+            
             # check that valid method has been supplied
             if not (self.multipole('method') in ['compare', 'edge']):
                 raise ValueError(("{} does not correspond to a valid way to " +
@@ -664,10 +662,8 @@ class AtomisticSim(object):
             else:
                 par, err = mp.fit_core_energy_mp(dE, self.base_struc, norm(self.burgers),
                                                 self.elast('rcore'), ndis=ndis, K=self.K)
-                                              
-            print(par)
             
-        return
+            return
         
         def write_output(self):
             '''Writes relevant output information to <control('output')>.
