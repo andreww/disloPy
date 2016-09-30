@@ -11,6 +11,7 @@ import sys
 sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from pyDis.atomic import aniso
+from pyDis.atomic import crystal as cry
 
 # conversion factor to take elastic properties from GPa to atomic units
 GPa_To_Atomic = 160.2176
@@ -57,13 +58,13 @@ def anisotropic_K(Cij, b_edge, b_screw, normal, using_atomic=True):
 
     return [Ke, Ks]
     
-def anisotropic_K_b(Cij, b, normal, using_atomic=True):
+def anisotropic_K_b(Cij, b, n=cry.ei(1), m=cry.ei(2), using_atomic=True):
     '''Caluculate the energy coefficient for a dislocation with a specific 
     Burgers vector.
     '''
     
     # solve sextic eigenvalue problem
-    p, A, L = aniso.solve_sextic(Cij, b/norm(b), normal/norm(normal))
+    p, A, L = aniso.solve_sextic(Cij, n, m)
     energy_tensor = aniso.tensor_k(L)
     
     # calculate the scalar energy coefficient

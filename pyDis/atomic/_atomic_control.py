@@ -129,7 +129,8 @@ def handle_atomistic_control(param_dict):
     # aniso_edge will be added later. <normal> is the slip plane normal.
     elast_cards = (('disl_type', {'default': None, 'type': str}),
                    ('burgers', {'default': cry.ei(3), 'type': vector}),
-                   ('normal', {'default': cry.ei(2), 'type': vector}), 
+                   ('n', {'default': cry.ei(1), 'type': vector}),
+                   ('m', {'default': cry.ei(2), 'type': vector}), 
                    ('bulk', {'default': None, 'type': float}),
                    ('shear', {'default': None, 'type': float}),
                    ('poisson', {'default': None, 'type': float}),
@@ -313,7 +314,8 @@ class AtomisticSim(object):
             # Burgers vector and line vector) with which we are concerned
             self.K = 4*np.pi*coeff.anisotropic_K_b(self.elast('cij'),
                                                    self.elast('burgers'),
-                                                   self.elast('normal')
+                                                   self.elast('n'),
+                                                   self.elast('m')
                                                   )
         elif self.elast('coefficients').startswith('iso'):
             # extract edge and screw components
@@ -442,7 +444,6 @@ class AtomisticSim(object):
                                          )
                                          
             # apply displacement field
-            print(self.cluster('branch_cut'))
             cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
                                     Sij=self.sij, branch=self.cluster('branch_cut'))
             
