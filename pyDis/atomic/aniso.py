@@ -158,7 +158,7 @@ def solve_sextic(Cij, n=cry.ei(1), m=cry.ei(2)):
     
     p, xsi = lin.eig(NStroh(Cij, n, m))
     
-    # Calculate number of eigenvalues of N
+    # number of eigenvalues of N
     nEig = len(p)    
     # reorder p
     p = np.array([p[i] for i in orderedIndices])
@@ -214,8 +214,8 @@ def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
             # calculate displacement associated with each conjugate pair of 
             # eigenvalues/eigenvectors.
             for i in range(3):
-                posEig = A[i]*np.dot(L[i], b)*np.log(x[0]+p[i]*x[1])
-                negEig = A[i+3]*np.dot(L[i+3], b)*np.log(x[0]+p[i+3]*x[1])
+                posEig = A[i]*np.dot(L[i], b)*np.log(dx+p[i]*dy)
+                negEig = A[i+3]*np.dot(L[i+3], b)*np.log(dx+p[i+3]*dy)
                 u = u + (posEig - negEig).copy()
                 
         # make real

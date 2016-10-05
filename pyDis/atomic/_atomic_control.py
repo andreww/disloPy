@@ -440,8 +440,15 @@ class AtomisticSim(object):
                                          )
                                          
             # apply displacement field
-            cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
-                                    Sij=self.sij, branch=self.cluster('branch_cut'))
+            if self.elast('disl_type') == 'screw':
+                # should not contain a branch cut
+                cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
+                                     Sij=self.sij, branch=self.cluster('branch_cut'),
+                                                                     use_branch=False)
+            else:              
+                # delete/merge atoms that cross the branch cut                                          
+                cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
+                                     Sij=self.sij, branch=self.cluster('branch_cut'))
             
             outname = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)
                                                 

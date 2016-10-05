@@ -222,7 +222,7 @@ class TwoRegionCluster(PeriodicCluster):
         return self._r1Atoms
         
     def applyField(self, field_type, dis_cores, dis_burgers, Sij=0.5, branch=[0,-1],
-                                                                THRESH=0.5):
+                                                        THRESH=0.5, use_branch=True):
         '''Applies field to cluster and then updates list of RI
         and RII atoms. Default branch cut is appropriate for the displacement
         field corresponding to a pure edge dislocation in isotropic elasticity.
@@ -240,75 +240,79 @@ class TwoRegionCluster(PeriodicCluster):
             
         # check for overlapping atoms. Remove atoms that cross the branch cut.
         # NEED TO GENERALIZE FOR ARBITRARY BRANCH CUTS
-        for i, atom in enumerate(self._atoms):
-            # if atom is not going to be written to output, skip all tests
-            if not(atom.writeToOutput()):
-                continue
-            
-            x0 = atom.getCoordinates()
-            xi = atom.getDisplacedCoordinates()
-            # if atom is near the centre of the dislocation, likewise skip tests
-            if L.norm(xi[:-1]) < THRESH:
-                continue
-            # rotate coordinates to the basis with the branch cut along -y
-            x0tilde = np.dot(R, x0)
-            xitilde = np.dot(R, xi)
-            threshold(x0tilde)
-            threshold(xitilde)
-            #if x0tilde[1] < 0. and xitilde[1] < 0.:
-            if xitilde[1] < 0.:
-                # atom remains in the half of the crystal defined by the branch cut
-                # NOTE: need to check if it matters whether or not it started in the 
-                # lower half of the simulation cell
-                if np.sign(x0tilde[0]) != np.sign(xitilde[0]):
-                    if np.sign(x0tilde[0]) < 0. and abs(xitilde[0]) < 1e-12:
-                        # atom was in the left half of the crystal and intersects 
-                        # the branch cut -> will delete its counterpart from 
-                        # the right half of the crystal
-                        continue
-                    else:
-                        # atom passes over the branch cut and is deleted
-                        # if it is within THRESH of the branch cut, will test to
-                        # see if there are overlapping atoms
-                        if abs(xitilde[0]) < THRESH:                           
-                            for j, other_atom in enumerate(self._atoms):
-                                if i == j or not(other_atom.writeToOutput()):
-                                    continue
-                                else:
-                                    xj = other_atom.getDisplacedCoordinates()
-                                    delta = L.norm(xi-xj)
-                                    if delta < 2*THRESH:
-                                        atom.switchOutputMode()
-                                        break 
-                        else:
-                            atom.switchOutputMode()
-                            
-                # check for overlaps at the branch cut
-                elif x0tilde[0] > 0. and abs(xitilde[0]) < THRESH:
-                    for j, other_atom in enumerate(self._atoms):
-                        if i == j or not(other_atom.writeToOutput()):
+        if use_branch:
+            for i, atom in enumerate(self._atoms):
+                # if atom is not going to be written to output, skip all tests
+                if not(atom.writeToOutput()):
+                    continue
+                
+                x0 = atom.getCoordinates()
+                xi = atom.getDisplacedCoordinates()
+                # if atom is near the centre of the dislocation, likewise skip tests
+                if L.norm(xi[:-1]) < THRESH:
+                    continue
+                # rotate coordinates to the basis with the branch cut along -y
+                x0tilde = np.dot(R, x0)
+                xitilde = np.dot(R, xi)
+                threshold(x0tilde)
+                threshold(xitilde)
+                #if x0tilde[1] < 0. and xitilde[1] < 0.:
+                if xitilde[1] < 0.:
+                    # atom remains in the half of the crystal defined by the branch cut
+                    # NOTE: need to check if it matters whether or not it started in the 
+                    # lower half of the simulation cell
+                    if np.sign(x0tilde[0]) != np.sign(xitilde[0]):
+                        if np.sign(x0tilde[0]) < 0. and abs(xitilde[0]) < 1e-12:
+                            # atom was in the left half of the crystal and intersects 
+                            # the branch cut -> will delete its counterpart from 
+                            # the right half of the crystal
                             continue
                         else:
-                            xj = other_atom.getDisplacedCoordinates()
-                            #calculate distance between <atom> and <other_atom>
-                            delta = L.norm(xi-xj)
-                            if delta < 2*THRESH:
-                                # atoms deemed to be overlapping, and <atom> 
-                                # should be removed from output
+                            # atom passes over the branch cut and is deleted
+                            # if it is within THRESH of the branch cut, will test to
+                            # see if there are overlapping atoms
+                            if abs(xitilde[0]) < THRESH:                           
+                                for j, other_atom in enumerate(self._atoms):
+                                    if i == j or not(other_atom.writeToOutput()):
+                                        continue
+                                    else:
+                                        xj = other_atom.getDisplacedCoordinates()
+                                        delta = L.norm(xi-xj)
+                                        if delta < 2*THRESH:
+                                            atom.switchOutputMode()
+                                            break 
+                            else:
                                 atom.switchOutputMode()
                                 
-                                
-                                # "merge" atoms
-                                xjtilde = np.dot(R, xj)
-                                threshold(xjtilde)
-                                # project onto branch cut
-                                #xjtilde[0] = 0.
-                                # rotate back to original coordinate system
-                                #xj_unrot = np.dot(Rinv, xjtilde)
-                                #other_atom.setDisplacedCoordinates([xj_unrot[0],
-                                #                       xj_unrot[1], xj_unrot[2]])
-                                                            
-                                break
+                    # check for overlaps at the branch cut
+                    elif x0tilde[0] > 0. and abs(xitilde[0]) < THRESH:
+                        for j, other_atom in enumerate(self._atoms):
+                            if i == j or not(other_atom.writeToOutput()):
+                                continue
+                            else:
+                                xj = other_atom.getDisplacedCoordinates()
+                                #calculate distance between <atom> and <other_atom>
+                                delta = L.norm(xi-xj)
+                                if delta < 2*THRESH:
+                                    # atoms deemed to be overlapping, and <atom> 
+                                    # should be removed from output
+                                    atom.switchOutputMode()
+                                    
+                                    
+                                    # "merge" atoms
+                                    xjtilde = np.dot(R, xj)
+                                    threshold(xjtilde)
+                                    # project onto branch cut
+                                    #xjtilde[0] = 0.
+                                    # rotate back to original coordinate system
+                                    #xj_unrot = np.dot(Rinv, xjtilde)
+                                    #other_atom.setDisplacedCoordinates([xj_unrot[0],
+                                    #                       xj_unrot[1], xj_unrot[2]])
+                                                                
+                                    break
+        else:
+            # no branch cut
+            pass
                                                        
         #super(GulpCluster, self).applyField(fieldType, disCores, disBurgers, Sij)
         self.specifyRegions()

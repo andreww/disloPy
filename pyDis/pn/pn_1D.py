@@ -161,18 +161,23 @@ def plot_rho(ax, rho, x, colour='b', width=1., a_val=0.40):
     '''Width should usually be equal to the spacing between atomic planes.
     '''
     
-    #rho_disc = ax.bar(x[:-1], rho, width, color=colour, align='center', alpha=a_val,  
-    #                                         edgecolor=colour, label=r'$\rho(r)$')
     rho_disc = ax.plot(x[:-1], rho, '{}D'.format(colour), label=r'$\rho(r)$')
     ax.plot(x[:-1], rho, '{}{}'.format(colour, '-.'))
     return rho_disc
     
 def plot_u(ax, u, x, colour='r', shape='s', linestyle='-.'):
+    '''Plots the disregistry field along x.
+    '''
+    
     u_disc = ax.plot(x, u, '{}{}'.format(colour, shape), label='$u(r)$')
     ax.plot(x, u, '{}{}'.format(colour, linestyle))
     return u_disc 
     
 def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True, nplanes=30):
+    '''Plots the disregistry field together with the associated dislocation
+    density distribution.
+    '''
+    
     fig, ax = plt.subplots()
 
     if along_b:
@@ -203,6 +208,10 @@ def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True, nplanes=30
 ### ENERGY TERMS ###
     
 def elastic_energy(A, x0, c, b=1, K=1):
+    '''Calculates the elastic energy of the dislocation characterised by 
+    parameters A, x0, and c, with Burgers vector b and elastic coefficient K.
+    '''
+    
     E = 0.
     for Ai, xi, ci in zip(A, x0, c):
         for Aj, xj, cj in zip(A, x0, c):
@@ -210,7 +219,11 @@ def elastic_energy(A, x0, c, b=1, K=1):
     return -0.5*K*E*b**2
     
 def misfit_energy(A, x0, c, N, energy_function, b, spacing, shift=0.):
-
+    '''Calculates the inelastic energy associated with a dislocation defined
+    by the parameters A, x0, and c and lying in the plane whose misfit energy
+    is given by <energy_function>.
+    '''
+    
     r = spacing*(np.arange(-N, N))
     u = u_field(r, A, x0, c, b)
     Em = energy_function(u).sum()*spacing
@@ -226,6 +239,11 @@ def total_energy(A, x0, c, N, energy_function, b, spacing, K=1):
     return Em + E_elast
     
 def total_optimizable(params, *args):
+    '''Puts the total energy function for the dislocation in a form useable by
+    fmin_slsqp.
+    '''
+    
+    # extract simulation parameters
     n_funcs = args[0]
     N = args[1]
     energy_function = args[2]
@@ -241,6 +259,10 @@ def total_optimizable(params, *args):
     return total_energy(A, x0, c, N, energy_function, b, spacing, K)
     
 def make_limits(n_funcs, max_x):
+    '''Constructs reasonable limits for the parameters used to fit the disregistry
+    field.
+    '''
+    
     unbound = (-np.inf, np.inf)
     spatial_bounds = (-max_x/2., max_x/2.)
     non_negative = (0, 100.)
@@ -284,12 +306,18 @@ def mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K):
         
 def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False,
                                    use_sym=False, b=1., spacing=1., noisy=False):
+    '''Runs a collection of dislocation energy minimization calculations with
+    random dislocation configurations to find the optimum(ish) dislocation 
+    configuration.
+    '''
+    
+    # set starting energy to something unreasonable
     Emin = 1e6
     x_opt = None
     lims = make_limits(N, max_x)
     
     for i in xrange(n_iter):
-        if i % 100 == 0:
+        if noisy and i % 100 == 0:
             print("Starting iteration {}...".format(i))
 
         E, x_try = mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K)

@@ -4,6 +4,7 @@ import numpy as np
 import re
 import matplotlib.pyplot as plt
 import sys
+from numpy.linalg import norm
 
 # PN modules from pyDis package
 sys.path.append('/home/richard/code_bases/dislocator2/')
@@ -384,18 +385,30 @@ class PNSim(object):
                                                  do_fourier_fit=self.surf('do_fourier'),
                                                  n_order=self.surf('fourier_N'))
         elif n_columns == 3: # 2-dimensional misfit function
-            base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), 
-                                                  self.surf('y_length'),
-                                                  angle=self.surf('angle'),
-                                                  units=self.units,
-                                                  hasvac=self.surf('has_vacuum'),
-                                                  do_fourier_fit=self.surf('do_fourier'),
-                                                  n_order=self.surf('fourier_N'))
+            # fit the gamma surface
+            if self.control('dimensions') == 2:
+                base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), 
+                                                      self.surf('y_length'),
+                                                   angle=self.surf('angle'),
+                                                           units=self.units,
+                                             hasvac=self.surf('has_vacuum'),
+                                     do_fourier_fit=self.surf('do_fourier'),
+                                             n_order=self.surf('fourier_N'))
                                                   
-            temp_gsf = fg.new_gsf(base_func, self.surf('map_ux'), 
-                                             self.surf('map_uy'))
+                self.gsf = fg.new_gsf(base_func, self.surf('map_ux'), self.surf('map_uy'))
                                              
-            if self.control('dimensions') == 1: 
+            elif self.control('dimensions') == 1: 
+                # begin by performing a spline fit to the surface 
+                base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), 
+                                                      self.surf('y_length'),
+                                                   angle=self.surf('angle'),
+                                                           units=self.units,
+                                             hasvac=self.surf('has_vacuum'),
+                                                       do_fourier_fit=False)
+                
+                # remap input so that x and y correspond to ux and uy                                       
+                temp_gsf = fg.new_gsf(base_func, self.surf('map_ux'), self.surf('map_uy'))
+                
                 # project out the dislocation parallel component
                 # determine which axis to use (0/x if edge, 1/y if screw)
                 if self.control('disl_type') == 'edge':
@@ -403,19 +416,31 @@ class PNSim(object):
                 elif self.control('disl_type') == 'screw':
                     use_axis = 1
                     
-                self.gsf = fg.projection(temp_gsf, self.surf('gamma_shift'),
-                                                                   use_axis)
-            else:
-                self.gsf = temp_gsf
+                temp_1d = fg.projection(temp_gsf, self.surf('gamma_shift'), use_axis)
+                
+                # set the correct periodicity
+                temp_1d2 = lambda x: temp_1d(x % self.struc('burgers'))
+                
+                if self.surf('do_fourier'):
+                    # fit a fourier series to <temp_1d2>.
+                    self.gsf = fg.gline_fourier(temp_1d2, self.surf('fourier_N'),
+                                                              self.struc('burgers'))
         else:
             raise ValueError("GSF grid has invalid number of dimensions")
 
         return
                             
     def post_processing(self):
+        '''Calculate the displacement field and dislocation density, record these
+        values in appropriate output files, plot them (if requested to by the
+        user), and then calculate the dislocation height and width.
+        '''
         
         if self.control('plot') or self.prop('max_rho') or self.prop('width'):
-            # need to extract misfit profile and dislocation density
+            # lattice points
+            r = self.struc('spacing')*np.arange(-self.control('max_x'), self.control('max_x'))
+            
+            # calculate misfit profile and dislocation density
             if self.control('dimensions') == 1:
                 self.ux = pn1.get_u1d(self.par, self.struc('burgers'), 
                                    self.struc('spacing'), self.control('max_x'))  
@@ -423,9 +448,6 @@ class PNSim(object):
                 self.ux, self.uy = pn2.get_u2d(self.par, self.struc('burgers'),
                                     self.struc('spacing'), self.control('max_x'),
                                                       self.control('disl_type'))
-
-            r = self.struc('spacing')*np.arange(-self.control('max_x'),
-                                                  self.control('max_x'))
             
             # create plot of dislocation density and misfit profile
             if self.control('plot'):   
@@ -632,4 +654,3 @@ def main(filename):
     
 if __name__ == "__main__":
     main(sys.argv[1])
-

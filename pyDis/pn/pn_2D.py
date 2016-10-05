@@ -170,8 +170,10 @@ def supported_dislocation(disl_type):
     '''Check that <disl_type> is a supported dislocation type and return 
     the correct constraints. At present, only edge and screw dislocations are 
     supported. In the future, however, we will extend this to general dislocations.
-    '''
     
+    NOTE: This can be (partially) fooled by setting the "edge" and "screw" directions
+    to be the b-parallel and b-perpendicular components of the disregistry.
+    '''
     
     valid_dislocations = ['edge', 'screw']
     if not(disl_type.lower() in valid_dislocations):
@@ -246,6 +248,10 @@ def get_u2d(params, b, spacing, N, disl_type):
     
 def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
                                 use_sym=False, b=1, spacing=1, noisy=False):
+    '''Runs a collection of dislocation energy minimization calculations with
+    random dislocation configurations to find the optimum(ish) dislocation 
+    configuration.
+    '''
                                                               
     # generate limits and constraints
     if not energy_function:
@@ -258,11 +264,16 @@ def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
     # minimum energy to suitable dummy values
     Emin = 1e6
     x_opt = None
+    
     for i in xrange(n_iter):
-        if i % 100 == 0:
+        if noisy and i % 100 == 0:
             print("Starting iteration {}...".format(i))
+        
+        # generate a trial dislocation configuration and calculate its energy    
         E, x_try = mc_step2d(N, max_x, energy_function, lims, K, shift, constraints,
                                                   use_sym, disl_type, b, spacing)
+                                                  
+        # check that the parameters are reasonable(ish)
         is_valid = check_parameters2d(x_try, N, lims, disl_type)
         
         if is_valid and (E < Emin):

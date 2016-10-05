@@ -204,6 +204,9 @@ def create_lambda(in_str):
     return remapped_coord
     
 def new_gsf(gsf_calc, x_form, y_form):
+    '''Remaps <gsf_calc> so that the x and y directions correspond to those 
+    given in <x_form> and <y_form>.
+    '''
 
     x_new = create_lambda(x_form)
     y_new = create_lambda(y_form)

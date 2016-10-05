@@ -51,7 +51,7 @@ if (__name__ == "__main__"):
     sysInfo = gulp.parse_gulp(gulpName,gulpStruc)
     
     ### TEMPORARY
-    cij = aniso.readCij('mgo')
+    cij = aniso.readCij('mgo.0')
     uField = aniso.makeAnisoField(cij)
     ### \TEMPORARY
     
@@ -67,7 +67,7 @@ if (__name__ == "__main__"):
     
     eta = np.array([etax,etay])
     #b = np.array([L.norm(gulpStruc.getA()),0.,0.])
-    b = np.array([0.,-L.norm(gulpStruc.getB()),0.])
+    b = np.array([L.norm(gulpStruc.getA()), 0.,0.])
     disBurgers = np.array([b])
     disCores = np.array([[0.,0.]]) 
     
