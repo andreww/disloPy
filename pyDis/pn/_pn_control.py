@@ -372,16 +372,19 @@ class PNSim(object):
         # check to see if the user has provided parameters specifying a trial
         # disregistry profile (in the order A x0 c).
         if len(self.control('parameters')) != 0:
+            # use supplied parameters and perform only a single energy minimization
             inpar = self.control('parameters')
+            niter = 1
         else:
             # no parameters -> tell program that it should generate a trial 
             # configuration
             inpar = None
+            niter = self.control('n_iter')
             
         if self.control('dimensions') == 1:
             # calculate dislocation energy and disregistry profile
             self.E, self.par = pn1.run_monte1d(
-                                               self.control('n_iter'),
+                                               niter,
                                                self.control('n_funcs'),
                                                self.K,
                                                max_x=self.control('max_x'),
@@ -394,7 +397,7 @@ class PNSim(object):
                                               ) # Done Monte Carlo 1D
         elif self.control('dimensions') == 2:
             self.E, self.par = pn2.run_monte2d(
-                                               self.control('n_iter'),
+                                               niter,
                                                self.control('n_funcs'),
                                                self.control('disl_type'),
                                                self.K, 
