@@ -7,6 +7,10 @@ from scipy.optimize import fmin_slsqp
 #from test_2D_gamma import test_gamma_surf
 from numpy.random import uniform
 
+# suppress divide by zero Runtime warnings
+import warnings
+warnings.simplefilter("ignore", RuntimeWarning)
+
 def opposing_partials(N):
     '''Returns coefficients A[:] st. sum(A[:]) == 0
     '''
@@ -147,18 +151,35 @@ def make_limits2d(n_funcs, max_x, disl_type):
         
     return lims
     
-def mc_step2d(N, max_x, energy_function, lims, K, shift, constraints, use_sym,
-                                                    disl_type, b, spacing):
-    '''Single monte-carlo step.
+def dislocation2d(N, max_x, energy_function, lims, K, shift, constraints, use_sym,
+                                                     disl_type, b, spacing, inpar=None):
+    '''Optimise disregistry profile of dislocation with Burgers vector <b> and
+    misfit energy defined by <energy_function>.
     '''
     
-    params = generate_input(N, disl_type, spacing, use_sym)
+    if not (inpar is None):
+        # use the user-provided dislocation parameters
+        params = inpar 
+        
+        # check that <params> matches <N> and has the correct number of parameters
+        # for each arctan function
+        if len(params) % 3 != 0:
+            raise ValueError("Each function must have three parameters: A, x0, and c")
+        elif len(params)/3 != N:
+            raise Warning("Number of supplied parameters does not match specified" +
+                          " number of functions. Setting N = {}".format(len(params)/3))
+            N = len(params)/3   
+    else:
+        # generate a trial input configuration
+        params = generate_input(N, disl_type, spacing, use_sym)
 
     try:
+        # attempt to optimize the disregistry field
         new_par = fmin_slsqp(total_optimizable2d, params, eqcons=constraints,
                         args=(N, max_x, energy_function, K, shift, b, spacing),
                                               bounds=lims, iprint=0, acc=1e-16)
-                                                                    
+        
+        # calculate energy of optimized field                                                           
         E = total_optimizable2d(new_par, N, max_x, energy_function, K, shift, b, spacing)
     except RuntimeError:
         new_par = None
@@ -191,12 +212,20 @@ def supported_dislocation(disl_type):
 ### CONSTRAINTS ON THE A[:] COEFFICIENTS FOR A SCREW DISLOCATION
 
 def full_screw(params, *args):
+    '''Sum of the A coefficients must be 1 for the screw component of displacement
+    of a pure screw dislocation.
+    '''
+    
     n_funcs = args[0]
     A = params[:n_funcs]
     A_screw = A[len(A)/2:]
     return 1. - sum(A_screw)
     
 def no_edge(params, *args):
+    '''Sum of the A coefficients must be 0 for the edge component of displacement
+    of a pure screw dislocation.
+    '''
+    
     n_funcs = args[0]
     A = params[:n_funcs]
     A_edge = A[:len(A)/2]
@@ -205,12 +234,20 @@ def no_edge(params, *args):
 ### CONSTRAINTS ON THE A[:] COEFFICIENTS FOR AN EDGE DISLOCATION   
 
 def no_screw(params, *args):
+    '''Sum of the A coefficients must be 0 for the screw component of displacement
+    of a pure edge dislocation.
+    '''
+    
     n_funcs = args[0]
     A = params[:n_funcs]
     A_screw = A[len(A)/2:]
     return sum(A_screw)
     
 def full_edge(params, *args):
+    '''Sum of the A coefficients must be 1 for the edge component of displacement
+    of a pure edge dislocation.
+    '''
+    
     n_funcs = args[0]
     A = params[:n_funcs]
     A_edge = A[:len(A)/2]
@@ -247,11 +284,16 @@ def get_u2d(params, b, spacing, N, disl_type):
     return ux, uy
     
 def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
-                                use_sym=False, b=1, spacing=1, noisy=False):
+                 use_sym=False, b=1, spacing=1, noisy=False, params=None):
     '''Runs a collection of dislocation energy minimization calculations with
     random dislocation configurations to find the optimum(ish) dislocation 
     configuration.
     '''
+ 
+    # check that the specified number of functions matches <params>
+    if not (params is None):
+        if N != len(params)/3:
+            N = len(params)/3 
                                                               
     # generate limits and constraints
     if not energy_function:
@@ -270,8 +312,8 @@ def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
             print("Starting iteration {}...".format(i))
         
         # generate a trial dislocation configuration and calculate its energy    
-        E, x_try = mc_step2d(N, max_x, energy_function, lims, K, shift, constraints,
-                                                  use_sym, disl_type, b, spacing)
+        E, x_try = dislocation2d(N, max_x, energy_function, lims, K, shift, constraints,
+                                          use_sym, disl_type, b, spacing, inpar=params)
                                                   
         # check that the parameters are reasonable(ish)
         is_valid = check_parameters2d(x_try, N, lims, disl_type)

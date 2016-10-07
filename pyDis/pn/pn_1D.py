@@ -276,40 +276,68 @@ def make_limits(n_funcs, max_x):
     return lims
     
 def cons_func(inparams, *args):
+    '''Ensures that the sum of the <A> parameters is 1.
+    '''
+    
     n_funcs = args[0]
     A = inparams[:n_funcs]
     return 1.-sum(A)
 
-def mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K):
-    '''Single monte carlo step for dislocation structure.
+def dislocation1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K,
+                                                                      inpar=None):
+    '''Optimise structure of dislocation with Burgers vector <b> and misfit energy
+    given by <energy_function>.
     '''
     
-    if use_sym:
+    # begin by generating input
+    if not(inpar is None):
+        # use the input parameters supplied by the user
+        params = inpar
+        # check that the number of functions and the length of the supplied
+        # parameter array match (ie. correct length and divisibility)
+        if len(params) % 3 != 0:
+            raise ValueError("Each function must have three parameters: A, x0, and c")
+        elif len(params)/3 != N:
+            raise Warning("Number of supplied parameters does not match specified" +
+                          " number of functions. Setting N = {}".format(len(params)/3))
+            N = len(params)/3
+    elif use_sym:
+        # generate a random disregistry field that is symmetric about its centre  
         params = gen_symmetric(N, spacing)
     else:
+        # generate a random disregistry field
         params = gen_inparams(N, spacing)
 
     if noopt:
-        pass
+        # return energy of starting disregistry field
+        E = total_optimizable(params, N, max_x, energy_function, b, spacing, K)
+        return E, params
     else:
         try:
+            # optimise dislocation disregistry field
             new_par = fmin_slsqp(total_optimizable, params, eqcons=[cons_func],
                                   args=(N, max_x, energy_function, b, spacing, K),
                                              bounds=lims, iprint=0, acc=1e-14)
-                       
+            # calculate energy           
             E = total_optimizable(new_par, N, max_x, energy_function, b, spacing, K)
         except RuntimeError:
             new_par = None
             E = np.inf
 
-    return E, new_par
+        return E, new_par
         
 def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False,
-                                   use_sym=False, b=1., spacing=1., noisy=False):
+                                    use_sym=False, b=1., spacing=1., noisy=False,
+                                                                     params=None):
     '''Runs a collection of dislocation energy minimization calculations with
     random dislocation configurations to find the optimum(ish) dislocation 
     configuration.
     '''
+    
+    # check that the specified number of functions matches <params>
+    if not (params is None):
+        if N != len(params)/3:
+            N = len(params)/3
     
     # set starting energy to something unreasonable
     Emin = 1e6
@@ -320,7 +348,10 @@ def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False
         if noisy and i % 100 == 0:
             print("Starting iteration {}...".format(i))
 
-        E, x_try = mc_step1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K)
+        E, x_try = dislocation1d(N, max_x, energy_function, lims, noopt, use_sym,
+                                                    b, spacing, K, inpar=params)
+
+        # check that the output parameters are physically reasonable
         is_valid = check_parameters1d(x_try, N, lims)
 
         if is_valid and (E < Emin):

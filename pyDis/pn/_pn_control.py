@@ -128,7 +128,7 @@ def to_vector(in_str):
     '''
     
     new_vec = []
-    for x in re.finditer('-?\d+', in_str):
+    for x in re.finditer('-?\d+\.?\d*', in_str):
         new_vec.append(float(x.group()))
     
     return np.array(new_vec)
@@ -145,17 +145,19 @@ def handle_pn_control(param_dict):
     control_cards = (('gsf_file', {'default':None, 'type':str}),
                      ('output', {'default':'pyDisPN.out', 'type':str}),
                      ('title_line', {'default':'Peierls-Nabarro model', 'type':str}),
-                     ('n_iter', {'default':1000, 'type':int}),
+                     ('n_iter', {'default':1, 'type':int}),
                      ('dimensions', {'default':2, 'type':int}),
                      ('max_x', {'default':100, 'type':int}),
-                     ('n_funcs', {'default':6, 'type':int}),
+                     ('n_funcs', {'default':np.nan, 'type':int}),
                      ('disl_type', {'default':None, 'type':str}),
                      ('use_sym', {'default':True, 'type':to_bool}),
                      ('plot', {'default':False, 'type':to_bool}),
                      ('plot_name', {'default':'pn_plot.tif', 'type':str}),
                      ('plot_both', {'default':False, 'type':to_bool}),
+                     ('record', {'default':True, 'type':to_bool}),
                      ('nplanes', {'default':30, 'type':int}),
-                     ('noisy', {'default': False, 'type': to_bool})
+                     ('noisy', {'default': False, 'type': to_bool}),
+                     ('parameters', {'default':np.array([]), 'type':to_vector})
                    )
 
     # cards for the <&struc> namelist. Need to find some way to incorporate 
@@ -226,7 +228,7 @@ def handle_pn_control(param_dict):
             except ValueError:
                 default_val = var[1]['default']
                 # test to see if variable is "mission-critical" using None != None
-                if default_val == None:
+                if default_val is None:
                     raise ValueError("No value supplied for mission-critical" +
                                                  " variable {}.".format(var[0]))
                 else:
@@ -322,26 +324,52 @@ class PNSim(object):
                 # for the moment, default to shear
                 self.K = self.K[1]
         
-        # construct the gamma surface (gamma line in 1D - not implemented)
+        # construct the gamma surface/gamma line
+        if self.control('noisy'):
+            print("Constructing gamma surface/line")
         self.construct_gsf()
         
         # calculate fit parameters and energy of the dislocation
+        if self.control('noisy'):
+            print("Relaxing dislocation core structure.")
+             
         self.run_sim()
         
+        if self.control('noisy'):
+            print("Core relaxation complete.")
+        
         # do post-processing and/or plotting, if requested by the user
+        if self.control('noisy'):
+            print('Doing post-processing.')       
         self.post_processing()
         
         # calculate Peierls stress and Peierls barrier, if requested
+        if self.control('noisy'):
+            print('Calculating Peierls stress.')
+            
         self.peierls()
+        
+        if self.control('noisy'):
+            print('Peierls stress calculated.')
 
         # write results to ouput
         self.write_output()
         
     def run_sim(self):
+        '''Calculates an optimum(ish) dislocation structure.
+        '''
+        
+        # check to see if the user has provided parameters specifying a trial
+        # disregistry profile (in the order A x0 c).
+        if len(self.control('parameters')) != 0:
+            inpar = self.control('parameters')
+        else:
+            # no parameters -> tell program that it should generate a trial 
+            # configuration
+            inpar = None
+            
         if self.control('dimensions') == 1:
-            #!!! could potentially merge reduce the code length here by making
-            #!!! <disl_type> a keyword argument in <run_monte2d> and creating
-            #!!! a dummy argument with the same name in <run_monte1d>.
+            # calculate dislocation energy and disregistry profile
             self.E, self.par = pn1.run_monte1d(
                                                self.control('n_iter'),
                                                self.control('n_funcs'),
@@ -351,7 +379,8 @@ class PNSim(object):
                                                use_sym=self.control('use_sym'),
                                                b=self.struc('burgers'),
                                                spacing=self.struc('spacing'),
-                                               noisy=self.control('noisy')
+                                               noisy=self.control('noisy'),
+                                               params=inpar
                                               ) # Done Monte Carlo 1D
         elif self.control('dimensions') == 2:
             self.E, self.par = pn2.run_monte2d(
@@ -364,7 +393,8 @@ class PNSim(object):
                                                use_sym=self.control('use_sym'),
                                                b=self.struc('burgers'),
                                                spacing=self.struc('spacing'),
-                                               noisy=self.control('noisy')
+                                               noisy=self.control('noisy'),
+                                               params=inpar
                                               ) # Done Monte Carlo 2D              
                                                             
         return
@@ -423,8 +453,10 @@ class PNSim(object):
                 
                 if self.surf('do_fourier'):
                     # fit a fourier series to <temp_1d2>.
-                    self.gsf = fg.gline_fourier(temp_1d2, self.surf('fourier_N'),
-                                                              self.struc('burgers'))
+                    self.gsf = fg.gline_fourier(temp_1d, self.surf('fourier_N'),
+                                                           self.struc('burgers'))
+                else:
+                    self.gsf = temp_1d2
         else:
             raise ValueError("GSF grid has invalid number of dimensions")
 
@@ -436,19 +468,69 @@ class PNSim(object):
         user), and then calculate the dislocation height and width.
         '''
         
-        if self.control('plot') or self.prop('max_rho') or self.prop('width'):
+        if (self.control('plot') or self.prop('max_rho') or self.prop('width') or
+                                                        self.control('record')):
+                                                        
+            if self.control('record'):
+                # open output files for the disregistry and dislocation density
+                outstreamu = open('disreg.{}'.format(self.control('output')), 'w')
+                outstreamrho = open('rho.{}'.format(self.control('output')), 'w')
+                
             # lattice points
             r = self.struc('spacing')*np.arange(-self.control('max_x'), self.control('max_x'))
             
-            # calculate misfit profile and dislocation density
+            # calculate misfit profile and dislocation density and write to output
+            # files
             if self.control('dimensions') == 1:
                 self.ux = pn1.get_u1d(self.par, self.struc('burgers'), 
-                                   self.struc('spacing'), self.control('max_x'))  
+                                   self.struc('spacing'), self.control('max_x')) 
+                
+                # record disregistry and dislocation density
+                if self.control('record'):
+                    # header for output files
+                    outstreamu.write('# r (\AA) u (\AA)\n')
+                    outstreamrho.write('# r (\AA) rho\n')
+                    
+                    # record values of rho and u at each lattice point
+                    rho = pn1.rho(self.ux, r) 
+                    for i in range(len(r)):
+                        outstreamu.write('{:.3f} {:.6f}\n'.format(r[i], self.ux[i]))
+                        if i != 0:
+                            # rho not defined for first lattice plane
+                            # Record at intervals between lattice planes
+                            ri = 0.5*(r[i]+r[i-1])
+                            outstreamrho.write('{:.3f} {:.6f}\n'.format(ri, rho[i-1]))
+                        
+                    outstreamu.close()
+                    outstreamrho.close()
+                    
             elif self.control('dimensions') == 2:
                 self.ux, self.uy = pn2.get_u2d(self.par, self.struc('burgers'),
                                     self.struc('spacing'), self.control('max_x'),
                                                       self.control('disl_type'))
-            
+                
+                # record both components of disregistry and dislocation density
+                if self.control('record'):
+                    # header lines
+                    outstreamu.write('# r (\AA) ux (\AA) uy (\AA)\n')
+                    outstreamrho.write('# r (\AA) rhox  rhoy\n')
+                    
+                    # record values of u and rho at each lattice point
+                    rhox = pn1.rho(self.ux, r)
+                    rhoy = pn1.rho(self.uy, r)
+                    for i in range(len(r)):
+                        outstreamu.write('{:.3f} {:.6f} {:.6f}\n'.format(r[i], self.ux[i],
+                                                                              self.uy[i]))
+                        if i != 0:
+                            # as above, rho not defined for first lattice plane.
+                            # Record at intervals between lattice planes
+                            ri = 0.5*(r[i]+r[i-1])
+                            outstreamrho.write('{:.3f} {:.6f} {:.6f}\n'.format(ri, 
+                                                                rhox[i-1], rhoy[i-1]))
+                        
+                    outstreamu.close()
+                    outstreamrho.close()
+                             
             # create plot of dislocation density and misfit profile
             if self.control('plot'):   
                 if self.control('dimensions') == 1:
@@ -557,24 +639,25 @@ class PNSim(object):
         # write fit parameters
         outstream.write('Fit parameters: \n')
         
+        # needed in case user set input <parameters> manually
+        N = len(self.par)
+        
         if self.control('dimensions') == 2:
             # write parameters for the edge component of displacement
             outstream.write('----X1----\n')
             
             outstream.write('A\n')
-            for A in self.par[:self.control('n_funcs')/2]:
+            for A in self.par[:N/2]:
                 outstream.write('{:.3f} '.format(A))
             outstream.write('\n')
             
             outstream.write('x0\n')
-            for x0 in self.par[self.control('n_funcs'):self.control('n_funcs')+
-                                                     self.control('n_funcs')/2]:
+            for x0 in self.par[N:N+N/2]:
                 outstream.write('{:.3f} '.format(x0))
             outstream.write('\n')
             
             outstream.write('c\n')
-            for c in self.par[2*self.control('n_funcs'):2*self.control('n_funcs')+
-                                                        self.control('n_funcs')/2]:
+            for c in self.par[2*N:2*N+N/2]:
                 outstream.write('{:.3f} '.format(c))
             outstream.write('\n')
 
@@ -582,18 +665,17 @@ class PNSim(object):
             outstream.write('----X2----\n')
             
             outstream.write('A\n')
-            for A in self.par[self.control('n_funcs')/2:self.control('n_funcs')]:
+            for A in self.par[N/2:N]:
                 outstream.write('{:.3f} '.format(A))
             outstream.write('\n')
             
             outstream.write('x0\n')
-            for x0 in self.par[self.control('n_funcs')+self.control('n_funcs')/2:
-                                                        2*self.control('n_funcs')]:
+            for x0 in self.par[N+N/2:2*N]:
                 outstream.write('{:.3f} '.format(x0))
             outstream.write('\n')
             
             outstream.write('c\n')
-            for c in self.par[2*self.control('n_funcs')+self.control('n_funcs')/2:]:
+            for c in self.par[2*N+N/2:]:
                 outstream.write('{:.3f} '.format(c))
             outstream.write('\n')
 
@@ -601,17 +683,17 @@ class PNSim(object):
             outstream.write('----X----\n')
 
             outstream.write('A\n')
-            for A in self.par[:self.control('n_funcs')]:
+            for A in self.par[:N]:
                 outstream.write('{:.3f} '.format(A))
             outstream.write('\n')
             
             outstream.write('x0\n')
-            for x0 in self.par[self.control('n_funcs'):2*self.control('n_funcs')]:
+            for x0 in self.par[N:2*N]:
                 outstream.write('{:.3f} '.format(x0))
             outstream.write('\n')
             
             outstream.write('c\n')
-            for c in self.par[2*self.control('n_funcs'):]:
+            for c in self.par[2*N:]:
                 outstream.write('{:.3f} '.format(c))
             outstream.write('\n')
         

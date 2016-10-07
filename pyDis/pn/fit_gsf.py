@@ -119,7 +119,7 @@ def spline_fit2d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev',
         # 3D periodic -> cell contains two stacking faults
         E_vals /= 2.
     
-    g_spline = RectBivariateSpline(x_vals, y_vals, E_vals, kx=1, ky=1)
+    g_spline = RectBivariateSpline(x_vals, y_vals, E_vals)#, kx=1, ky=1)
     
     if int(scipy.__version__.split(".")[1]) < 14:
         def gamma(x, y):        
