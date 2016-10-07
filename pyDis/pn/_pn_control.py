@@ -650,7 +650,7 @@ class PNSim(object):
         outstream.write('Fit parameters: \n')
         
         # needed in case user set input <parameters> manually
-        N = len(self.par)
+        N = len(self.par)/3
         
         if self.control('dimensions') == 2:
             # write parameters for the edge component of displacement
