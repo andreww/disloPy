@@ -149,7 +149,7 @@ def handle_pn_control(param_dict):
                      ('dimensions', {'default':2, 'type':int}),
                      ('max_x', {'default':100, 'type':int}),
                      ('n_funcs', {'default':np.nan, 'type':int}),
-                     ('disl_type', {'default':None, 'type':str}),
+                     ('disl_type', {'default':'edge', 'type':str}),
                      ('use_sym', {'default':True, 'type':to_bool}),
                      ('plot', {'default':False, 'type':to_bool}),
                      ('plot_name', {'default':'pn_plot.tif', 'type':str}),
@@ -168,10 +168,14 @@ def handle_pn_control(param_dict):
                    ('spacing', {'default':'map struc > a: x -> x', 'type':float}),
                   )
                   
-    # cards for the &elast namelist.
+    # cards for the &elast namelist. <k_para> and <k_norm> allow the user to 
+    # supply predetermined elastic coefficients for the systems parallel and 
+    # perpendicular to the Burgers vector
     elast_cards = (('bulk', {'default':None, 'type':float}),
                    ('shear', {'default':None, 'type':float}),
                    ('poisson', {'default':None, 'type':float}),
+                   ('k_parallel', {'default':None, 'type':float}),
+                   ('k_normal', {'default':np.nan, 'type':float}),
                    ('cij', {'default':None, 'type':aniso.readCij}),
                    ('b_edge', {'default':np.array([1., 0., 0.]), 'type':to_vector}),
                    ('b_screw', {'default':np.array([0., 0., 1.]), 'type':to_vector}),
@@ -247,7 +251,9 @@ def handle_pn_control(param_dict):
     # test to make sure that all of the parameters required for one of isotropic
     # or anisotropic elasticity have been supplied. Should we also test to see
     # which function to use when calculating the energy coefficients?
-    if not (param_dict['elast']['cij'] is None):
+    if not (param_dict['elast']['k_parallel'] is None):
+        param_dict['elast']['coefficients'] = 'specific'
+    elif not (param_dict['elast']['cij'] is None):
         # if an elastic constants tensor is given, use anisotropic elasticity
         param_dict['elast']['coefficients'] = 'aniso'
     elif param_dict['elast']['shear'] != None:
@@ -299,7 +305,10 @@ class PNSim(object):
         self.stress = lambda card: self.sim['stress'][card]
 
         # calculate the energy coefficients
-        if self.elast('coefficients') == 'aniso':
+        if self.elast('coefficients') == 'specific':          
+            self.K = coeff.predefined(self.elast('k_parallel'), self.elast('k_normal'),
+                                                using_atomic=not(self.elast('in_gpa')))
+        elif self.elast('coefficients') == 'aniso':
             self.K = coeff.anisotropic_K(self.elast('cij'),
                                          self.elast('b_edge'),
                                          self.elast('b_screw'),
@@ -312,6 +321,7 @@ class PNSim(object):
         elif self.elast('coefficients') == 'iso_bulk':
             self.K = coeff.isotropic_K(self.elast('bulk'), self.elast('shear'),
                                            using_atomic=not(self.elast('in_gpa')))
+                                           
 
         # if restricting calculation to one component of displacement, extract
         # the appropriate energy coefficient.    

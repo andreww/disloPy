@@ -72,4 +72,17 @@ def anisotropic_K_b(Cij, b, n=cry.ei(1), m=cry.ei(2), using_atomic=True):
     
     return K
     
+def predefined(kpara, knorm, using_atomic=False):
+    '''Casts <kpara> and <knorm> in the form (and units) required by the P-N
+    routines in pyDis.
+    '''
     
+    k1 = kpara/(4*np.pi)
+    k2 = knorm/(4*np.pi)
+    
+    # put in eV/ang.^3
+    if not using_atomic:
+        k1 /= GPa_To_Atomic
+        k2 /= GPa_To_Atomic
+        
+    return [k1, k2]
