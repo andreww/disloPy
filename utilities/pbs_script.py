@@ -9,7 +9,7 @@ The file used as a template for the job submission scripts must have the form
 _SCRIPT = """#PBS -N castep
 #PBS -l select=5
 #PBS -l walltime=09:00:00
-#PBS -A n03-walk
+#PBS -A wouldntyouliketoknow
 #PBS -j oe
 #PBS -m n
 

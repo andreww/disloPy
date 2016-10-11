@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import gulpUtils as gulp
 from pyDis.atomic import qe_utils as qe

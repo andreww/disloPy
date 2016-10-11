@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 import sys
-sys.path.append('/home/richard/code_bases/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import atomistic_utils as util
 from pyDis.atomic import wolf

@@ -7,7 +7,8 @@ from __future__ import print_function
 
 import numpy as np
 import sys
-sy.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic.aniso import readCij
 

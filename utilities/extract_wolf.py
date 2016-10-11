@@ -2,7 +2,8 @@
 
 import numpy as np
 import sys
-sys.path.append('/home/richard/code_bases/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import wolf
 

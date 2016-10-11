@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 
+import sys
+import os
+sys.path.append(os.environ['PYDISPATH'])
+
 import numpy as np
 import re
 import matplotlib.pyplot as plt
-import sys
 from numpy.linalg import norm
 
 # PN modules from pyDis package
-sys.path.append('/home/richard/code_bases/dislocator2/')
 from pyDis.pn import pn_1D as pn1
 from pyDis.pn import pn_2D as pn2
 from pyDis.pn import fit_gsf as fg
@@ -256,12 +258,12 @@ def handle_pn_control(param_dict):
     elif not (param_dict['elast']['cij'] is None):
         # if an elastic constants tensor is given, use anisotropic elasticity
         param_dict['elast']['coefficients'] = 'aniso'
-    elif param_dict['elast']['shear'] != None:
+    elif not (param_dict['elast']['shear'] is None):
         # test to see if another isotropic elastic property has been provided. 
         # Preference poisson's ratio over bulk modulus, if both have been provided
-        if param_dict['elast']['poisson']  != None:
+        if not (param_dict['elast']['poisson']  is None):
             param_dict['elast']['coefficients'] = 'iso_nu'
-        elif param_dict['elast']['bulk'] != None:
+        elif not (param_dict['elast']['bulk'] is None):
             param_dict['elast']['coefficients'] = 'iso_bulk'
         else:
             raise AttributeError("No elastic properties have been provided.")

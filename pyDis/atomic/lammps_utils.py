@@ -7,7 +7,8 @@ from __future__ import print_function
 import re
 import numpy as np
 import sys
-sys.path.append('/home/richitensor/programs/pyDis/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import atomistic_utils as atm
@@ -43,7 +44,7 @@ class LammpsAtom(cry.Atom):
         if self._index < 1:
                 raise AttributeError("Cannot find value of atom index.")
         
-        if q != None:
+        if not (q is None):
             # using charges -> need to include q
             atom_format = '{} {} {:.6f} {:.6f} {:.6f} {:.6f}'
         else:
@@ -55,7 +56,7 @@ class LammpsAtom(cry.Atom):
         else:
             coords = self.getCoordinates()
 
-        if q != None:
+        if not (q is None):
             outstream.write(atom_format.format(self._index, self.getSpecies(), 
                                       self.q, coords[0], coords[1], coords[2]))
         else:
@@ -122,7 +123,7 @@ def parse_lammps(basename, unit_cell, use_data=False, datafile=None, path='./'):
 
     
     # check that the user has passed a data.* file if <use_data> is True
-    if use_data and datafile == None:
+    if use_data and datafile is None:
         raise NameError("No file containing simulation data specified.")
 
     struc_file = atm.read_file(basename, path=path)

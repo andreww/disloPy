@@ -5,8 +5,10 @@ from __future__ import print_function
 
 import re
 import numpy as np
+
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import atomistic_utils as util
@@ -161,7 +163,7 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
     '''
             
     # if isolated/coupled defects have been supplied, add these to the structure
-    if impurities != None:
+    if not (impurities is None):
         if mutate.is_single(impurities):
             mutate.cell_defect(qe_struc, impurities, use_displaced=True)
         elif mutate.is_coupled(impurities):
@@ -174,7 +176,7 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
         outstream.write(' {}\n'.format(block))
         for variable in sys_info['namelists'][block]:
             if variable == 'calculation':
-                if relax_type != None:
+                if not (relax_type is None):
                     outstream.write('    calculation = \'{}\'\n'.format(relax_type))
                 else:
                     print("No calculation type specified; defaulting to scf")
@@ -216,7 +218,7 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
     outstream.close()
     
     # finally, remove any impurity atoms that have been appended to <qe_struc>
-    if impurities != None:
+    if not (impurities is None):
         mutate.undo_defect(qe_struc, impurities)
     
     return

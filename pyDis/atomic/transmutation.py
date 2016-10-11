@@ -6,7 +6,8 @@ from __future__ import print_function
 import numpy as np
 import re
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from  numpy.linalg import norm
 
@@ -30,7 +31,7 @@ class Impurity(cry.Basis):
         self.__site = site
         self.__name = defect_name
         
-        if sitecoords != None:
+        if not (sitecoords is None):
             # set the location of the impurity
             self.site_location(sitecoords, use_displaced=use_displaced, 
                                                 updateatoms=updateatoms)
@@ -92,7 +93,7 @@ class Impurity(cry.Basis):
                 self._sitecoords = new_location.getCoordinates()
         elif isinstance(new_location, cry.Basis) or isinstance(new_location, cry.Crystal):
             # ONLY WORKS IF <site_index> is defined
-            if self.site_index == None:
+            if self.site_index is None:
                 raise AttributeError("Cannot use <Crystal> or <Basis> object to set" +
                                  " the site location if <site_index> is undefined.")
                                  
@@ -115,7 +116,7 @@ class Impurity(cry.Basis):
         the coordinates of the defect site.
         '''
         
-        if self._sitecoords == None:
+        if self._sitecoords is None:
             raise TypeError("Cannot calculate site coordinates if site is <None>.")
         else:
             for atom in self:
@@ -135,7 +136,7 @@ class Impurity(cry.Basis):
         for atom in self:
             new_imp.addAtom(atom)
             
-        if updateatoms and (self._sitecoords != None):
+        if updateatoms and not (self._sitecoords is None):
             # calculate defect coordinates for a specific site
             self.atomic_site_coords()
         
@@ -165,17 +166,17 @@ class CoupledImpurity(object):
         '''
         
         # if no impurities/sites have been provided, default to empty
-        if impurities == None and sites == None:
+        if impurities is None and sites is None:
             self.impurities = []
             self.sites = []
-        elif (sites != None and impurities != None) and (len(sites) != len(impurities)):
+        elif (not(sites is None) and not(impurities is None)) and (len(sites) != len(impurities)):
             raise ValueError()
         else:
             self.impurities = []
             for i, imp in enumerate(impurities):
                 new_imp = imp.copy()
                 # set site index, if provided
-                if sites != None:
+                if not (sites is None):
                     imp.set_index(sites[i])
                     
                 self.impurities.append(new_imp) 
@@ -189,7 +190,7 @@ class CoupledImpurity(object):
         new_imp = impurity.copy() 
         
         # if the index of the site differs from that of <impurity>, change index
-        if site != None:
+        if not (site is None):
             new_imp.set_index(site)
             
         self.impurities.append(new_imp)
@@ -231,6 +232,22 @@ class CoupledImpurity(object):
         for impurity in self:
             impurity.site_location(simulation_cell[impurity.get_index()], 
                                             use_displaced=use_displaced)
+                                            
+        return
+                                            
+    def atomic_site_coords(self):
+        '''Calculates the atomic coordinates of each impurity atom in the 
+        cluster using the impurity coordinates and the coordinates of the site
+        at which each impurity is located. Note that, if the coordinates of the 
+        impurity atoms relative to their associated defect sites have been given
+        in angstroms/bohr/stadia, they must first be converted to crystal 
+        coordinates using <self.to_cell_coords()>.
+        '''
+        
+        for imp in self:
+            imp.atomic_site_coords()
+        
+        return
                                         
     def __iter__(self):
         return self
@@ -252,6 +269,8 @@ class CoupledImpurity(object):
         
         for imp in self:
             imp.to_cell_coords(lattice)
+            
+        return
             
 def merge_coupled(*defect_clusters):
     '''Creates a single <CoupledImpurity> from a collection of <CoupledImpurity>s.

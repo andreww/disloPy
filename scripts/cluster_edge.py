@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 import numpy.linalg as L

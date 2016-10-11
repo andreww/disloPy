@@ -3,7 +3,8 @@
 import numpy as np
 
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import qe_utils as qe

@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import sys
+import os
+sys.path.append(os.environ['PYDISPATH'])
+
 import numpy as np
 import numpy.linalg as L
 import re
-import os
-import sys
 import argparse
 from scipy.optimize import curve_fit
 
-sys.path.append('/home/richard/code_bases/dislocator2/')
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import gulpUtils as gulp
 from pyDis.atomic import atomistic_utils as atm
@@ -39,7 +40,7 @@ def handle_atoms(atomlist):
     
     # check that two values (symbol + energy) have been provided for every 
     # atom.
-    if atomlist == None:
+    if atomlist is None:
         return None
     if len(atomlist) % 2 == 1:
         raise ValueError("")
@@ -294,7 +295,7 @@ def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, use_eregion=True,
     
     # if atomic energies have been supplied, record that we are using the 
     # edge method
-    if E_atoms != None:
+    if not (E_atoms is None):
         using_edge = True
     else:
         using_edge = False
@@ -428,7 +429,7 @@ def fitCoreEnergy(basename, b, thickness, rcore=10, fit_K=False, in_K=None,
         def specific_energy(r, Ecore, K):
             return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
     else:
-        if in_K == None: # prompt user to provide energy coefficient
+        if in_K is None: # prompt user to provide energy coefficient
             K = raw_input("Enter the energy coefficient K (in GPa): ")
         else:
             K = in_K
@@ -475,7 +476,7 @@ def dis_energy(rmax, rmin, dr, basename, executable, method, b, thick, relax_K=T
         iterateOverRI(rmax, rmin, dr, basename, executable, use_eregion=False)
     elif method == 'eregion':
         iterateOverRI(rmax, rmin, dr, basename, executable, use_eregion=True)
-    elif method == 'edge' and atom_dict != None:
+    elif method == 'edge' and not (atom_dict is None):
         iterateOverRI(rmax, rmin, dr, basename, executable, E_atoms=atom_dict)
     
     # if rc == None, use the normal value of twice the burgers vector length

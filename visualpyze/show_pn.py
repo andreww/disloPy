@@ -6,7 +6,8 @@ from __future__ import print_function
 
 import numpy as np
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 import matplotlib.pyplot as plt
 
 from pyDis.atomic import crystal as cry
@@ -96,9 +97,9 @@ def pn_displacement(x, r, edgefield=None, screwfield=None, uedge=None,
 
     # calculate inelastic displacement due to edge and screw components
     # of the displacement
-    if uedge != None:
+    if not (uedge is None):
         # check that elastic displacement field form has been provided
-        if edgefield == None:
+        if edgefield is None:
             raise ValueError("Edge field cannot be <None>.")
             
         # calculate inelastic displacement
@@ -106,9 +107,9 @@ def pn_displacement(x, r, edgefield=None, screwfield=None, uedge=None,
     else:
         inelast_e = np.zeros(3)
 
-    if uscrew != None:
+    if not (uscrew is None):
         # check that screw displacement field form has been provided
-        if screwfield == None:
+        if screwfield is None:
             raise ValueError("Screw field cannot be <None>.")
             
         # calculate inelastic displacement
@@ -121,7 +122,7 @@ def pn_displacement(x, r, edgefield=None, screwfield=None, uedge=None,
     
     # calculate the elastic displacement field
     # calculate dislocation density
-    if uedge != None:
+    if not (uedge is None):
         rho_e = pn1.rho(uedge, r)
         #rd_e, rhod_e = densify(rho_e, r[1:])
         
@@ -131,7 +132,7 @@ def pn_displacement(x, r, edgefield=None, screwfield=None, uedge=None,
     else:
         elast_e = np.zeros(3)
 
-    if uscrew != None:
+    if not (uscrew is None):
         rho_s = pn1.rho(uscrew, r)
         #rd_s, rhod_s = densify(rho_s, r[1:], r[1]-r[0])
         # filter

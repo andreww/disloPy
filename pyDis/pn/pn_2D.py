@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
+import sys
+import os
+sys.path.append(os.environ['PYDISPATH'])
+
 import numpy as np
-import pn_1D as pn1
+
+from pyDis.pn import pn_1D as pn1
 
 from scipy.optimize import fmin_slsqp
-#from test_2D_gamma import test_gamma_surf
 from numpy.random import uniform
 
 # suppress divide by zero Runtime warnings

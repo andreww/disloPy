@@ -8,7 +8,8 @@ import numpy as np
 import cmath
 import numpy.linalg as lin
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 

@@ -43,10 +43,12 @@ temperature
 '''
 from __future__ import print_function, division
 
-import numpy as np
 import sys
+import os
+sys.path.append(os.environ['PYDISPATH'])
+
+import numpy as np
 import re
-sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from scipy.optimize import curve_fit
 from numpy.linalg import norm
@@ -429,7 +431,7 @@ def excess_energy(energy_grid, method, perf_grid=None, Edict=None, parse_fn=None
     
     if method == 'compare':
         # check that the user has supplied energies for perfect cells
-        if perf_grid == None: # may be better to check type
+        if perf_grid is None: # may be better to check type
             raise TypeError("Undislocated energies cannot be <None>.") 
         else:
             # test that <perf_grid> has the right dimensions
@@ -445,9 +447,9 @@ def excess_energy(energy_grid, method, perf_grid=None, Edict=None, parse_fn=None
         
     elif method == 'edge':
         # check that the user has supplied atomic energies
-        if Edict == None:
+        if Edict is None:
             raise TypeError("<Edict> not defined.")
-        if parse_fn == None:
+        if parse_fn is None:
             raise AttributeError("<parse_fn> not defined.")
             
         for discell in energy_grid:
@@ -476,7 +478,7 @@ def gridded_energies(basename, program, suffix, i_index, j_index=None, gridded=F
     '''
     
     energy_values = []
-    if j_index == None:
+    if j_index is None:
         # set equal to <i_index>
         j_index = np.copy(i_index)
     elif type(j_index) == int:
@@ -565,15 +567,15 @@ def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev', A=None,
     spacing = spacing.transpose()
     
     # create version of the energy function with specific <b> and maybe <K>
-    if K == None and A == None:
+    if K is None and A is None:
         # fit both K and A
         def fittable_energy(dis_space, Ecore, An, Kn):
             return multipole_energy(dis_space, Ecore, An, Kn, b, rcore, n)
-    elif K == None:
+    elif K is None:
         # fit K 
         def fittable_energy(dis_space, Ecore, Kn):
             return multipole_energy(dis_space, Ecore, A, Kn, b, rcore, n)
-    elif A == None:
+    elif A is None:
         # fit A
         def fittable_energy(dis_space, Ecore, An):
             return multipole_energy(dis_space, Ecore, An, K, b, rcore, n)

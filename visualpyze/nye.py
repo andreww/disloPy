@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import numpy as np
 import sys
-from numpy.linalg import norm
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import numpy as np
+from numpy.linalg import norm
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import qe_utils as qe
@@ -34,10 +35,10 @@ def partition_lattice(struc, ndomains=None, domain_size=None):
     cell lengths). Priority is <ndomains> > <domain_size>.
     '''
     
-    if ndomains != None:
+    if not (ndomains is None):
         # use the specified domain decomposition
         pass
-    elif domain_size != None:
+    elif not (domain_size is None):
         # generate domains from the specified domain size
         ndomains = np.ones(3, dtype=int)
         for x in struc.getLattice():

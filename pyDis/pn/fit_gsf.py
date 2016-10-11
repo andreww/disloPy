@@ -10,7 +10,8 @@ import scipy
 import re
 import matplotlib.pyplot as plt
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
@@ -42,7 +43,7 @@ def read_numerical_gsf(filename):
             gsf.append([float(value) for value in data])
             
     # check that units were contained in file
-    if units == None:
+    if units is None:
         print("Warning: no energy units specified. Defaulting to eV")
         units = 'ev'
             

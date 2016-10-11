@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import glob
 import sys
+import os
+sys.path.append(os.environ['PYDISPATH'])
+
 import re
 import numpy as np
-import os
-sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from numpy.linalg import norm
 

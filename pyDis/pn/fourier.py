@@ -88,7 +88,7 @@ def integrate2d(f, xmax, ymax, ngrid=250, ngridy=None, xmin=0., ymin=0.):
     points along each axis.
     '''
     
-    if ngridy == None:
+    if ngridy is None:
         # set number of grid points along y equal to grid number along x
         ngridy = ngrid
     

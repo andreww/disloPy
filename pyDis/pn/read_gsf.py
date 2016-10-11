@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import sys
+import os
+sys.path.append(os.environ['PYDISPATH'])
+
 import numpy as np
 import re
 import argparse
-import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from pyDis.atomic import atomistic_utils as atm
 from pyDis.pn.fit_gsf import gamma_line, gamma_surface3d

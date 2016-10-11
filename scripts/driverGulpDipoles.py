@@ -4,7 +4,8 @@ assume that the simulation cell has orthogonal unit cell vectors. This
 means that a quadrupole arrangement of dislocations must be used.
 Currently, set up for screw dislocation in isotropic material only.'''
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import fields as df

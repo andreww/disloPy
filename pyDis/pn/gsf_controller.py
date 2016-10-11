@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import numpy as np
 import sys
+import os
+sys.path.append(os.environ['PYDISPATH'])
+
+import numpy as np
 import argparse
 import subprocess
-sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from pyDis.pn import gsf_setup as gsf
 from pyDis.atomic import gulpUtils as gulp
@@ -184,7 +186,7 @@ def main():
         # run the calculations, if an executable has been provided. Otherwise,
         # assume that that the input files will be transferred to another machine
         # and run by the user.
-        if args.progexec != None:
+        if not (args.progexec is None):
             # extract increments
             N, M = gsf.gs_sampling(new_slab.getLattice(), args.res, limits)
             for n in xrange(0, N+1):
@@ -208,7 +210,7 @@ def main():
                            sys_info, suffix=suffix, limits=args.max_x,  
                            basename=args.sim_name, vacuum=args.vac, relax=relax)
         
-        if args.progexec != None:
+        if not (args.progexec is None):
             # extract limits
             N = gsf.gl_sampling(new_slab.getLattice(), resolution=args.res, 
                             vector=np.array(args.line_vec), limits=args.max_x)

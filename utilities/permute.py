@@ -7,7 +7,8 @@ import numpy as np
 import argparse
 import warnings
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import gulpUtils as gulp

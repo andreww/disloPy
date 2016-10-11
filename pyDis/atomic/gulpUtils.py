@@ -5,11 +5,13 @@ coordinates, species, potentials, etc.
 '''
 from __future__ import division, print_function
 
+import sys
+import os
+sys.path.append(os.environ['PYDISPATH'])
+
 import numpy as np
 import re
-import sys
 import subprocess
-sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from numpy.linalg import norm
 
@@ -413,7 +415,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
     # insert impurities, if supplied. If <defected> is False, we are using the
     # perfect (ie. dislocation-free) cell, and so we DO NOT make use of the 
     # displaced coordinates when setting the coordinates of the impurity atoms
-    if impurities != None:
+    if not (impurities is None):
         if mutate.is_single(impurities):
             mutate.cell_defect(struc, impurities, use_displaced=defected)
         elif mutate.is_coupled(impurities):
@@ -423,7 +425,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
 
     # write simulation cell geometry to file
     if struc_type in rod_classes:
-        if impurities != None:
+        if not (impurities is None):
             struc.specifyRegions()
             
         # polymer cell -> write cell height
@@ -476,7 +478,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
     outstream.close()
     
     # undo defect insertion
-    if impurities != None:
+    if not (impurities is None):
         mutate.undo_defect(struc, impurities)
         if struc_type in rod_classes:
             struc.specifyRegions()
@@ -807,7 +809,7 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             continue  
               
         # check <constraints>
-        if constraints == None:
+        if constraints is None:
             pass
         else:
             for test in constraints:

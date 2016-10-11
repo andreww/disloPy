@@ -3,7 +3,8 @@
 import numpy as np
 import numpy.linalg as L
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import circleConstruct as grid
@@ -23,14 +24,14 @@ class PeriodicCluster(cry.Basis):
         cry.Basis.__init__(self)
         
         # set cluster variables
-        if R == None:
+        if R is None:
             raise AttributeError("Radius <R> not defined.")
         else:
             self._r = R
             self._thickness = thickness
         
-        if unitCell == None:
-            if periodic_atoms == None:
+        if unitCell is None:
+            if periodic_atoms is None:
                 raise Warning("No atoms included in <PeriodicCluster>.")
             else:
                 # add atoms to <PeriodicCluster>
@@ -40,7 +41,7 @@ class PeriodicCluster(cry.Basis):
                 self._height=height*thickness
                 self._baseCell = cry.Lattice()
         else:    
-            if periodic_atoms != None:
+            if not (periodic_atoms is None):
                 raise Warning("Disregarding <periodic_atoms> and relying on " +
                                 "specified <unitCell>.")
             # if a basecell has been provided, construct cluster using provided 
@@ -124,20 +125,20 @@ class TwoRegionCluster(PeriodicCluster):
         '''Initializes a 1D periodic GULP cluster.
         '''
         
-        if R == None:
+        if R is None:
             R = regionII
         
         PeriodicCluster.__init__(self, unitCell=unitCell, centre=centre, R=R, 
                            thickness=thickness, periodic_atoms=periodic_atoms,
                                                                  height=height)
-        if regionI == None:
+        if regionI is None:
             raise AttributeError("Region I radius not specified.")
         else:
             self._RI = regionI
             
         # if RII < RI, assume that the user has entered RII as the difference
         # between RI and the actual RII
-        if regionII == None:
+        if regionII is None:
             raise AttributeError("Region II thickness/radius not specified.")
         elif regionII > regionI:
             self._RII = regionII

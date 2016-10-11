@@ -4,7 +4,8 @@ from __future__ import print_function
 import re
 import numpy as np
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import atomistic_utils as util
@@ -191,7 +192,7 @@ def write_castep(outstream, cas_struc, sys_info, defected=True, to_cart=False,
     '''
     
     # insert defect(s), if supplied
-    if impurities != None:
+    if not (impurities is None):
         if mutate.is_single(impurities):
             mutate.cell_defect(cas_struc, impurities, use_displaced=True)
         elif mutate.is_coupled(impurities):
@@ -236,7 +237,7 @@ def write_castep(outstream, cas_struc, sys_info, defected=True, to_cart=False,
     param_file.close()
     
     # remove any defects that have been inserted
-    if impurities != None:
+    if not (impurities is None):
         mutate.undo_defect(cas_struc, impurities)
         
     return

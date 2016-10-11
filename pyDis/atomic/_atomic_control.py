@@ -4,7 +4,8 @@ from __future__ import print_function,division
 import numpy as np
 import re
 import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
+import os
+sys.path.append(os.environ['PYDISPATH'])
 from numpy.linalg import norm
 
 # list of atomic simulation codes currently supported by pyDis

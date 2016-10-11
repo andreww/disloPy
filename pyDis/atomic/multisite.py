@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import sys
+import os
+sys.path.append(os.environ['PYDISPATH'])
+
 import numpy as np
 import re
-import sys
-sys.path.append('/home/richard/code_bases/dislocator2/')
 
 from numpy.linalg import norm
 
@@ -100,7 +102,7 @@ def closest_atom_in_direction(atomindex, supercell, direction, use_displaced=Tru
     unit_dir = as_unit(direction)
     
     # get species of atom for which we are searching
-    if atomtype == None:
+    if atomtype is None:
         # use type of <atomindex>
         atomtype = supercell[atomindex].getSpecies()
     
