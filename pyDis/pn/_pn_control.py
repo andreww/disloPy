@@ -584,8 +584,13 @@ class PNSim(object):
             else: # screw
                 self.rho = pn1.rho(self.uy, r)
             
-            self.dis_width = pn1.dislocation_width(self.rho, r)
+            if self.control('disl_type') in 'edge' or self.control('dimensions') == 1:
+                self.dis_width = pn1.dislocation_width(self.ux, r, self.struc('burgers'))
+            else: # screw dislocation with edge component of displacement 
+                self.dis_width = pn1.dislocation_width(self.uy, r, self.struc('burgers'))
+                
             self.max_density = pn1.max_rho(self.rho, self.struc('spacing'))
+            
         return
             
     def peierls(self):

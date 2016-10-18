@@ -6,6 +6,7 @@ import numpy.random as rand
 from numpy.linalg import norm
 
 from scipy.optimize import fmin_slsqp, curve_fit
+from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
 # suppress divide by zero Runtime warnings
@@ -13,13 +14,23 @@ import warnings
 warnings.simplefilter("ignore", RuntimeWarning)
 
 def simple_gamma(u):
+    '''Simple test gamma line function. For validation purposes.
+    '''
+    
     return 0.5*(1-np.cos(2*np.pi*u))
 
 def test_gamma(u):
+    '''More complicated test gamma line function, including stable stacking
+    fault energies. For validation purposes.
+    '''
+    
     a = 0.5*(1-np.cos(2*np.pi*u))
     return 1/0.14*(a-0.5*(np.exp(1.09*a)-1))
 
 def generate_A(N):
+    '''Generates relative magnitudes for N partial dislocations.
+    '''
+     
     A = rand.uniform(size=N)
     A /= A.sum()
     return A
@@ -28,6 +39,7 @@ def generate_x(N, A, spacing, sigma=1.):
     '''Generates midpoints for N dislocations. If N == 1, we simply locate the
     dislocation at the origin.
     '''
+    
     if N == 1:
         return np.zeros(1)
     else:
@@ -36,10 +48,16 @@ def generate_x(N, A, spacing, sigma=1.):
         return (x-(x_mean-(x_mean % spacing)))
     
 def generate_c(N):
+    '''Generates N random dislocation half-widths.
+    '''
+    
     c = rand.lognormal(0, 1, N)
     return c
         
 def gen_inparams(n_funcs, spacing):
+    '''Generates a random set of dislocation parameters.
+    '''
+    
     A = generate_A(n_funcs)
     x0 = generate_x(n_funcs, A, spacing)
     c = generate_c(n_funcs)
@@ -112,6 +130,11 @@ def generate_input(N, spacing, use_sym=False):
     '''
 
 def u_field(x, A, x0, c, b, bc=0.5):
+    '''Calculates disregistry value at x, for a given set of partial dislocations
+    defined by the parameters <A>, <x0>, and <c>, with Burgers vector <b>. The
+    default value of <bc> (0.5) leads to u == -b at -inf and u == 0 at inf.
+    '''
+    
     u = 0.
     for Ai, xi, ci in zip(A, x0, c):
         u += 1/np.pi*(Ai*np.arctan((x-xi)/ci))
@@ -133,23 +156,48 @@ def get_u1d(parameters, b, spacing, N, bc=0.5):
     return u
     
 def rho(u, r):
+    '''Calculate dislocation density <rho> from a given disregistry field.
+    '''
+    
     rho_vals = (u[1:] - u[:-1])/(r[1:]-r[:-1])
     return rho_vals
     
 def center_of_mass(rho, x, b):
-    return 1/b*(rho*(x[1:]**2 - x[:-1]**2)).sum()
-    
-def rho_form(x, a, xsi, x0):
-    return a*xsi**2/((x-x0)**2+xsi**2)
-    
-def dislocation_width(rho_vals, r):
-    '''Note: at present, works only when rhox has a single, well defined
-    maximum value. Will implement analysis function for dislocations composed 
-    of multiple partials later.
+    '''Calculates the virtual centre of mass of a dislocation density distribution.
     '''
     
-    fit_par, cov = curve_fit(rho_form, r[1:], rho_vals)
-    xsi = fit_par[1]
+    return 1/(2.*b)*(rho*(x[1:]**2 - x[:-1]**2)).sum()
+    
+#def rho_form(x, a, xsi, x0):
+#    return a*xsi**2/((x-x0)**2+xsi**2)
+    
+def dislocation_width(u, r, b, bc=0.5):
+    '''Calculates the distance over which the disregistry increases from 0.25*b
+    to 0.75*b.
+    '''
+    
+    # create spline function giving (smooth, continuous) displacement, as a 
+    # function of distance from the dislocation line
+    uspline = interp1d(r, u)
+    
+    # find the points where u is equal to one quarter and three quarters of the 
+    # Burgers vector magnitude
+    notquart = True
+    notthree = True
+    finex = np.linspace(-10*b, 10*b, 1000) # to get accurate positions
+    
+    for i, ui in enumerate(uspline(finex)):
+        if abs(ui+(bc+0.5)*b)/b >= 0.25 and notquart:
+            xlower = finex[i]
+            # record that we have found the point where u = 0.25*b
+            notquart = False
+        if abs(ui+(bc+0.5)*b)/b >= 0.75 and notthree:
+            xupper = finex[i]
+            # found all parameters we need to calculate fwhm; exit loop
+            break
+    
+    xsi = xupper - xlower
+    
     return xsi 
     
 def max_rho(rho, spacing):
