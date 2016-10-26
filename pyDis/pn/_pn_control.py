@@ -725,17 +725,17 @@ class PNSim(object):
         if self.stress('calculate_stress'):
             if self.stress('use_GPa'):
                 units = 'GPa'
-                outstream.write('Minimum Peierls stress = {:.3f} {}\n'.format(
+                outstream.write('Left Peierls stress = {:.3f} {}\n'.format(
                                                          self.taup[0], units))
-                outstream.write('Maximum Peierls stress = {:.3f} {}\n'.format(
+                outstream.write('Right Peierls stress = {:.3f} {}\n'.format(
                                                          self.taup[1], units))
                 outstream.write('Average Peierls stress = {:.3f} {}\n'.format(
                                                          self.taup_av, units))
             else:
                 units = 'eV/ang.^3'
-                outstream.write('Minimum Peierls stress = {:.6f} {}\n'.format( 
+                outstream.write('Left Peierls stress = {:.6f} {}\n'.format( 
                                                           self.taup[0], units))
-                outstream.write('Maximum Peierls stress = {:.6f} {}\n'.format(
+                outstream.write('Right Peierls stress = {:.6f} {}\n'.format(
                                                           self.taup[1], units))
                 outstream.write('Average Peierls stress = {:.6f} {}\n'.format(
                                                           self.taup_av, units))

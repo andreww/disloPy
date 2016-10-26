@@ -112,8 +112,8 @@ def stressed_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
                                                             disl_type, dims)
     # obtain the relaxed structure of the dislocation in the applied stress 
     # field
-    new_par = fmin_slsqp(total_opt_stress, params, eqcons=constraints, 
-                                    args=in_args, bounds=lims, iprint=0)
+    new_par = fmin_slsqp(total_opt_stress, params, eqcons=constraints, args=in_args,
+                                                     bounds=lims, iprint=0, acc=1e-14)
      
     # calculate total self-interaction + misfit + stress energy                                   
     E = total_opt_stress(new_par, *in_args)       
@@ -207,7 +207,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     
     rho = pn1.rho(u, r)
     #d_max = (rho*r[1:]/rho.sum()).sum()
-    cm0 = com(rho, r, b)
+    cm0 = pn1.center_of_mass(rho, r, b)
     # apply stress to the dislocation, starting with the positive direction
     new_par = dis_parameters
     for s in stresses:
@@ -224,14 +224,14 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
                 us = uxs
             else: # screw
                 us = uys
-                    
-        rhos = pn1.rho(us, r)
-        d_current = (rhos*r[1:]/rhos.sum()).sum()
         
-        #if abs(d_current-d_max) >= threshold:
-        #    tau_p_plus = s
-        #    break
-        if abs(com(rhos, r, b) - cm0) >= threshold*spacing:
+        # calculate the stressed dislocation's centre            
+        rhos = pn1.rho(us, r)        
+        cm_new = pn1.center_of_mass(rhos, r, b) 
+        # calculate distance of dislocation density c.o.m from the location of
+        # the unstressed dislocation, recording the value if it exceeds specified
+        # threshold
+        if abs(cm_new - cm0) >= threshold:
             tau_p_plus = s
             break
 
@@ -251,18 +251,18 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
             else: # screw
                 us = uys
         
+        # calculate centre of mass of the stressed dislocation
         rhos = pn1.rho(us, r)
-        d_current = (rhos*r[1:]/rhos.sum()).sum()
+        cm_new = pn1.center_of_mass(rhos, r, b)
         
-        #if abs(d_current-d_max) >= threshold:
-        #    tau_p_minus = -s
-        #    break
-        if abs(com(rhos, r, b) - cm0) >= threshold*spacing:
+        # calculate distance of dislocation density c.o.m from the location of
+        # the unstressed dislocation, recording the value if it exceeds specified
+        # threshold
+        if abs(cm_new - cm0) >= threshold:
             tau_p_minus = -s
             break
                    
     peierls_stresses = [tau_p_minus, tau_p_plus]
-    peierls_stresses.sort()
     
     if in_GPa:
         # express Peierls stresses in GPa
@@ -292,3 +292,43 @@ def peierls_barrier(taup, b, in_GPa=True):
 def sig_figs(value, n_figs):
     x = '{{:.{}f}}'.format(n_figs).format(value)
     return float(x)
+    
+### PEIERLS BARRIER BY TRANSLATION AND OPTIMIZATION ###
+
+def com_constraint(par, *args):
+    '''Constrains the location of the centre of mass of the 
+    dislocation density distribution.
+    '''
+    
+    # extract sim. parameters
+    n_funcs = args[0]
+    N = args[1]
+    energy_function = args[2]
+    b = args[3]
+    spacing = args[4]
+    K = args[5]
+    fix_centre = args[6]
+    dimensions = args[7]
+    if dimensions == 2:
+        disl_type = args[8]
+    
+    # calculate dislocation density
+    if dimensions == 1:
+        u = pn1.get_u1d(par, b, spacing, N)
+    elif dimensions == 2:
+        ux, uy = pn2.get_u2d(par, b, spacing, N, disl_type)
+        if disl_type.lower() == 'edge':
+            u = ux
+        elif disl_type.lower() == 'screw':
+            u = uy
+     
+    # calculate the dislocation density distribution
+    r = np.arange(-N*spacing, N*spacing, spacing)
+    rho = pn1.rho(u, r)
+    
+    # calculate dislocation density c.o.m.
+    com = pn1.center_of_mass(rho, r, b)
+    # return distance between current and desired centre of 
+    # mass
+    return (com - fix_centre)
+

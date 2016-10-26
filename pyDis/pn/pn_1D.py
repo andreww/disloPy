@@ -266,23 +266,24 @@ def elastic_energy(A, x0, c, b=1, K=1):
             E += Ai*Aj*np.log((xi-xj)**2+(ci+cj)**2)
     return -0.5*K*E*b**2
     
-def misfit_energy(A, x0, c, N, energy_function, b, spacing, shift=0.):
+def misfit_energy(A, x0, c, N, energy_function, b, spacing, translate=0.):
     '''Calculates the inelastic energy associated with a dislocation defined
     by the parameters A, x0, and c and lying in the plane whose misfit energy
-    is given by <energy_function>.
+    is given by <energy_function>. <translate> translates the summation points
+    relative to the crystal lattice.
     '''
     
-    r = spacing*(np.arange(-N, N))
+    r = spacing*(np.arange(-N, N))+translate
     u = u_field(r, A, x0, c, b)
     Em = energy_function(u).sum()*spacing
     return Em
     
-def total_energy(A, x0, c, N, energy_function, b, spacing, K=1):
+def total_energy(A, x0, c, N, energy_function, b, spacing, K=1, translate=0.):
     '''Return the total elastic and inelastic (ie. misfit) energy of the 
     dislocation.
     '''
     
-    Em = misfit_energy(A, x0, c, N, energy_function, b, spacing)
+    Em = misfit_energy(A, x0, c, N, energy_function, b, spacing, translate=translate)
     E_elast = elastic_energy(A, x0, c, b, K)
     return Em + E_elast
     
@@ -299,7 +300,7 @@ def total_optimizable(params, *args):
     spacing = args[4]
     K = args[5]
         
-    # extract parameters and symmetrise, if required
+    # extract dislocation parameters
     A = params[:n_funcs]
     x0 = params[n_funcs:2*n_funcs]
     c = params[2*n_funcs:]
@@ -331,8 +332,8 @@ def cons_func(inparams, *args):
     A = inparams[:n_funcs]
     return 1.-sum(A)
 
-def dislocation1d(N, max_x, energy_function, lims, noopt, use_sym, b, spacing, K,
-                                                                      inpar=None):
+def dislocation1d(N, max_x, energy_function, lims, use_sym, b, spacing, K,
+                                                  inpar=None, noopt=False):
     '''Optimise structure of dislocation with Burgers vector <b> and misfit energy
     given by <energy_function>.
     '''
@@ -396,8 +397,8 @@ def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False
         if noisy and i % 100 == 0:
             print("Starting iteration {}...".format(i))
 
-        E, x_try = dislocation1d(N, max_x, energy_function, lims, noopt, use_sym,
-                                                    b, spacing, K, inpar=params)
+        E, x_try = dislocation1d(N, max_x, energy_function, lims, use_sym, b,
+                                       spacing, K, inpar=params, noopt=noopt)
 
         # check that the output parameters are physically reasonable
         is_valid = check_parameters1d(x_try, N, lims)

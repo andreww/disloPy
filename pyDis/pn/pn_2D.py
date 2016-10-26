@@ -90,7 +90,8 @@ def elastic_energy2d(A, x0, c, b=1, K=[1, 1]):
     E = pn1.elastic_energy(A1, x01, c1, b, Ke) + pn1.elastic_energy(A2, x02, c2, b, Ks)
     return E
     
-def misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=[0., 0.5]):
+def misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=[0., 0.5], 
+                                                                translate=0.):
     '''Defaults shift corresponds to screw dislocation.
     
     0 <= xc <= 1
@@ -98,19 +99,21 @@ def misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=[0., 0.5]):
     
     A1, x01, c1, A2, x02, c2 = unzip_parameters(A, x0, c)
     
-    r = spacing*(np.arange(-N, N))
+    r = spacing*(np.arange(-N, N))+translate
     ux = pn1.u_field(r, A1, x01, c1, b, bc=shift[0])
     uz = pn1.u_field(r, A2, x02, c2, b, bc=shift[1])
     Em = energy_function(ux, uz).sum()*spacing
 
     return Em
     
-def total_energy2d(A, x0, c, N, energy_function, K, b, spacing, shift=[0., 0.5]):
+def total_energy2d(A, x0, c, N, energy_function, K, b, spacing, shift=[0., 0.5], 
+                                                                   translate=0.):
     '''Calculates the total energy of the 2D dislocationd density distribution
     defined by <A>, <x0>, and <c>. Defaults to screw dislocation: K = [Ke, Ks]
     '''
     
-    Em = misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=shift)
+    Em = misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=shift,
+                                                           translate=translate)
     E_el = elastic_energy2d(A, x0, c, b, K)
     return Em + E_el
     
