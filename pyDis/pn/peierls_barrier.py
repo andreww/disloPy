@@ -10,14 +10,14 @@ import matplotlib.pyplot as plt
 
 atomic_to_GPa =  160.2176487 # convert from eV/Ang**3 to GPa
 
-def stress_energy(tau, rho, x_vals):
+def stress_energy(tau, rho, x_vals, b, cm0):
     '''Calculate total stress energy.
     '''
     
-    return -0.5*tau*(rho*(x_vals[1:]**2-x_vals[:-1]**2)).sum()
+    return -tau*b*(pn1.center_of_mass(rho, x_vals, b)-cm0)
     
 def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
-                                           shift, tau, disl_type=None, dims=2):
+                                           shift, tau, disl_type=None, dims=2, cm0=0.):
     '''Calculate the (fully relaxed) energy of a 1- or 2-dimensional dislocation
     under the action of an applied stress <tau>.
     
@@ -58,7 +58,7 @@ def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing,
     rho_vals = pn1.rho(u, r)
     
     # calculate the stress energy
-    E_stress = stress_energy(tau, rho_vals, r)
+    E_stress = stress_energy(tau, rho_vals, r, b, cm0)
     return (Em + E_el + E_stress)
    
 def total_opt_stress(params, *args):
@@ -79,6 +79,7 @@ def total_opt_stress(params, *args):
     tau = args[7]
     disl_type = args[8]
     dims = args[9]
+    cm0 = args[-1]
     
     # extract dislocation parameters and calculate energy
     A = params[:n_funcs]
@@ -86,12 +87,12 @@ def total_opt_stress(params, *args):
     c = params[2*n_funcs:]
     
     E = total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
-                                                      shift, tau, disl_type, dims)
+                                                      shift, tau, disl_type, dims, cm0)
     return E
     
     
 def stressed_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
-                                           tau, disl_type=None, dims=1):
+                                           tau, disl_type=None, dims=1, cm0=0.):
     '''Calculates the fully relaxed structure of a dislocation whose structure
     has previously been determined under unstressed conditions. 
     
@@ -109,7 +110,7 @@ def stressed_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
         lims = pn2.make_limits2d(n_funcs, np.inf, disl_type)
     
     in_args = (n_funcs, max_x, energy_function, K, b, spacing, shift, tau, 
-                                                            disl_type, dims)
+                                                            disl_type, dims, cm0)
     # obtain the relaxed structure of the dislocation in the applied stress 
     # field
     new_par = fmin_slsqp(total_opt_stress, params, eqcons=constraints, args=in_args,
@@ -166,6 +167,8 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # between adjacent unstressed dislocations
     threshold = thr*spacing
     
+    # set <max_x> to be larger than the value used to relax the core structure
+    max_x = 5*max_x
     
     # construct list of stresses to apply, using the gamma surface as a guide 
     # for the maximum possible value
@@ -190,10 +193,6 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     r = spacing*np.arange(-max_x, max_x)
        
     # find difference between the base dislocation and one that has been displaced
-    # note: may have to change this later for complicated misfit profiles,
-    # but this seems to work for edge dislocations in UO2 
-    #!!! SHOULD WE USE THE DISLOCATION DENSITY?!
-    shift = max(5, int(float(b)/spacing)) # distance a dislocation can move
     if dims == 1:
         # get displacement field of unstressed dislocation, compare with 
         # shifted dislocation
@@ -206,13 +205,12 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
             u = uy
     
     rho = pn1.rho(u, r)
-    #d_max = (rho*r[1:]/rho.sum()).sum()
     cm0 = pn1.center_of_mass(rho, r, b)
     # apply stress to the dislocation, starting with the positive direction
     new_par = dis_parameters
     for s in stresses:
         Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
-                            max_x, gsf_func, K, b, spacing, s, disl_type,  dims)
+                            max_x, gsf_func, K, b, spacing, s, disl_type,  dims, cm0)
         
         # compare new displacement field to that of original (ie. unstressed)
         # dislocation
@@ -239,7 +237,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     new_par = dis_parameters
     for s in -stresses:
         Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
-                             max_x, gsf_func, K, b, spacing, s, disl_type, dims)
+                             max_x, gsf_func, K, b, spacing, s, disl_type, dims, cm0)
         
         # compare with unstressed dislocation                     
         if dims == 1:
