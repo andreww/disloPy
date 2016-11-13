@@ -386,8 +386,8 @@ class AtomisticSim(object):
             self.ufield = fields.isotropicEdgeField
             if not (self.elast('poisson') is None):
                 self.sij = self.elast('poisson')
-            elif self.elastic('cij') is not None:
-                k, g = aniso.get_isotropic(self.elastic('cij'))
+            elif self.elast('cij') is not None:
+                k, g = aniso.get_isotropic(self.elast('cij'))
                 self.sij = poisson(k, g)
             else:
                 self.sij = poisson(self.elast('bulk'), self.elast('shear'))
