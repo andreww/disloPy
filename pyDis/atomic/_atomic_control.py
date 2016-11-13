@@ -420,8 +420,7 @@ class AtomisticSim(object):
         
         print("Constructing cluster...", end='')
             
-        if self.control('program') == 'gulp': # add option for LAMMPS later            
-            #!!! need to work out why I included this bit
+        if self.control('program') == 'gulp': # add option for LAMMPS later      
             sysout = open('{}.{:.0f}.{:.0f}.sysInfo'.format(self.control('basename'),
                                                                         r1, r2), 'w')
             sysout.write('pcell\n')
@@ -459,9 +458,11 @@ class AtomisticSim(object):
                 self.run_simulation('dis.{}'.format(outname))
                 self.run_simulation('ndf.{}'.format(outname))
                 
-                # calculate core energy
-                if self.control('calculate_core_energy'):
-                    self.core_energy_cluster(r1, r2)
+            # calculate core energy -> putting this here so that core energies
+            # can be easily recalculated without needing to re-run the cluster
+            # relaxation calculations. USE WITH CARE.
+            if self.control('calculate_core_energy'):
+                self.core_energy_cluster(r1, r2)
                 
         print('done')
             
@@ -597,6 +598,7 @@ class AtomisticSim(object):
         basename = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)  
                 
         # note that <rmax> is always taken to be the region 1 radius
+        total_thick = self.cluster('thickness')*norm(self.base_struc.getC())
         par, err = ce.dis_energy(r1,
                                  self.cluster('rmin'),
                                  self.cluster('dr'),
@@ -604,7 +606,7 @@ class AtomisticSim(object):
                                  self.control('executable'),
                                  self.cluster('method'),
                                  norm(self.burgers),
-                                 self.cluster('thickness')*norm(self.base_struc.getC()),
+                                 total_thick,
                                  relax_K=self.cluster('fit_K'),
                                  K=self.K,
                                  atom_dict=self.atomic_energies,
