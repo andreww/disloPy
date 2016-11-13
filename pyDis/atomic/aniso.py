@@ -324,7 +324,7 @@ def get_isotropic(Cij):
     '''
     
     # get elastic compliance matrix
-    Sij = np.linalg.inverse(Cij)
+    Sij = np.linalg.inv(Cij)
     
     # calculate Voigt and Reuss bounds on the bulk and shear moduli
     K_v = (Cij[0, 0]+Cij[1, 1]+Cij[2, 2]+2*Cij[0, 1]+2*Cij[0, 2]+2*Cij[1, 2])/9.
