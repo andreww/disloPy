@@ -270,7 +270,7 @@ def poisson(K, G):
     modulus <G>.
     '''
     
-    nu = (3*K - 2*G)/(2*(3*K+G))
+    nu = (3*K-2*G)/(2*(3*K+G))
     return nu
     
 class AtomisticSim(object):
@@ -386,6 +386,9 @@ class AtomisticSim(object):
             self.ufield = fields.isotropicEdgeField
             if not (self.elast('poisson') is None):
                 self.sij = self.elast('poisson')
+            elif self.elastic('cij') is not None:
+                k, g = aniso.get_isotropic(self.elastic('cij'))
+                self.sij = poisson(k, g)
             else:
                 self.sij = poisson(self.elast('bulk'), self.elast('shear'))
                 

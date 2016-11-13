@@ -317,3 +317,26 @@ def scalar_k(K, b):
     e_coeff /= lin.norm(b)**2
     return e_coeff
 
+def get_isotropic(Cij):
+    '''Calculates the isotropic bulk and shear moduli for the material with
+    elastic constants matrix Cij. Returns only the VRH average values for each
+    of these properties.
+    '''
+    
+    # get elastic compliance matrix
+    Sij = np.linalg.invert(Cij)
+    
+    # calculate Voigt and Reuss bounds on the bulk and shear moduli
+    K_v = (Cij[0, 0]+Cij[1, 1]+Cij[2, 2]+2*Cij[0, 1]+2*Cij[0, 2]+2*Cij[1, 2])/9.
+    G_v = (Cij[0, 0]+Cij[1, 1]+Cij[2, 2]-Cij[0, 1]-Cij[0, 2]-Cij[1, 2]+3*Cij[3, 3]
+           +3*Cij[4, 4]+3*Cij[5, 5])/15.
+    
+    K_r = 1/(Sij[0, 0]+Sij[1, 1]+Sij[2, 2]+2*Sij[0, 1]+2*Sij[0, 2]+2*Sij[1, 2])
+    G_r = 15/(4*Sij[0, 0]+4*Sij[1, 1]+4*Sij[2, 2]-4*Sij[0, 1]-4*Sij[0, 2]-4*Sij[1, 2]
+              +3*Sij[3, 3]+3*Sij[4, 4]+3*Sij[5, 5])
+    
+    # calculate Voigt-Reuss-Hill averages
+    K_vrh = 0.5*(K_v + K_r)
+    G_vrh = 0.5*(G_v + G_r)
+    
+    return K_vrh, G_vrh
