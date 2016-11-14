@@ -178,7 +178,7 @@ def extract_energy(cellname, program, relax=True):
     
     
     # regex to match the final energy output from relaxation calculations 
-    energy_relax = {"gulp": re.compile(r"\n\s*Final energy\s+=\s+" +
+    energy_relax = {"gulp": re.compile(r"\n\s*Final (?:energy|enthalpy)\s+=\s+" +
                                   "(?P<E>-?\d+\.\d+)\s*(?P<units>eV)\s*\n"),
                     "castep": re.compile(r"\n\s*BFGS:\s*Final\s+Enthalpy\s+=\s+" +
                               "(?P<E>-?\d+\.\d+E\+\d+)\s*(?P<units>\w+)\s*\n"),

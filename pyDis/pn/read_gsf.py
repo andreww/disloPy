@@ -174,6 +174,9 @@ def main():
         if args.mirror:
             energies = mirror1d(energies)
             
+        # rescale energies such that <energies>[0] == 0.0
+        energies -= energies[0]
+            
         # output computed gamma line energies to file
         for i, E in enumerate(energies):
             if E != E:
@@ -229,6 +232,9 @@ def main():
             energies = mirror2d(energies, axis=0)
         elif args.mirrory:
             energies = mirror2d(energies, axis=1)
+            
+        # rescale energies such that <energies>[0, 0] == 0 
+        energies -= energies[0, 0]
    
         # write energies to gsf file
         for i in xrange(len(energies[:, 0])):

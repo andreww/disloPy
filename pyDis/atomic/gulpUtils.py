@@ -772,7 +772,7 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     <replaceType> with an impurity <newType>. dRMin is the minimum difference
     between <RI> and <radius>. Ensures that the impurity is not close to region
     II, where internal strain would not be relaxed. <constraints> contains any 
-    additional tests we may perform on the atoms, eg. if the thickness is > 1,
+    additional tests we may perform on the atoms, eg. if the thickness is > 1||c||,
     we may wish to restrict substituted atoms to have z (x0) coordinates in the
     range [0,0.5) ( % 1). The default algorithm used to relax atomic coordinates
     is BFGS but, because of the N^2 scaling of the memory required to store the 
