@@ -86,7 +86,7 @@ def main():
     
     outstream = open(args.supercell_name, 'w')
     write_fn(outstream, supercell, sys_info, defected=False, do_relax=args.relax,
-                                        relax_type=args.calc_type, prop=args.prop)
+                        relax_type=args.calc_type, prop=args.prop, to_cart=False)
 
 if __name__ == "__main__":
     main()

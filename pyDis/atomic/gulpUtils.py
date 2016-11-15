@@ -114,6 +114,7 @@ class GulpAtom(cry.Atom):
 
         normalisationFactor = np.array([float(cellA), float(cellB),
                                         float(cellC)])
+
         self.__shelCoords = self.__shelCoords/normalisationFactor
         return
 
@@ -127,6 +128,7 @@ class GulpAtom(cry.Atom):
         # test to see if atom has a shell, if True, normalise its coordinates
         if self.hasShell():
             self.normaliseShelCoordinates(cellA, cellB, cellC)
+
         return
         
     def to_cart(self, lattice):
