@@ -205,7 +205,6 @@ def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str, program='gulp',
             new_hydrox.addAtom(cry.Atom(hydroxyl_str))
               
         # locate index of site containing nearest oxygen atom
-        #!!! needs to be fixed
         site_index = closest_atom_oftype(H, supercell, oxy_str, oned=oned, 
                                                             to_cart=to_cart)
         new_hydrox.set_index(site_index)
@@ -256,5 +255,101 @@ def locate_bonded(site, siteindex, bondatom, supercell, nbonds):
             # seen by the loop
             pass
 
-
+def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
+                   constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
+                    do_calc=False, oh_str='Oh', o_str='O'):
+    '''Iterates through all atoms in <relaxedCluster> within distance <radius>
+    of the dislocation line, and sequentially replaces one atom of type 
+    <replaceType> with an impurity <newType>. dRMin is the minimum difference
+    between <RI> and <radius>. Ensures that the impurity is not close to region
+    II, where internal strain would not be relaxed. <constraints> contains any 
+    additional tests we may perform on the atoms, eg. if the thickness is > 1||c||,
+    we may wish to restrict substituted atoms to have z (x0) coordinates in the
+    range [0,0.5) ( % 1). The default algorithm used to relax atomic coordinates
+    is BFGS but, because of the N^2 scaling of the memory required to store the 
+    Hessian, other solvers (eg. CG or numerical BFGS) should be used for large
+    simulation cells.
+    
+    Tests to ensure that radius < (RI - dRMin) to be performed in the calling 
+    routine (ie. <impurityEnergySurface> should only be called if radius < 
+    (RI-dRMin) is True. 
+    '''
+    
+    # file to keep track of defect sites and IDs
+    idfile = open('{}.{}.id.txt'.format(defect.getName(), defect.getSite()), 'w')
+    idfile.write('# site-id x y z\n')
+    
+    # dummy variables for lattice and toCart. Due to the way the program
+    # is set up, disloc is set equal to false, as the atoms are displaced 
+    # and relaxed BEFORE we read them in
+    lattice = np.identity(3)
+    toCart = False
+    disloc = False
+    coordType = 'pcell'
+    
+    # test to see if <defect> is located at a single site
+    if type(defect) is mutate.Impurity:
+        pass
+    else:
+        raise TypeError('Invalid impurity type.')
+        
+    use_indices = []    
+    for i, atom in enumerate(gulpcluster):
+        # check conditions for substitution:
+        # 1. Is the atom to be replaced of the right kind?
+        if atom.getSpecies() != defect.getSite():
+            continue
+        # 2. Is the atom within <radius> of the dislocation line?
+        if norm(atom.getCoordinates()[:-1]) > radius:
+            continue  
+              
+        # check <constraints>
+        if constraints is None:
+            pass
+        else:
+            for test in constraints:
+                useAtom = test(atom) 
+                if not useAtom:
+                    print("Skipping atom {}.".format(i))
+                    break
+            if not useAtom:
+                continue       
+        if noisy:        
+            print("Replacing atom {} (index {})...".format(str(atom), i)) 
+        
+        # record that atom <i> is to be replaced      
+        use_indices.append(i)        
+        
+    for i in use_indices:        
+        # set the coordinates and site index of the impurity
+        atom = gulpcluster[i]
+        defect.site_location(atom)
+        defect.set_index(i)
+        
+        # if the defect contains hydrogen, replace normal oxygen atoms with 
+        # hydroyl oxygen atoms
+        full_defect = hydroxyl_oxygens(defect, gulpcluster, oh_str, oxy_str=o_str,
+                                                        oned=True, to_cart=False)            
+        
+        # create .gin file for the calculation
+        coords = atom.getCoordinates()
+        outname = '{}.{}.{}'.format(defect.getName(), defect.getSite(), defect.get_index())
+        outstream = open(outname+'.gin','w')
+        
+        # record coordinates and site number in <idfile>
+        idfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(i, coords[0], 
+                                         coords[1], coords[2], norm(coords)))
+       
+        # write structure to output file, including the coordinates of the 
+        # impurity atom(s)
+        gulp.write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False,
+                                                                impurities=full_defect)
+                                                                 
+        # run calculation, if requested by user
+        if do_calc:
+            gulp.run_gulp(gulpexec, outname)
+            
+    idfile.close()
+                    
+    return
 

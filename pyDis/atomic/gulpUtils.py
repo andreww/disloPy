@@ -19,7 +19,6 @@ from pyDis.atomic import crystal as cry
 from pyDis.atomic import atomistic_utils as util
 from pyDis.atomic import transmutation as mutate
 from pyDis.atomic import rodSetup as rs
-from pyDis.atomic import multisite as ms
 
 from pyDis.atomic.rodSetup import __dict__ as rod_classes
 
@@ -769,7 +768,7 @@ def cluster_from_grs(filename, rI, rII, r=None):
 
 def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
-                    do_calc=False, is_hydroxyl=False, oh_str=None, o_str='O'):
+                                                                do_calc=False):
     '''Iterates through all atoms in <relaxedCluster> within distance <radius>
     of the dislocation line, and sequentially replaces one atom of type 
     <replaceType> with an impurity <newType>. dRMin is the minimum difference
@@ -788,7 +787,7 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     '''
     
     # file to keep track of defect sites and IDs
-    idfile = open('defect.id.txt', 'w')
+    idfile = open('{}.{}.id.txt'.format(defect.getName(), defect.getSite()), 'w')
     idfile.write('# site-id x y z\n')
     
     # dummy variables for lattice and toCart. Due to the way the program
@@ -836,13 +835,7 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         # set the coordinates and site index of the impurity
         atom = gulpcluster[i]
         defect.site_location(atom)
-        defect.set_index(i)
-        
-        # if the defect contains hydrogen, replace normal oxygen atoms with 
-        # hydroyl oxygen atoms
-        if is_hydroxyl:
-            full_defect = ms.hydroxyl_oxygens(defect, gulpcluster, oh_str,
-                            oxy_str=o_str, oned=True, to_cart=False)            
+        defect.set_index(i)            
         
         # create .gin file for the calculation
         coords = atom.getCoordinates()
@@ -850,16 +843,12 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         outstream = open(outname+'.gin','w')
         
         # record coordinates and site number in <idfile>
-        idfile.write('{} {:.6f} {:.6f} {:.6f}\n'.format(i, coords[0], coords[1],
-                                                                     coords[2]))
-        
+        idfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(i, coords[0], 
+                                         coords[1], coords[2], norm(coords)))
+       
         # write structure to output file, including the coordinates of the 
         # impurity atom(s)
-        if is_hydroxyl:
-            write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False,
-                                                                impurities=full_defect)
-        else:
-            write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False, 
+        write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False, 
                                                                  impurities=defect)
                                                                  
         # run calculation, if requested by user
