@@ -160,13 +160,15 @@ def handle_atomistic_control(param_dict):
     # cards for the <&cluster> namelist. Remember that the Stroh sextic theory
     #  (ie. anisotropic solution) places that branch cut along the negative
     # x-axis. Method for calculating core energy is specified may be edge,
-    # eregion or explicit.
+    # eregion or explicit. <rgap> is the difference between <region1> and the 
+    # outer radius used for core energy fitting
     cluster_cards = (('region1', {'default': None, 'type': array_or_float}),
                      ('region2', {'default': None, 'type': array_or_float}),
                      ('scale', {'default': 1.1, 'type': float}),
                      ('branch_cut', {'default': [0, -1], 'type': vector}),
                      ('thickness', {'default': 1, 'type': int}),
                      ('method', {'default': '', 'type': str}),
+                     ('rgap', {'default': 0, 'type', int}),
                      ('rmin', {'default': 1, 'type': int}),
                      ('dr', {'default': 1, 'type': int}),
                      ('fit_K', {'default': False, 'type': to_bool})
@@ -602,7 +604,7 @@ class AtomisticSim(object):
                 
         # note that <rmax> is always taken to be the region 1 radius
         total_thick = self.cluster('thickness')*norm(self.base_struc.getC())
-        par, err = ce.dis_energy(r1,
+        par, err = ce.dis_energy(r1-self.cluster('rgap'),
                                  self.cluster('rmin'),
                                  self.cluster('dr'),
                                  basename,

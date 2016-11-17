@@ -258,21 +258,9 @@ def locate_bonded(site, siteindex, bondatom, supercell, nbonds):
 def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
                     do_calc=False, oh_str='Oh', o_str='O'):
-    '''Iterates through all atoms in <relaxedCluster> within distance <radius>
-    of the dislocation line, and sequentially replaces one atom of type 
-    <replaceType> with an impurity <newType>. dRMin is the minimum difference
-    between <RI> and <radius>. Ensures that the impurity is not close to region
-    II, where internal strain would not be relaxed. <constraints> contains any 
-    additional tests we may perform on the atoms, eg. if the thickness is > 1||c||,
-    we may wish to restrict substituted atoms to have z (x0) coordinates in the
-    range [0,0.5) ( % 1). The default algorithm used to relax atomic coordinates
-    is BFGS but, because of the N^2 scaling of the memory required to store the 
-    Hessian, other solvers (eg. CG or numerical BFGS) should be used for large
-    simulation cells.
-    
-    Tests to ensure that radius < (RI - dRMin) to be performed in the calling 
-    routine (ie. <impurityEnergySurface> should only be called if radius < 
-    (RI-dRMin) is True. 
+    '''Similar to the function <calculateImpurity> in <gulpUtils>, but with 
+    the ability to replace oxygen atoms bonded to H atoms with their hydroxyl
+    counterparts.
     '''
     
     # file to keep track of defect sites and IDs
