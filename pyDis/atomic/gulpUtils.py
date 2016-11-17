@@ -27,8 +27,6 @@ from pyDis.atomic.rodSetup import __dict__ as rod_classes
 class GulpAtom(cry.Atom):
     '''Same as <cry.Atom>, but contains an additional variable to record
     whether it has a shell or breathing shell.
-
-    ### NOT FINISHED ###
     '''
 
     def __init__(self, atomicSymbol, coordinates=np.zeros(3)):
@@ -45,13 +43,13 @@ class GulpAtom(cry.Atom):
         # records whether we are using cluster-order indices (z, x, y)
         self._cluster_ordered = False
 
-    def addShell(self, shelCoords, shellType='shel'):
+    def addShell(self, shelCoords, shellType='shel', frac=False):
         '''Gives the atom a polarizable shell, with coordinates <shelCoords>.
         May add position checking later.
         '''
 
         self.__hasShell = True
-        self.__shelCoords = self.getShellDistance(shelCoords)
+        self.__shelCoords = self.getShellDistance(shelCoords, frac=frac)
 
         if shellType in 'bshe':
             # using a breathing shell model
@@ -94,12 +92,16 @@ class GulpAtom(cry.Atom):
             print('Error: atom does not have a shell.')
             return None
 
-    def getShellDistance(self, shelCoords):
+    def getShellDistance(self, shelCoords, frac=False):
         '''Returns the distance between the centre of the shell and the
-        (undisplaced) coordinates of the ionic core.
+        (undisplaced) coordinates of the ionic core. If <frac> is True, coordinates
+        are given in fractional units.
         '''
 
-        return np.copy(shelCoords - self.getCoordinates())
+        if frac:
+            return np.copy(shelCoords % 1 - self.getCoordinates() % 1)
+        else:
+            return np.copy(shelCoords - self.getCoordinates())
 
     def setShell(self, newShell):
         '''Changes coordinates of the polarizable shell to <newShell>.
@@ -311,12 +313,6 @@ def writeSuper(cell, sys_info, outFile, relax='conv', coordinateType='frac',
 
     return
 
-def writeSlab():
-    '''Write a slab simulation cell to file.
-    '''
-
-    pass
-
 def write1DCluster(cluster, sys_info, outname, maxiter=1000):
     '''Writes 1D-periodic simulation cell to file. Always write an accompanying
     undislocated cluster, so that dislocation energy can be calculated. <maxiter>
@@ -345,11 +341,6 @@ def write1DCluster(cluster, sys_info, outname, maxiter=1000):
                                                                     relax_type=relax)
 
     return
-
-def writeDefectCluster():
-    '''Sets up cluster calculation (eg. Mott-Littleton).
-    '''
-    pass
 
 # Master level functions for opening and parsing GULP input
 
@@ -549,9 +540,16 @@ def parse_gulp(filename, crystalStruc, path='./'):
                 if atomsNotFound:
                     # record that we are now reading atom info
                     atomsNotFound = False
+                    
+                    # check to see if the atomic positions are specified in 
+                    # fractional coordinates
+                    if gulp_lines[i-1].rstrip().startswith('frac'):
+                        frac = True
+                    else:
+                        frac = False
 
                 # extract atom info to <allAtoms>
-                extractAtom(foundAtoms, allAtoms)
+                extractAtom(foundAtoms, allAtoms, frac=frac)
 
             elif (not atomsNotFound) and (not foundAtoms):
                 # Locates the end of the atomic line section
@@ -570,7 +568,7 @@ def parse_gulp(filename, crystalStruc, path='./'):
 
 # Utility functions used to parse specific GULP input
 
-def extractAtom(atomRegex, atomsDict):
+def extractAtom(atomRegex, atomsDict, frac=False):
     '''Extracts atom info found in <atomRegex> to existing dictionary of atoms
     <atomsDict>.
     '''
@@ -578,13 +576,16 @@ def extractAtom(atomRegex, atomsDict):
     atomicSymbol = atomRegex.group(1)
 
     if atomicSymbol in atomsDict:
+        # extract atomic symbol and coordinates
         typeOfAtom = atomRegex.group(2)
         tempCoords = atomRegex.group(3)
         tempCoords = tempCoords.split()
         atomCoords = np.array([float(eval(x)) for x in tempCoords])
+        
+        # test to see if the "atom" is in fact a polarizable shell
         if typeOfAtom in 'shell':
             index = atomsDict[atomicSymbol]['shells']
-            atomsDict[atomicSymbol]['atoms'][index].addShell(atomCoords)
+            atomsDict[atomicSymbol]['atoms'][index].addShell(atomCoords, frac=frac)
             atomsDict[atomicSymbol]['shells'] += 1
         elif typeOfAtom in 'bshe':
             index = atomsDict[atomicSymbol]['shells']
@@ -603,7 +604,13 @@ def extractAtom(atomRegex, atomsDict):
         else:
             tempCoords = atomRegex.group(3)
             tempCoords = tempCoords.split()
-            atomCoords = np.array([float(x) for x in tempCoords])
+            if frac:
+                # read in coordinates modulo 1
+                atomCoords = np.array([float(x) for x in tempCoords])
+            else:
+                atomCoords = np.array([float(x) for x in tempCoords])
+                
+            # create atom and add it to the appropriate collection
             newAtom = GulpAtom(atomicSymbol, atomCoords)
             atomsDict[atomicSymbol]['atoms'].append(newAtom)
 

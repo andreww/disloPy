@@ -121,7 +121,7 @@ def handle_atomistic_control(param_dict):
                      ('basename', {'default': 'dis', 'type': str}),
                      ('suffix', {'default': 'in', 'type': str}),
                      ('executable', {'default': '', 'type': str}),
-                     ('calculate_core_energy', {'default': True, 'type': to_bool})
+                     ('calculate_core_energy', {'default': False, 'type': to_bool})
                     )
     
     # cards for the <&elast> namelist. Note that if dislocations are specified 
