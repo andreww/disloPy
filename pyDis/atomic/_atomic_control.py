@@ -165,6 +165,7 @@ def handle_atomistic_control(param_dict):
     cluster_cards = (('region1', {'default': None, 'type': array_or_float}),
                      ('region2', {'default': None, 'type': array_or_float}),
                      ('scale', {'default': 1.1, 'type': float}),
+                     ('use_branch', {'default': True, 'type': to_bool}),
                      ('branch_cut', {'default': [0, -1], 'type': vector}),
                      ('thickness', {'default': 1, 'type': int}),
                      ('method', {'default': '', 'type': str}),
@@ -453,7 +454,8 @@ class AtomisticSim(object):
             else:              
                 # delete/merge atoms that cross the branch cut                                          
                 cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
-                                     Sij=self.sij, branch=self.cluster('branch_cut'))
+                                     Sij=self.sij, branch=self.cluster('branch_cut'),
+                                               use_branch=self.cluster('use_branch'))
             
             outname = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)
                                                 

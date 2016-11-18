@@ -182,6 +182,13 @@ def solve_sextic(Cij, n=cry.ei(1), m=cry.ei(2)):
     return p, A, L
 
 #!!! should move these into <fields.py>
+
+def log_dis(z):
+    '''Logarithm using atan2 for the imaginary part. Gives sane edge dislocation
+    structures
+    '''
+    
+    return np.log(z.real**2+z.imag**2) +1j*np.arctan2(z.imag, z.real)     
    
 def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
     '''Given an elastic constants matrix <Cij>, defines a function 
@@ -215,9 +222,16 @@ def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
             # calculate displacement associated with each conjugate pair of 
             # eigenvalues/eigenvectors.
             for i in range(3):
-                posEig = A[i]*np.dot(L[i], b)*np.log(dx+p[i]*dy)
-                negEig = A[i+3]*np.dot(L[i+3], b)*np.log(dx+p[i+3]*dy)
-                u = u + (posEig - negEig).copy()
+                # original version
+                #posEig = A[i]*np.dot(L[i], b)*np.log(dx+p[i]*dy)
+                #negEig = A[i+3]*np.dot(L[i+3], b)*np.log(dx+p[i+3]*dy)
+                #u = u + (posEig - negEig).copy()
+                # new version
+                zp = dx+p[i]*dy
+                zm = dx+p[i+3]*dy
+                posEig = A[i]*np.dot(L[i], b)*log_dis(zp)
+                negEig = A[i+3]*np.dot(L[i+3], b)*log_dis(zm)
+                u += (posEig - negEig).copy()
                 
         # make real
         u *= 1/(2.*np.pi*1j)
