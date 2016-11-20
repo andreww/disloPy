@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+from __future__ import print_function
 import numpy as np
 
 import sys
@@ -12,29 +12,30 @@ from pyDis.pn import gsf_setup as gsf
 from pyDis.atomic import transmutation as imp
 from pyDis.pn import slab_impurity as sl
 from pyDis.atomic import atomistic_utils as atm
+from pyDis.atomic import gulpUtils as gulp
 
 def main(argv):
 
     basefile = argv[0]
-    vacuum = 10.
-    d_fix = 2.5
+    vacuum = 15.
+    d_fix = 2.8
     
     struc = cry.Crystal()
-    sys_info = qe.parse_qe(basefile, struc)
+    sys_info = gulp.parse_gulp(basefile, struc)
     new_struc = cry.superConstructor(struc, dims=np.array([2, 2, 1]))
-    new_slab = gsf.make_slab(new_struc, 6, vacuum, d_fix=d_fix, free_atoms=['H'])
-    atm.scale_kpoints(sys_info["cards"]["K_POINTS"], np.array([2, 2, 6]))
+    new_slab = gsf.make_slab(new_struc, 8, vacuum, d_fix=d_fix, free_atoms=['H'])
+    #atm.scale_kpoints(sys_info["cards"]["K_POINTS"], np.array([2, 2, 6]))
 
     # replace here to make new impurity
-    dfct = imp.Impurity('Mg', 'water')
-    dfct.addAtom(cry.Atom('H', coordinates=np.array([0.125, 0.0, 0.03])))
-    dfct.addAtom(cry.Atom('H', coordinates=np.array([-0.125, 0.0, -0.03])))
+    dfct = imp.Impurity('Mg', 'vac')
+    #dfct.addAtom(cry.Atom('H', coordinates=np.array([0.125, 0.0, 0.03])))
+    #dfct.addAtom(cry.Atom('H', coordinates=np.array([-0.125, 0.0, -0.03])))
     
     # find and replace appropriate atom
-    i = sl.replace_at_plane(new_slab, dfct, vacuum=10.)[0]
+    i = sl.replace_at_plane(new_slab, dfct, vacuum=15.)[0]
     dfct.set_index(i)
-    sl.impure_faults(new_slab, dfct, qe.write_qe, sys_info, 0.2, argv[1], 
-                         dim=1, limits=0.25, vacuum=vacuum, relax='relax')
+    sl.impure_faults(new_slab, dfct, gulp.write_gulp, sys_info, 0.1, argv[1], 
+                         dim=1, limits=0.25, vacuum=vacuum, suffix='gin')
     
 
 if __name__ == "__main__":

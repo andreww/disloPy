@@ -485,8 +485,11 @@ def restart(outstream, every=10):
     '''
     
     # find basename
-    name_form = re.compile('(?P<base>.+)\.gin')
-    basename = name_form.match(outstream.name).group('base')
+    if 'gin' in outstream.name:
+        name_form = re.compile('(?P<base>.+)\.gin')
+        basename = name_form.match(outstream.name).group('base')
+    else:
+        basename = outstream.name
     
     # write dump lines
     if not every:
