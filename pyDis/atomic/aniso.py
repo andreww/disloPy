@@ -188,7 +188,7 @@ def log_dis(z):
     structures
     '''
     
-    return np.log(z.real**2+z.imag**2) +1j*np.arctan2(z.imag, z.real)     
+    return np.log(np.sqrt(z.real**2+z.imag**2)) +1j*np.arctan2(z.imag, z.real)     
    
 def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
     '''Given an elastic constants matrix <Cij>, defines a function 
