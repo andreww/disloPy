@@ -231,7 +231,7 @@ def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
                 zm = dx+p[i+3]*dy
                 posEig = A[i]*np.dot(L[i], b)*log_dis(zp)
                 negEig = A[i+3]*np.dot(L[i+3], b)*log_dis(zm)
-                u += (posEig - negEig).copy()
+                u = u + (posEig - negEig).copy()
                 
         # make real
         u *= 1/(2.*np.pi*1j)

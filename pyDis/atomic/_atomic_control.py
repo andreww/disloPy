@@ -399,7 +399,13 @@ class AtomisticSim(object):
             self.ufield = fields.anisotropicScrewField
             # need to make this work for general elasticty, but currently works
             # because C_{44} = 1/S_{44}, C_{55} = 1/S_{55}
-            self.sij = self.elast('cij')[4, 4]/self.elast('cij')[3, 3]
+            sij = np.linalg.inv(self.elast('cij'))
+            self.sij = sij[3, 3]/sij[4, 4]
+            
+        elif self.elast('field_type') == 'aniso_edge':
+            # edge dislocation in an anisotropic medium
+            self.ufield = fields.anisotropicEdgeField
+            self.sij = self.elast('cij')
         
         return 
         
