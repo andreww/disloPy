@@ -223,7 +223,7 @@ class TwoRegionCluster(PeriodicCluster):
         return self._r1Atoms
         
     def applyField(self, field_type, dis_cores, dis_burgers, Sij=0.5, branch=[0,-1],
-                                                        THRESH=0.5, use_branch=True):
+                            branch_thresh=0.5, use_branch=True, centre_thresh=1e-10):
         '''Applies field to cluster and then updates list of RI
         and RII atoms. Default branch cut is appropriate for the displacement
         field corresponding to a pure edge dislocation in isotropic elasticity.
@@ -250,7 +250,7 @@ class TwoRegionCluster(PeriodicCluster):
                 x0 = atom.getCoordinates()
                 xi = atom.getDisplacedCoordinates()
                 # if atom is near the centre of the dislocation, likewise skip tests
-                if L.norm(xi[:-1]) < THRESH:
+                if L.norm(xi[:-1]) < centre_thresh:
                     continue
                 # rotate coordinates to the basis with the branch cut along -y
                 x0tilde = np.dot(R, x0)
@@ -272,21 +272,21 @@ class TwoRegionCluster(PeriodicCluster):
                             # atom passes over the branch cut and is deleted
                             # if it is within THRESH of the branch cut, will test to
                             # see if there are overlapping atoms
-                            if abs(xitilde[0]) < THRESH:                           
+                            if abs(xitilde[0]) < branch_thresh:                           
                                 for j, other_atom in enumerate(self._atoms):
                                     if i == j or not(other_atom.writeToOutput()):
                                         continue
                                     else:
                                         xj = other_atom.getDisplacedCoordinates()
                                         delta = L.norm(xi-xj)
-                                        if delta < 2*THRESH:
+                                        if delta < 2*branch_thresh:
                                             atom.switchOutputMode()
                                             break 
                             else:
                                 atom.switchOutputMode()
                                 
                     # check for overlaps at the branch cut
-                    elif x0tilde[0] > 0. and abs(xitilde[0]) < THRESH:
+                    elif x0tilde[0] > 0. and abs(xitilde[0]) < branch_thresh:
                         for j, other_atom in enumerate(self._atoms):
                             if i == j or not(other_atom.writeToOutput()):
                                 continue
@@ -294,7 +294,7 @@ class TwoRegionCluster(PeriodicCluster):
                                 xj = other_atom.getDisplacedCoordinates()
                                 #calculate distance between <atom> and <other_atom>
                                 delta = L.norm(xi-xj)
-                                if delta < 2*THRESH:
+                                if delta < 2*branch_thresh:
                                     # atoms deemed to be overlapping, and <atom> 
                                     # should be removed from output
                                     atom.switchOutputMode()
@@ -315,7 +315,6 @@ class TwoRegionCluster(PeriodicCluster):
             # no branch cut
             pass
                                                        
-        #super(GulpCluster, self).applyField(fieldType, disCores, disBurgers, Sij)
         self.specifyRegions()
         return
         

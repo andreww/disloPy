@@ -173,7 +173,8 @@ def handle_atomistic_control(param_dict):
                      ('rmin', {'default': 1, 'type': int}),
                      ('dr', {'default': 1, 'type': int}),
                      ('fit_K', {'default': False, 'type': to_bool}),
-                     ('cut_thresh', {'default': 0.5, 'type': float})
+                     ('cut_thresh', {'default': 0.5, 'type': float}),
+                     ('centre_thresh', {'default': 1e-10, 'type': float})
                     )
                      
     namelists = ['control', 'multipole', 'cluster', 'elast', 'atoms']
@@ -457,13 +458,16 @@ class AtomisticSim(object):
                 # should not contain a branch cut
                 cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
                                      Sij=self.sij, branch=self.cluster('branch_cut'),
-                                     use_branch=False, THRESH=self.cluster('cut_thresh'))
+                                            branch_thresh=self.cluster('cut_thresh'),
+                                         centre_thresh=self.cluster('centre_thresh'),
+                                                                    use_branch=False)
             else:              
-                # delete/merge atoms that cross the branch cut                                          
+                # delete/merge atoms that cross the branch cut          
                 cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
                                      Sij=self.sij, branch=self.cluster('branch_cut'),
                                                use_branch=self.cluster('use_branch'),
-                                               THRESH=self.cluster('cut_thresh'))
+                                            branch_thresh=self.cluster('cut_thresh'),
+                                         centre_thresh=self.cluster('centre_thresh'))
             
             outname = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)
                                                 
