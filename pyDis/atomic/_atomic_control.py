@@ -172,7 +172,8 @@ def handle_atomistic_control(param_dict):
                      ('rgap', {'default': 0, 'type': int}),
                      ('rmin', {'default': 1, 'type': int}),
                      ('dr', {'default': 1, 'type': int}),
-                     ('fit_K', {'default': False, 'type': to_bool})
+                     ('fit_K', {'default': False, 'type': to_bool}),
+                     ('cut_thresh', {'default': 0.5, 'type': float})
                     )
                      
     namelists = ['control', 'multipole', 'cluster', 'elast', 'atoms']
@@ -456,12 +457,13 @@ class AtomisticSim(object):
                 # should not contain a branch cut
                 cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
                                      Sij=self.sij, branch=self.cluster('branch_cut'),
-                                                                     use_branch=False)
+                                     use_branch=False, THRESH=self.cluster('cut_thresh'))
             else:              
                 # delete/merge atoms that cross the branch cut                                          
                 cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
                                      Sij=self.sij, branch=self.cluster('branch_cut'),
-                                               use_branch=self.cluster('use_branch'))
+                                               use_branch=self.cluster('use_branch'),
+                                               THRESH=self.cluster('cut_thresh'))
             
             outname = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)
                                                 

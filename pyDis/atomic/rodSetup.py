@@ -107,7 +107,7 @@ class PeriodicCluster(cry.Basis):
                         # Finally, translate the atoms so that <eta> is at the
                         # origin of the cell. This ensures that the dislocation
                         # can be set up symmetrically.
-                        cartCoords -= centre[0]*lattice[0]-centre[1]*lattice[1]
+                        cartCoords -= (centre[0]*lattice[0]+centre[1]*lattice[1])
                         # displace along c-axis
                         cartCoords[-1] = cartCoords[-1] + k*z
                         newAtom.setCoordinates(cartCoords)

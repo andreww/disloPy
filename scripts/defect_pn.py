@@ -13,6 +13,7 @@ from pyDis.atomic import transmutation as imp
 from pyDis.pn import slab_impurity as sl
 from pyDis.atomic import atomistic_utils as atm
 from pyDis.atomic import gulpUtils as gulp
+from pyDis.atomic import multisite as ms
 
 def main(argv):
 
@@ -28,13 +29,22 @@ def main(argv):
 
     # replace here to make new impurity
     dfct = imp.Impurity('Mg', 'vac')
-    #dfct.addAtom(cry.Atom('H', coordinates=np.array([0.125, 0.0, 0.03])))
-    #dfct.addAtom(cry.Atom('H', coordinates=np.array([-0.125, 0.0, -0.03])))
     
     # find and replace appropriate atom
     i = sl.replace_at_plane(new_slab, dfct, vacuum=15.)[0]
     dfct.set_index(i)
-    sl.impure_faults(new_slab, dfct, gulp.write_gulp, sys_info, 0.1, argv[1], 
+    
+    # add hydrogen atoms and replace the appropriate oxygen atoms with hydroxyl
+    # oxygens
+    dfct.addAtom(gulp.GulpAtom('H', coordinates=np.array([-0.707, 0., -0.707])))
+    dfct.addAtom(gulp.GulpAtom('H', coordinates=np.array([0.707, 0., 0.707])))
+    dfct.to_cell_coords(new_slab)
+    
+    fulldfct = ms.hydroxyl_oxygens(dfct, new_slab, 'O2', oxy_str='O1', oned=False,
+                                    to_cart=False)
+    
+    # insert defect into slab and calculate generalised stacking fault energies
+    sl.cluster_faults(new_slab, fulldfct, gulp.write_gulp, sys_info, 0.1, argv[1], 
                          dim=1, limits=0.25, vacuum=vacuum, suffix='gin')
     
 
