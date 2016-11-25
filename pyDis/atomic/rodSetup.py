@@ -284,6 +284,11 @@ class TwoRegionCluster(PeriodicCluster):
                                         delta = L.norm(xi-xj)
                                         if delta < 2*branch_thresh:
                                             atom.switchOutputMode()
+                                            #!!! EXPERIMENTAL
+                                            new_coords = other_atom.getDisplacedCoordinates()
+                                            new_coords[0] = 0.
+                                            other_atom.setDisplacedCoordinates(new_coords)
+                                            #!!! END EXPERIMENTAL
                                             break 
                             else:
                                 atom.switchOutputMode()
@@ -309,6 +314,11 @@ class TwoRegionCluster(PeriodicCluster):
                                     # "merge" atoms
                                     xjtilde = np.dot(R, xj)
                                     threshold(xjtilde)
+                                    #!!! EXPERIMENTAL
+                                    new_coords = other_atom.getDisplacedCoordinates()
+                                    new_coords[0] = 0.
+                                    other_atom.setDisplacedCoordinates(new_coords)
+                                    #!!! END EXPERIMENTAL
                                     # project onto branch cut
                                     #xjtilde[0] = 0.
                                     # rotate back to original coordinate system
