@@ -121,7 +121,8 @@ def handle_atomistic_control(param_dict):
                      ('basename', {'default': 'dis', 'type': str}),
                      ('suffix', {'default': 'in', 'type': str}),
                      ('executable', {'default': '', 'type': str}),
-                     ('calculate_core_energy', {'default': False, 'type': to_bool})
+                     ('calculate_core_energy', {'default': False, 'type': to_bool}),
+                     ('maxcyc', {'default': 100, 'type': int})
                     )
     
     # cards for the <&elast> namelist. Note that if dislocations are specified 
@@ -471,7 +472,7 @@ class AtomisticSim(object):
             
             outname = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)
                                                 
-            gulp.write1DCluster(cluster, self.sys_info, outname)
+            gulp.write1DCluster(cluster, self.sys_info, outname, maxiter=self.control('maxcyc'))
             
             if self.control('run_sim'):
                 self.run_simulation('dis.{}'.format(outname))
@@ -555,9 +556,14 @@ class AtomisticSim(object):
             relaxtype = self.multipole('relaxtype')
         else:
             relaxtype = None
-            
-        self.write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True, 
-              add_constraints=False, relax_type=relaxtype)
+        
+        if self.control('program') != 'gulp':    
+            self.write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True, 
+                                                add_constraints=False, relax_type=relaxtype)
+        else:
+            self.write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True,
+                                                add_constraints=False, relax_type=relaxtype, 
+                                                             maxiter=self.control('maxcyc'))
         
         # run calculations, if requested by the user
         if self.control('run_sim'):

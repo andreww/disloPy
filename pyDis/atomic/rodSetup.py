@@ -276,6 +276,9 @@ class TwoRegionCluster(PeriodicCluster):
                                 for j, other_atom in enumerate(self._atoms):
                                     if i == j or not(other_atom.writeToOutput()):
                                         continue
+                                    elif other_atom.getSpecies() != atom.getSpecies():
+                                        # don't delete dissimilar atoms
+                                        continue   
                                     else:
                                         xj = other_atom.getDisplacedCoordinates()
                                         delta = L.norm(xi-xj)
@@ -289,6 +292,9 @@ class TwoRegionCluster(PeriodicCluster):
                     elif x0tilde[0] > 0. and abs(xitilde[0]) < branch_thresh:
                         for j, other_atom in enumerate(self._atoms):
                             if i == j or not(other_atom.writeToOutput()):
+                                continue
+                            elif other_atom.getSpecies() != atom.getSpecies():
+                                # don't delete dissimilar atoms
                                 continue
                             else:
                                 xj = other_atom.getDisplacedCoordinates()

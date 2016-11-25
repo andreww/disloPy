@@ -313,11 +313,11 @@ def writeSuper(cell, sys_info, outFile, relax='conv', coordinateType='frac',
 
     return
 
-def write1DCluster(cluster, sys_info, outname, maxiter=1000):
+def write1DCluster(cluster, sys_info, outname, maxiter=100):
     '''Writes 1D-periodic simulation cell to file. Always write an accompanying
     undislocated cluster, so that dislocation energy can be calculated. <maxiter>
-    gives the maximum number of iterations allowed. GULP defaults to 1000, but
-    his is somewhat too high in most circumstances.
+    gives the maximum number of iterations allowed. GULP defaults to 100, but
+    this is somewhat too high in most circumstances.
     '''
 
     # open files for the perfect and dislocated clusters
@@ -338,7 +338,7 @@ def write1DCluster(cluster, sys_info, outname, maxiter=1000):
             prefix = 'dis.{}'.format(outname)
 
         write_gulp(outstream, cluster, sys_info, defected=disloc, do_relax=do_relax, 
-                                                                    relax_type=relax)
+                                                  relax_type=relax, maxiter=maxiter)
 
     return
 
@@ -385,7 +385,7 @@ def preamble(outstream, maxiter=500, do_relax=True, relax_type='conv',
     
 def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart=True,
                     add_constraints=False, relax_type='conv', impurities=None, prop=True,
-                                                pfractional=False):
+                                                pfractional=False, maxiter=500):
     '''Writes the crystal <gulp_struc> to <outstream>. If <defected> is True,
     then it uses the displaced coordinates, otherwise it uses the regular atomic
     coordinates (ie. their locations in a perfect crystal with the provided
@@ -422,7 +422,8 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
             struc.specifyRegions()
             
         # polymer cell -> write cell height
-        preamble(outstream, do_relax=do_relax, polymer=True, relax_type=relax_type)
+        preamble(outstream, do_relax=do_relax, polymer=True, relax_type=relax_type,
+                                                                   maxiter=maxiter)
         height = struc.getHeight()
         outstream.write('pcell\n')
         outstream.write('{:.6f} 0\n'.format(height))
@@ -441,7 +442,8 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
                                                                      defected)
     else:
         # write lattice vectors
-        preamble(outstream, do_relax=do_relax, relax_type=relax_type, prop=prop) 
+        preamble(outstream, do_relax=do_relax, relax_type=relax_type, prop=prop,
+                                                maxiter=maxiter) 
         writeVectors(struc.getLattice(), outstream)
         
         if relax_type is None:
