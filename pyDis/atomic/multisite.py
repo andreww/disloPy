@@ -298,7 +298,9 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             for test in constraints:
                 useAtom = test(atom) 
                 if not useAtom:
-                    print("Skipping atom {}.".format(i))
+                    # if atom fails to satisfy ANY constraint, skip over it
+                    if noisy:
+                        print("Skipping atom {}.".format(i))
                     break
             if not useAtom:
                 continue       
@@ -306,7 +308,15 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             print("Replacing atom {} (index {})...".format(str(atom), i)) 
         
         # record that atom <i> is to be replaced      
-        use_indices.append(i)        
+        use_indices.append(i)    
+        
+    # record all indices in <idfile> if not running calculations at the time of
+    # execution. This facilitates later automation of calculations
+    if not do_calc:
+        idfile.write('#')
+        for i in use_indices:
+            idfile.write(' {}'.format(i))
+        idfile.write('\n')    
         
     for i in use_indices:        
         # set the coordinates and site index of the impurity
@@ -317,7 +327,7 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         # if the defect contains hydrogen, replace normal oxygen atoms with 
         # hydroyl oxygen atoms
         full_defect = hydroxyl_oxygens(defect, gulpcluster, oh_str, oxy_str=o_str,
-                                                        oned=True, to_cart=False)            
+                                                        oned=True, to_cart=False)          
         
         # create .gin file for the calculation
         coords = atom.getCoordinates()
@@ -335,6 +345,7 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                                                                  
         # run calculation, if requested by user
         if do_calc:
+            print('Relaxing structure with defect at site {}...'.format(i))
             gulp.run_gulp(gulpexec, outname)
             
     idfile.close()

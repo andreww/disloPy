@@ -359,23 +359,27 @@ def is_coupled(testobject):
     
 # POSSIBLE CONSTRAINTS
 
-def heightConstraint(zMin,zMax,atom):
+def heightConstraint(zMin, zMax, atom, period=1, use_disp=False, index=-1):
     '''Ensures that the z-coordinate of <atom> (in pfractional units) is in the 
-    range [zMin,zMax).
+    range [zMin,zMax). <period> is the periodicity of the atomic structure along
+    the dislocation line.
     '''
     
     # z coordinate of atom, constrained to be in [0,1)
-    atomicZ = atom.getCoordinates()[0] % 1
+    if use_disp:
+        atomicZ = atom.getCoordinates()[index] % period
+    else:
+        atomicZ = atom.getDisplacedCoordinates()[index] % period
     
-    useAtom = in_range(atomicZ,zMin,zMax)
+    useAtom = in_range(atomicZ, zMin, zMax)
     return useAtom
 
 def plane_constraint(atom, i, xmin=-np.inf, xmax=np.inf, use_polymer=True,
                                                           tolerance=1e-12):
-    '''Allows substitution iff coordinate of <atom> > xmin(-tolerance). The
-    inclusion of a tolerance factor accounts for small deviations away from a
+    '''Allows substitution iff coordinate of xmax(+tol) > <atom> > xmin(-tol). 
+    The inclusion of a tolerance factor accounts for small deviations away from 
     symmetry plane, generally due to the use of CG or numerical BFGS. We assume
-    symmetry about x_{i} == 0. <xmax> (<xmin>) defaults to inf (-inf); ie. 
+    a symmetry about x_{i} == 0. <xmax> (<xmin>) defaults to inf (-inf); ie. 
     unbounded above (below).
     '''
 

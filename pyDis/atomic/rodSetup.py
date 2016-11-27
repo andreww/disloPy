@@ -235,9 +235,10 @@ class TwoRegionCluster(PeriodicCluster):
                                                            dis_burgers, Sij)
                                                            
         # set up rotation matrix
-        theta = rotation_angle(branch)
-        R = rotation_matrix(theta)
-        Rinv = inverse_rotation(R)
+        #theta = rotation_angle(branch)
+        #R = rotation_matrix(theta)
+        #Rinv = inverse_rotation(R)
+        br_i = branch_index(branch)
             
         # check for overlapping atoms. Remove atoms that cross the branch cut.
         # NEED TO GENERALIZE FOR ARBITRARY BRANCH CUTS
@@ -308,8 +309,7 @@ class TwoRegionCluster(PeriodicCluster):
                                 if delta < 2*branch_thresh:
                                     # atoms deemed to be overlapping, and <atom> 
                                     # should be removed from output
-                                    atom.switchOutputMode()
-                                    
+                                    atom.switchOutputMode()                                    
                                     
                                     # "merge" atoms
                                     xjtilde = np.dot(R, xj)
@@ -417,3 +417,12 @@ def rotation_angle(branch_cut):
     theta_base %= (2*np.pi)
     theta = 3*np.pi/2. - theta_base
     return theta
+    
+def branch_index(br):
+    if br[0] != 0 and br[1] != 0:
+        raise ValueError("Branch cut must lie along one axis.")
+    elif br[0] == 0:
+        return 0
+    else:
+        # branch cut lies along x axis
+        return 1

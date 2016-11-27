@@ -177,7 +177,7 @@ class GulpAtom(cry.Atom):
             # recording that we are using cluster-ordered coordinate indices
             self._cluster_ordered = True
         
-    def from_cluster(self):
+    def from_cluster(self, height=1):
         '''Permutes indices so that the position vector reads (x, y, z), given a
         vector with the order (z, x, y) (ie. in polymer coordinates).
         '''
@@ -195,7 +195,13 @@ class GulpAtom(cry.Atom):
         # shell coordinates
         if self.hasShell():
             shel_coords = self.getShell()
-            shel_coords = np.array([shel_coords[1], shel_coords[2], shel_coords[0]])
+            
+            # correct for the periodicity of the cell 
+            dz = shel_coords[0] % height         
+            if dz > 0.5:
+                dz = 1-dz
+
+            shel_coords = np.array([shel_coords[1], shel_coords[2], dz])
             self.setShell(shel_coords)
 
         # recording that we are using cluster-ordered coordinate indices
@@ -801,6 +807,8 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     # file to keep track of defect sites and IDs
     idfile = open('{}.{}.id.txt'.format(defect.getName(), defect.getSite()), 'w')
     idfile.write('# site-id x y z\n')
+    # record base name of simulation files
+    idfile.write('# {}.{}'.format(defect.getName(), defect.getSite()))
     
     # dummy variables for lattice and toCart. Due to the way the program
     # is set up, disloc is set equal to false, as the atoms are displaced 
@@ -842,7 +850,13 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         
         # record that atom <i> is to be replaced      
         use_indices.append(i)        
-        
+    
+    # record all indices in <idfile> for ease of restarting
+    idfile.write('#')
+    for i in use_indices:
+        idfile.write(' {}'.format(i))
+    idfile.write('\n') 
+            
     for i in use_indices:        
         # set the coordinates and site index of the impurity
         atom = gulpcluster[i]
@@ -865,6 +879,7 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                                                                  
         # run calculation, if requested by user
         if do_calc:
+            print('Relaxing structure with defect at site {}...'.format(i))
             run_gulp(gulpexec, outname)
             
     idfile.close()
