@@ -181,18 +181,7 @@ def solve_sextic(Cij, n=cry.ei(1), m=cry.ei(2)):
     
     return p, A, L
 
-#!!! should move these into <fields.py>
-
-def log_dis(z):
-    '''Logarithm using atan2 for the imaginary part. Gives sane edge dislocation
-    structures
-    '''
-    
-    mod_z = np.log(np.sqrt(z.real**2+z.imag**2))
-    z_rot = z*np.exp(-1j*(np.pi/2.))
-    arg_z = np.arctan(z_rot.imag/z_rot.real)+np.pi/2.
-    
-    return mod_z + 1j*arg_z
+# FIELDS CORRESPONDING TO SPECIFIC DEFECT TYPES
    
 def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
     '''Given an elastic constants matrix <Cij>, defines a function 
@@ -210,8 +199,8 @@ def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
         '''
         
         u = 0j*np.zeros(3)
-        dx = x[0] - x0[0]
-        dy = x[1] - x0[1]-1e-10
+        dx = x[0] - x0[0]-1e-10
+        dy = x[1] - x0[1]
         
         rho2 = dx**2 + dy**2
         
@@ -227,15 +216,9 @@ def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
             # eigenvalues/eigenvectors.
             for i in range(3):
                 # original version
-                posEig = A[i]*np.dot(L[i], b)*np.log(dx+p[i]*dy)
-                negEig = A[i+3]*np.dot(L[i+3], b)*np.log(dx+p[i+3]*dy)
-                u = u - (posEig-negEig).copy()
-                # new version
-                #zp = dx+p[i]*dy
-                #zm = dx+p[i+3]*dy
-                #posEig = A[i]*np.dot(L[i], b)*log_dis(zp)
-                #negEig = A[i+3]*np.dot(L[i+3], b)*log_dis(zm)
-                #u = u - (posEig - negEig).copy()
+                posEig = A[i]*np.dot(L[i], b)*np.log(dy+p[i]*dx)
+                negEig = A[i+3]*np.dot(L[i+3], b)*np.log(dy+p[i+3]*dx)
+                u = u + (negEig-posEig).copy()
              
         # make real
         u *= 1/(2.*np.pi*1j)
