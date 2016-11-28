@@ -235,10 +235,13 @@ class TwoRegionCluster(PeriodicCluster):
                                                            dis_burgers, Sij)
                                                            
         # set up rotation matrix
-        #theta = rotation_angle(branch)
-        #R = rotation_matrix(theta)
-        #Rinv = inverse_rotation(R)
-        br_i = branch_index(branch)
+        #!!! EXPERIMENTAL
+        #!theta = rotation_angle(branch)
+        #!R = rotation_matrix(theta)
+        #!Rinv = inverse_rotation(R)
+        # indices of the axes normal and parallel to the branch cut
+        br_i = branch_index(branch)#!
+        br_j = (br_i-1) % 2#!
             
         # check for overlapping atoms. Remove atoms that cross the branch cut.
         # NEED TO GENERALIZE FOR ARBITRARY BRANCH CUTS
@@ -254,17 +257,22 @@ class TwoRegionCluster(PeriodicCluster):
                 if L.norm(xi[:-1]) < centre_thresh:
                     continue
                 # rotate coordinates to the basis with the branch cut along -y
-                x0tilde = np.dot(R, x0)
-                xitilde = np.dot(R, xi)
-                threshold(x0tilde)
-                threshold(xitilde)
+                #!x0tilde = np.dot(R, x0)
+                #!xitilde = np.dot(R, xi)
+                #!threshold(x0tilde)
+                #!threshold(xitilde)
+                threshold(x0)#!
+                threshold(xi)#!
                 #if x0tilde[1] < 0. and xitilde[1] < 0.:
-                if xitilde[1] < 0.:
+                #!if xitilde[1] < 0.:
+                if xi[br_j] < 0.:#!
                     # atom remains in the half of the crystal defined by the branch cut
                     # NOTE: need to check if it matters whether or not it started in the 
                     # lower half of the simulation cell
-                    if np.sign(x0tilde[0]) != np.sign(xitilde[0]):
-                        if np.sign(x0tilde[0]) < 0. and abs(xitilde[0]) < 1e-12:
+                    #!if np.sign(x0tilde[0]) != np.sign(xitilde[0]):
+                    #!    if np.sign(x0tilde[0]) < 0. and abs(xitilde[0]) < 1e-12:
+                    if np.sign(x0[br_i]) != np.sign(xi[br_i]):#!
+                        if np.sign(x0[br_i]) < 0. and abs(xi[br_i]) < 1e-12:#!
                             # atom was in the left half of the crystal and intersects 
                             # the branch cut -> will delete its counterpart from 
                             # the right half of the crystal
@@ -273,7 +281,8 @@ class TwoRegionCluster(PeriodicCluster):
                             # atom passes over the branch cut and is deleted
                             # if it is within THRESH of the branch cut, will test to
                             # see if there are overlapping atoms
-                            if abs(xitilde[0]) < branch_thresh:                           
+                            #!if abs(xitilde[0]) < branch_thresh:    
+                            if abs(xi[br_i]) < branch_thresh:#!                       
                                 for j, other_atom in enumerate(self._atoms):
                                     if i == j or not(other_atom.writeToOutput()):
                                         continue
@@ -287,7 +296,8 @@ class TwoRegionCluster(PeriodicCluster):
                                             atom.switchOutputMode()
                                             #!!! EXPERIMENTAL
                                             new_coords = other_atom.getDisplacedCoordinates()
-                                            new_coords[0] = 0.
+                                            #!new_coords[0] = 0.
+                                            new_coords[br_i] = 0.#!
                                             other_atom.setDisplacedCoordinates(new_coords)
                                             #!!! END EXPERIMENTAL
                                             break 
@@ -295,7 +305,8 @@ class TwoRegionCluster(PeriodicCluster):
                                 atom.switchOutputMode()
                                 
                     # check for overlaps at the branch cut
-                    elif x0tilde[0] > 0. and abs(xitilde[0]) < branch_thresh:
+                    #!elif x0tilde[0] > 0. and abs(xitilde[0]) < branch_thresh:
+                    elif x0[br_i] > 0. and abs(xi[br_i]) < branch_thresh:#!
                         for j, other_atom in enumerate(self._atoms):
                             if i == j or not(other_atom.writeToOutput()):
                                 continue
@@ -312,11 +323,13 @@ class TwoRegionCluster(PeriodicCluster):
                                     atom.switchOutputMode()                                    
                                     
                                     # "merge" atoms
-                                    xjtilde = np.dot(R, xj)
-                                    threshold(xjtilde)
+                                    #!xjtilde = np.dot(R, xj)
+                                    #!threshold(xjtilde)
+                                    threshold(xj)
                                     #!!! EXPERIMENTAL
-                                    new_coords = other_atom.getDisplacedCoordinates()
-                                    new_coords[0] = 0.
+                                    new_coords = xj
+                                    #!new_coords[0] = 0.
+                                    new_coords[br_i] = 0.#!
                                     other_atom.setDisplacedCoordinates(new_coords)
                                     #!!! END EXPERIMENTAL
                                     # project onto branch cut

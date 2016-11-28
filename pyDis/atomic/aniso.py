@@ -188,7 +188,11 @@ def log_dis(z):
     structures
     '''
     
-    return np.log(np.sqrt(z.real**2+z.imag**2)) +1j*np.arctan2(z.imag, z.real)     
+    mod_z = np.log(np.sqrt(z.real**2+z.imag**2))
+    z_rot = z*np.exp(-1j*(np.pi/2.))
+    arg_z = np.arctan(z_rot.imag/z_rot.real)+np.pi/2.
+    
+    return mod_z + 1j*arg_z
    
 def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
     '''Given an elastic constants matrix <Cij>, defines a function 
@@ -207,7 +211,7 @@ def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
         
         u = 0j*np.zeros(3)
         dx = x[0] - x0[0]
-        dy = x[1] - x0[1]
+        dy = x[1] - x0[1]-1e-10
         
         rho2 = dx**2 + dy**2
         
@@ -225,14 +229,14 @@ def makeAnisoField(Cij, n=cry.ei(1), m=cry.ei(2)):
                 # original version
                 posEig = A[i]*np.dot(L[i], b)*np.log(dx+p[i]*dy)
                 negEig = A[i+3]*np.dot(L[i+3], b)*np.log(dx+p[i+3]*dy)
-                u = u + (posEig - negEig).copy()
+                u = u - (posEig-negEig).copy()
                 # new version
                 #zp = dx+p[i]*dy
                 #zm = dx+p[i+3]*dy
                 #posEig = A[i]*np.dot(L[i], b)*log_dis(zp)
                 #negEig = A[i+3]*np.dot(L[i+3], b)*log_dis(zm)
-                #u = u + (posEig - negEig).copy()
-                
+                #u = u - (posEig - negEig).copy()
+             
         # make real
         u *= 1/(2.*np.pi*1j)
         return u.real

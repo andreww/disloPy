@@ -43,13 +43,13 @@ class GulpAtom(cry.Atom):
         # records whether we are using cluster-order indices (z, x, y)
         self._cluster_ordered = False
 
-    def addShell(self, shelCoords, shellType='shel', frac=False):
+    def addShell(self, shelCoords, shellType='shel', frac=False, pfrac=False):
         '''Gives the atom a polarizable shell, with coordinates <shelCoords>.
         May add position checking later.
         '''
 
         self.__hasShell = True
-        self.__shelCoords = self.getShellDistance(shelCoords, frac=frac)
+        self.__shelCoords = self.getShellDistance(shelCoords, frac=frac, pfrac=pfrac)
 
         if shellType in 'bshe':
             # using a breathing shell model
@@ -92,7 +92,7 @@ class GulpAtom(cry.Atom):
             print('Error: atom does not have a shell.')
             return None
 
-    def getShellDistance(self, shelCoords, frac=False):
+    def getShellDistance(self, shelCoords, frac=False, pfrac=False):
         '''Returns the distance between the centre of the shell and the
         (undisplaced) coordinates of the ionic core. If <frac> is True, coordinates
         are given in fractional units.
@@ -100,6 +100,26 @@ class GulpAtom(cry.Atom):
 
         if frac:
             return np.copy(shelCoords % 1 - self.getCoordinates() % 1)
+        elif pfrac:
+            # get shell coordinates
+            sx = shelCoords[1]
+            sy = shelCoords[2]
+            sz = shelCoords[0] % 1
+            # get core coordinates
+            cx = self.getCoordinates()[1]
+            cy = self.getCoordinates()[2]
+            cz = self.getCoordinates()[0] % 1
+            
+            # calculate shortest distance between the core and any periodic image
+            # of the shell along the dislocation line
+            dz = sz-cz
+            if abs(sz+1-cz) < abs(dz):
+                dz = sz+1-cz
+            if abs(sz-1-cz) < abs(dz):
+                dz = sz-1-cz
+            
+            # return final core-shell distance
+            return np.copy([sx-cx, sy-cy, dz])
         else:
             return np.copy(shelCoords - self.getCoordinates())
 
@@ -196,12 +216,8 @@ class GulpAtom(cry.Atom):
         if self.hasShell():
             shel_coords = self.getShell()
             
-            # correct for the periodicity of the cell 
-            dz = shel_coords[0] % height         
-            if dz > 0.5:
-                dz = 1-dz
-
-            shel_coords = np.array([shel_coords[1], shel_coords[2], dz])
+            # reorder
+            shel_coords = np.array([shel_coords[1], shel_coords[2], shel_coords[0]])
             self.setShell(shel_coords)
 
         # recording that we are using cluster-ordered coordinate indices
@@ -556,11 +572,16 @@ def parse_gulp(filename, crystalStruc, path='./'):
                     # fractional coordinates
                     if gulp_lines[i-1].rstrip().startswith('frac'):
                         frac = True
+                        pfrac = False
+                    elif gulp_lines[i-1].rstrip().startswith('pfrac'):
+                        frac = False
+                        pfrac = True
                     else:
+                        pfrac = False
                         frac = False
 
                 # extract atom info to <allAtoms>
-                extractAtom(foundAtoms, allAtoms, frac=frac)
+                extractAtom(foundAtoms, allAtoms, frac=frac, pfrac=pfrac)
 
             elif (not atomsNotFound) and (not foundAtoms):
                 # Locates the end of the atomic line section
@@ -579,7 +600,7 @@ def parse_gulp(filename, crystalStruc, path='./'):
 
 # Utility functions used to parse specific GULP input
 
-def extractAtom(atomRegex, atomsDict, frac=False):
+def extractAtom(atomRegex, atomsDict, frac=False, pfrac=False):
     '''Extracts atom info found in <atomRegex> to existing dictionary of atoms
     <atomsDict>.
     '''
@@ -596,7 +617,8 @@ def extractAtom(atomRegex, atomsDict, frac=False):
         # test to see if the "atom" is in fact a polarizable shell
         if typeOfAtom in 'shell':
             index = atomsDict[atomicSymbol]['shells']
-            atomsDict[atomicSymbol]['atoms'][index].addShell(atomCoords, frac=frac)
+            atomsDict[atomicSymbol]['atoms'][index].addShell(atomCoords, frac=frac,
+                                                                       pfrac=pfrac)
             atomsDict[atomicSymbol]['shells'] += 1
         elif typeOfAtom in 'bshe':
             index = atomsDict[atomicSymbol]['shells']
