@@ -218,8 +218,6 @@ def dislocationEnergyEregion(gulpName, outStream, currentRI):
     # calculate energy of introducing a dislocation
     eDis = totalEnergyDis - totalEnergyPerf
     
-    outStream.write('{} {:.6f}\n'.format(currentRI, eDis))
-    
     return eDis
     
 def dislocationEnergySections(gulpName, outStream, currentRI):
@@ -251,8 +249,6 @@ def dislocationEnergySections(gulpName, outStream, currentRI):
     
     # calculate energy of dislocation                
     eDis = energies['dislocated']['Etot'] - energies['perfect']['Etot']
-    
-    outStream.write('{} {:.6f}\n'.format(currentRI, eDis))
         
     return eDis
     
@@ -279,13 +275,11 @@ def dislocation_energy_edge(base_name, outStream, currentRI, newRI, E_atoms):
         E_perfect += E_atoms[atom.getSpecies()]
             
     eDis = total_E_RI - E_perfect
-        
-    outStream.write('{} {:.6f}\n'.format(currentRI, eDis))
     
     return eDis
 
-def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, use_eregion=True,
-                                                                E_atoms=None):
+def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, thick, 
+                                     use_eregion=True, E_atoms=None):
     '''Decreases the radius of region I from <startRI> to <finalRI> by
     decrementing by dRI (> 0). <baseName> gives the root name for both .grs
     files and the .sysInfo file. <gulpExec> is the path to the GULP 
@@ -384,8 +378,11 @@ def iterateOverRI(startRI, finalRI, dRI, baseName, gulpExec, use_eregion=True,
                                                             regionsUsed))
                                                           
             eDis = dislocationEnergySections(derivedName, outStream, currentRI) 
-            
-        print('Energy is {:.6f} eV'.format(eDis))    
+         
+        # convert <eDis> to energy_units/angstrom and write to output streams
+        eDis /= thick    
+        print('Energy is {:.6f} eV/ang.'.format(eDis))  
+        outStream.write('{} {:.6f}\n'.format(currentRI, eDis))  
                                                          
         currentRI = currentRI - dRI        
         
@@ -413,14 +410,14 @@ def EDis(r, Ecore, K, b, rcore=10.):
     
     return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
     
-def fitCoreEnergy(basename, b, thickness, rcore=10, fit_K=False, in_K=None,
+def fitCoreEnergy(basename, b, rcore=10, fit_K=False, in_K=None,
                                                         using_atomic=False):
     '''Fit the core energy and energy coefficient of the dislocation whose 
     radius-energy data is stored in <basename>.energies. Returns K in eV/ang**3
     and Ecore in eV/ang. <thickness> is the length of the simulation cell.
     '''
     
-    E = readEnergies(basename)/np.array([1., thickness])
+    E = readEnergies(basename)
    
     # define dislocation energy function -> contains specified core radius. If
     # fit_K is true, fit the value of K, otherwise, use the material specific
@@ -473,18 +470,18 @@ def dis_energy(rmax, rmin, dr, basename, executable, method, b, thick, relax_K=T
     # to the type of dislocation and interatomic potentials being used
     print('####CALCULATING ENERGY OF DISLOCATION AS A FUNCTION OF R####')
     if method == 'explicit':
-        iterateOverRI(rmax, rmin, dr, basename, executable, use_eregion=False)
+        iterateOverRI(rmax, rmin, dr, basename, executable, thick, use_eregion=False)
     elif method == 'eregion':
-        iterateOverRI(rmax, rmin, dr, basename, executable, use_eregion=True)
+        iterateOverRI(rmax, rmin, dr, basename, executable, thick, use_eregion=True)
     elif method == 'edge' and not (atom_dict is None):
-        iterateOverRI(rmax, rmin, dr, basename, executable, E_atoms=atom_dict)
+        iterateOverRI(rmax, rmin, dr, basename, executable, thick, E_atoms=atom_dict)
     
     # if rc == None, use the normal value of twice the burgers vector length
     if rc != rc:  
         rc = 2*b
   
     # Fit core energy and energy coefficient, and write to output
-    Ecore, K, cov = fitCoreEnergy(basename, b, thick, rc, fit_K=relax_K, in_K=K,
+    Ecore, K, cov = fitCoreEnergy(basename, b, rc, fit_K=relax_K, in_K=K,
                                                     using_atomic=using_atomic)
     KGPa = K*CONV_EV_TO_GPA
     
