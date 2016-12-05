@@ -318,6 +318,15 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             idfile.write(' {}'.format(i))
         idfile.write('\n')    
         
+    # write atomic site coords to <idfile> for later use
+    for i in use_indices:
+        coords = gulpcluster[i].getCoordinates()
+        idfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(i, coords[0], 
+                                         coords[1], coords[2], norm(coords)))
+            
+    idfile.close()
+      
+    # construct input files and, if requested by the user, run calculations    
     for i in use_indices:        
         # set the coordinates and site index of the impurity
         atom = gulpcluster[i]
@@ -333,10 +342,6 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         coords = atom.getCoordinates()
         outname = '{}.{}.{}'.format(defect.getName(), defect.getSite(), defect.get_index())
         outstream = open(outname+'.gin','w')
-        
-        # record coordinates and site number in <idfile>
-        idfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(i, coords[0], 
-                                         coords[1], coords[2], norm(coords)))
        
         # write structure to output file, including the coordinates of the 
         # impurity atom(s)
@@ -347,8 +352,6 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         if do_calc:
             print('Relaxing structure with defect at site {}...'.format(i))
             gulp.run_gulp(gulpexec, outname)
-            
-    idfile.close()
                     
     return
 
