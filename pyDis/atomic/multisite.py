@@ -266,6 +266,8 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     # file to keep track of defect sites and IDs
     idfile = open('{}.{}.id.txt'.format(defect.getName(), defect.getSite()), 'w')
     idfile.write('# site-id x y z\n')
+    # record base name of simulation files
+    idfile.write('# {}.{}\n'.format(defect.getName(), defect.getSite()))
     
     # dummy variables for lattice and toCart. Due to the way the program
     # is set up, disloc is set equal to false, as the atoms are displaced 
