@@ -314,11 +314,10 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         
     # record all indices in <idfile> if not running calculations at the time of
     # execution. This facilitates later automation of calculations
-    if not do_calc:
-        idfile.write('#')
-        for i in use_indices:
-            idfile.write(' {}'.format(i))
-        idfile.write('\n')    
+    idfile.write('#')
+    for i in use_indices:
+        idfile.write(' {}'.format(i))
+    idfile.write('\n')    
         
     # write atomic site coords to <idfile> for later use
     for i in use_indices:
