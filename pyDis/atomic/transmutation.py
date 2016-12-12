@@ -291,6 +291,12 @@ def cell_defect(simcell, defect, use_displaced=True):
     '''Inserts the provided defect (+ site) into the simulation cell.
     '''
     
+    # safety check to make sure that <defect> is not an <CoupledImpurity>
+    if defect.__class__.__name__ == "CoupledImpurity":
+        cell_defect_cluster(simcell, defect, use_displaced=True)
+        return
+        
+    # else...
     # switch off atom to be replaced
     simcell[defect.get_index()].switchOutputMode()
     
@@ -313,8 +319,12 @@ def cell_defect_cluster(simcell, defect_cluster, use_displaced=True):
     '''Inserts the provided defect cluster into the supercell.
     '''
     
-    for defect in defect_cluster:
-        cell_defect(simcell, defect, use_displaced=use_displaced)
+    # safety check to make sure that <defect_cluster> is not an <Impurity>
+    if defect_cluster.__class__.__name__ == "Impurity":
+        cell_defect(simcell, defect_cluster, use_displaced=use_displaced)
+    else:
+        for defect in defect_cluster:
+            cell_defect(simcell, defect, use_displaced=use_displaced)
         
     return
     
