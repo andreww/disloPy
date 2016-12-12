@@ -830,7 +830,7 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     idfile = open('{}.{}.id.txt'.format(defect.getName(), defect.getSite()), 'w')
     idfile.write('# site-id x y z\n')
     # record base name of simulation files
-    idfile.write('# {}.{}'.format(defect.getName(), defect.getSite()))
+    idfile.write('# {}.{}\n'.format(defect.getName(), defect.getSite()))
     
     # dummy variables for lattice and toCart. Due to the way the program
     # is set up, disloc is set equal to false, as the atoms are displaced 
@@ -877,7 +877,15 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     idfile.write('#')
     for i in use_indices:
         idfile.write(' {}'.format(i))
-    idfile.write('\n') 
+    idfile.write('\n')  
+        
+    # write atomic site coords to <idfile> for later use
+    for i in use_indices:
+        coords = gulpcluster[i].getCoordinates()
+        idfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(i, coords[0], 
+                                         coords[1], coords[2], norm(coords)))
+            
+    idfile.close()
             
     for i in use_indices:        
         # set the coordinates and site index of the impurity
@@ -889,10 +897,6 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         coords = atom.getCoordinates()
         outname = '{}.{}.{}'.format(defect.getName(), defect.getSite(), defect.get_index())
         outstream = open(outname+'.gin','w')
-        
-        # record coordinates and site number in <idfile>
-        idfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(i, coords[0], 
-                                         coords[1], coords[2], norm(coords)))
        
         # write structure to output file, including the coordinates of the 
         # impurity atom(s)
@@ -903,8 +907,6 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         if do_calc:
             print('Relaxing structure with defect at site {}...'.format(i))
             run_gulp(gulpexec, outname)
-            
-    idfile.close()
                     
     return
     
