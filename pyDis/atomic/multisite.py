@@ -188,7 +188,10 @@ def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str, program='gulp',
     # if <hydrous_defect> is a <CoupledImpurity>, locate the site containing
     # hydrogen
     if mutate.is_coupled(hydrous_defect):
+        hydrous_defect.site_locations(supercell)
         hydrogen_site = hydrous_defect[hydrogens_index(hydrous_defect)] 
+    else: # <Impurity> object
+        hydrous_defect.site_location(supercell)
     
     # find hydroxyl oxygens
     for H in hydrous_defect:
@@ -203,10 +206,11 @@ def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str, program='gulp',
             new_hydrox.addAtom(new_atom)        
         else:
             new_hydrox.addAtom(cry.Atom(hydroxyl_str))
-              
+               
         # locate index of site containing nearest oxygen atom
         site_index = closest_atom_oftype(H, supercell, oxy_str, oned=oned, 
                                                             to_cart=to_cart)
+
         new_hydrox.set_index(site_index)
         new_hydrox.site_location(supercell)
 

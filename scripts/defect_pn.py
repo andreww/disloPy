@@ -39,6 +39,7 @@ def main(argv):
     dfct.addAtom(gulp.GulpAtom('H', coordinates=np.array([-0.707, 0., -0.707])))
     dfct.addAtom(gulp.GulpAtom('H', coordinates=np.array([0.707, 0., 0.707])))
     dfct.to_cell_coords(new_slab)
+    dfct.site_location(new_slab)
     
     fulldfct = ms.hydroxyl_oxygens(dfct, new_slab, 'O2', oxy_str='O1', oned=False,
                                     to_cart=False)

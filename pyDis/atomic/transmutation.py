@@ -292,7 +292,7 @@ def cell_defect(simcell, defect, use_displaced=True):
     '''
     
     # safety check to make sure that <defect> is not an <CoupledImpurity>
-    if defect.__class__.__name__ == "CoupledImpurity":
+    if isinstance(defect, CoupledImpurity): 
         cell_defect_cluster(simcell, defect, use_displaced=True)
         return
         
@@ -320,7 +320,7 @@ def cell_defect_cluster(simcell, defect_cluster, use_displaced=True):
     '''
     
     # safety check to make sure that <defect_cluster> is not an <Impurity>
-    if defect_cluster.__class__.__name__ == "Impurity":
+    if isinstance(defect_cluster, Impurity): 
         cell_defect(simcell, defect_cluster, use_displaced=use_displaced)
     else:
         for defect in defect_cluster:
