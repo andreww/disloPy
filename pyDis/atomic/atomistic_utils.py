@@ -169,7 +169,7 @@ def to_bool(in_str):
         
     return new_value
     
-def extract_energy(cellname, program, relax=True):
+def extract_energy(cellname, program, relax=True, acceptable_gnorm=0.2):
     '''Reads in the final energy (or enthalpy) from an atomistic calculation.
     If the calculation involved relaxation of the atomic coordinates or the 
     cell shape/size, <relax> == True, otherwise it should be False. 
@@ -195,8 +195,7 @@ def extract_energy(cellname, program, relax=True):
                                     '(?P<E>-?\d+\.\d+)\s*(?P<units>\w+)\s*')
                    }
     
-    # stuff to match total force in GULP output
-    acceptable_gnorm = 0.2               
+    # stuff to match total force in GULP output              
     get_gnorm = re.compile(r"Final Gnorm\s*=\s*(?P<gnorm>\d+\.\d+)")
     
     if not (program in supported_codes):

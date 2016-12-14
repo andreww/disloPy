@@ -38,9 +38,12 @@ def command_line_options():
                             help="Plot gamma line/surface.")
     options.add_argument("-sc", "--scale", type=float, dest="scale", default=1.,
                             help="Scale the GSF energies by this value.")
+    options.add_argument("-g", "--gnorm", type=float, dest='gnorm', default=10.,
+                         help="Maximum acceptable value for <gnorm> in GULP.")
     return options
     
-def get_gsf_energy(base_name, program, suffix, i, j=None, indir=False, relax=True):
+def get_gsf_energy(base_name, program, suffix, i, j=None, indir=False, relax=True,
+                                                                       gnorm=10.):
     '''Extracts calculated energy from a generalized stacking fault calculation
     using the regular expression <energy_regex> corresponding to the code used
     to calculate the GSF energy.
@@ -60,7 +63,7 @@ def get_gsf_energy(base_name, program, suffix, i, j=None, indir=False, relax=Tru
         filename = '{}.{}'.format(name_format, suffix)
         
     # read in energies
-    E, units = atm.extract_energy(filename, program, relax=relax)
+    E, units = atm.extract_energy(filename, program, relax=relax, acceptable_gnorm=gnorm)
     
     return E, units
    
@@ -155,7 +158,7 @@ def main():
         # handle gamma line
         for i in xrange(args.x_max+1):
             E, units = get_gsf_energy(args.base_name, args.program, args.suffix, 
-                                          i, indir=args.indir)
+                                          i, indir=args.indir, gnorm=args.gnorm)
             energies[i] = E*args.scale
             
         # record the units in which the cell energy is expressed
@@ -190,7 +193,7 @@ def main():
         for i in xrange(args.x_max+1):
             for j in xrange(args.y_max+1):
                 E, units = get_gsf_energy(args.base_name, args.program, args.suffix, 
-                                                               i, j, indir=args.indir)
+                                           i, j, indir=args.indir, gnorm=args.gnorm)
                 energies[i, j] = E
 
         # record energy units used
