@@ -88,7 +88,7 @@ def elastic_energy2d(A, x0, c, b=1, K=[1, 1]):
     A1, x01, c1, A2, x02, c2 = unzip_parameters(A, x0, c)
     
     E = pn1.elastic_energy(A1, x01, c1, b, Ke) + pn1.elastic_energy(A2, x02, c2, b, Ks)
-    return E
+    return E   
     
 def misfit_energy2d(A, x0, c, N, energy_function, b, spacing, shift=[0., 0.5], 
                                                                 translate=0.):

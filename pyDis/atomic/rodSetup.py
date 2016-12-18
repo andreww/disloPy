@@ -185,7 +185,7 @@ class TwoRegionCluster(PeriodicCluster):
         self.specifyRegions()
         return
         
-    def specifyRegions(self, gulp_ordered=False):
+    def specifyRegions(self, gulp_ordered=False): # experimental
         '''Specifies which atoms are in region I. If <gulp_ordered> is True,
         the x and y coordinates are, respectively, elements -1 and -2 of the
         atomic position vector.

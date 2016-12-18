@@ -17,7 +17,7 @@ def stress_energy(tau, rho, x_vals, b, cm0):
     return -tau*b*(pn1.center_of_mass(rho, x_vals, b)-cm0)
     
 def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
-                                           shift, tau, disl_type=None, dims=2, cm0=0.):
+                         shift, tau, disl_type=None, dims=2, cm0=0.):
     '''Calculate the (fully relaxed) energy of a 1- or 2-dimensional dislocation
     under the action of an applied stress <tau>.
     
@@ -28,7 +28,7 @@ def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing,
     # determine (from <dims>) which functions should be used to calculate the 
     # elastic and inelastic (ie. misfit) components of the dislocation energy. 
     if dims == 1:
-        el_func = pn1.elastic_energy
+        el_func = pn1.elastic_energy          
         misfit_func = pn1.misfit_energy
     elif dims == 2:
         el_func = pn2.elastic_energy2d
@@ -87,12 +87,12 @@ def total_opt_stress(params, *args):
     c = params[2*n_funcs:]
     
     E = total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
-                                                      shift, tau, disl_type, dims, cm0)
+                                         shift, tau, disl_type, dims, cm0)
     return E
     
     
 def stressed_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
-                                           tau, disl_type=None, dims=1, cm0=0.):
+                                  tau, disl_type=None, dims=1, cm0=0.):
     '''Calculates the fully relaxed structure of a dislocation whose structure
     has previously been determined under unstressed conditions. 
     
@@ -100,7 +100,6 @@ def stressed_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
     '''
                                                           
     # check to make sure provided dislocation type (edge/screw) is supported
-    #!!! How to generalise this so that it works for 1- and 2-dimensional dislocations?
     if dims == 1:
         constraints = [pn1.cons_func]
         shift = 0.5
@@ -110,7 +109,7 @@ def stressed_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
         lims = pn2.make_limits2d(n_funcs, np.inf, disl_type)
     
     in_args = (n_funcs, max_x, energy_function, K, b, spacing, shift, tau, 
-                                                            disl_type, dims, cm0)
+                                                 disl_type, dims, cm0)
     # obtain the relaxed structure of the dislocation in the applied stress 
     # field
     new_par = fmin_slsqp(total_opt_stress, params, eqcons=constraints, args=in_args,
@@ -154,7 +153,6 @@ def com(rho, r, b, n=1000):
         av_x += (dr*np.linspace(r[i]+dr, r[i+1], n)*rhoi).sum()
     
     return av_x
-
     
 def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None,
                                                  dtau=0.001, in_GPa=True, thr=0.5):

@@ -226,7 +226,7 @@ def gamma_line(slab, line_vec, resolution, write_fn, sys_info, limits=1.0,
             outstream = open('{}.{}'.format(gsf_name, suffix), 'w')
             
         write_fn(outstream, slab, sys_info, to_cart=False, defected=True, do_relax=True,
-                                                  add_constraints=True, relax_type=relax)
+                                     add_constraints=True, relax_type=relax, prop=False)
         
     return  
 
@@ -261,7 +261,7 @@ def gamma_surface(slab, resolution, write_fn, sys_info, basename='gsf',
                 outstream = open('{}.{}'.format(gsf_name, suffix), 'w')
 
             write_fn(outstream, slab, sys_info, to_cart=False, defected=True,
-                         do_relax=True, add_constraints=True, relax_type=relax)
+             do_relax=True, add_constraints=True, relax_type=relax, prop=False)
 
     return
 

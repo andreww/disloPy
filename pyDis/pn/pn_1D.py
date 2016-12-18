@@ -9,6 +9,9 @@ from scipy.optimize import fmin_slsqp, curve_fit
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
+import sys
+import os
+
 # suppress divide by zero Runtime warnings
 import warnings
 warnings.simplefilter("ignore", RuntimeWarning)
@@ -167,9 +170,6 @@ def center_of_mass(rho, x, b):
     '''
     
     return 1/(2.*b)*(rho*(x[1:]**2 - x[:-1]**2)).sum()
-    
-#def rho_form(x, a, xsi, x0):
-#    return a*xsi**2/((x-x0)**2+xsi**2)
     
 def dislocation_width(u, r, b, bc=0.5):
     '''Calculates the distance over which the disregistry increases from 0.25*b
@@ -333,7 +333,7 @@ def cons_func(inparams, *args):
     return 1.-sum(A)
 
 def dislocation1d(N, max_x, energy_function, lims, use_sym, b, spacing, K,
-                                                  inpar=None, noopt=False):
+                                          inpar=None, noopt=False):
     '''Optimise structure of dislocation with Burgers vector <b> and misfit energy
     given by <energy_function>.
     '''
@@ -356,7 +356,7 @@ def dislocation1d(N, max_x, energy_function, lims, use_sym, b, spacing, K,
     else:
         # generate a random disregistry field
         params = gen_inparams(N, spacing)
-
+        
     if noopt:
         # return energy of starting disregistry field
         E = total_optimizable(params, N, max_x, energy_function, b, spacing, K)
@@ -377,7 +377,7 @@ def dislocation1d(N, max_x, energy_function, lims, use_sym, b, spacing, K,
         
 def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False,
                                     use_sym=False, b=1., spacing=1., noisy=False,
-                                                                     params=None):
+                                                                    params=None):
     '''Runs a collection of dislocation energy minimization calculations with
     random dislocation configurations to find the optimum(ish) dislocation 
     configuration.
@@ -398,7 +398,7 @@ def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False
             print("Starting iteration {}...".format(i))
 
         E, x_try = dislocation1d(N, max_x, energy_function, lims, use_sym, b,
-                                       spacing, K, inpar=params, noopt=noopt)
+                             spacing, K, inpar=params, noopt=noopt)
 
         # check that the output parameters are physically reasonable
         is_valid = check_parameters1d(x_try, N, lims)

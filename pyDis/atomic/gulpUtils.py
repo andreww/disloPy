@@ -784,9 +784,10 @@ def run_gulp(gulp_exec, basename):
     
 ### ROUTINES FOR CALCULATING DEFECT ENERGY SURFACES IN A CYLINDER
 
-def cluster_from_grs(filename, rI, rII, r=None):
+def cluster_from_grs(filename, rI, rII, new_rI=None, r=None):
     '''Reads in the .grs file output after a successful cluster-based dislocation
-    simulation and use it to construct a <TwoRegionCluster>.
+    simulation and use it to construct a <TwoRegionCluster>. <new_rI> allows 
+    us to change the size of region I, whether by enlarging or reducing it.
     '''
     
     # read in the .grs file and convert it to cartesian coordinates
@@ -799,9 +800,19 @@ def cluster_from_grs(filename, rI, rII, r=None):
         # convert z from pcell units to length units
         atom.to_cart(grs_struc)
         
-    # create the cluster
+    # determine the region I radius to use for the new cluster
+    if new_rI is None:
+        new_rI = rI
+    else:
+        # check that <new_rI> is not ridiculous
+        if new_rI >= rII:
+            raise ValueError("New region I radius must be less than total radius.")
+        elif new_rI > rI:
+            print("Warning: region I radius greater than that of original cluster.")
+    
+    # create the cluster    
     height = norm(grs_struc.getC())        
-    new_cluster = rs.TwoRegionCluster(R=rI, regionI=rI, regionII=rII, height=height,
+    new_cluster = rs.TwoRegionCluster(R=rI, regionI=new_rI, regionII=rII, height=height,
                                             periodic_atoms=grs_struc)                            
     
     return new_cluster, sysinfo
