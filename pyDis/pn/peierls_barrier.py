@@ -10,11 +10,13 @@ import matplotlib.pyplot as plt
 
 atomic_to_GPa =  160.2176487 # convert from eV/Ang**3 to GPa
 
-def stress_energy(tau, rho, x_vals, b, cm0):
+def stress_energy(tau, rho, x_vals, b, cm0, spacing):
     '''Calculate total stress energy.
     '''
+
+    #return -tau*(pn1.center_of_mass(rho, x_vals, b)-cm0)*spacing 
     
-    return -tau*b*(pn1.center_of_mass(rho, x_vals, b)-cm0)
+    return -tau*(rho*(x_vals[1:]-spacing/2.)).sum()*spacing
     
 def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
                          shift, tau, disl_type=None, dims=2, cm0=0.):
@@ -36,7 +38,7 @@ def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing,
     
     # calculate elastic and misfit energies 
     E_el = el_func(A, x0, c, b, K)
-    Em = misfit_func(A, x0, c, max_x, energy_function, b, spacing, shift)
+    Em = misfit_func(A, x0, c, max_x, energy_function, b, spacing)
     
     # calculate the component of the displacement field affected by the applied
     # stress, and the corresponding dislocation distribution.
@@ -58,7 +60,7 @@ def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing,
     rho_vals = pn1.rho(u, r)
     
     # calculate the stress energy
-    E_stress = stress_energy(tau, rho_vals, r, b, cm0)
+    E_stress = stress_energy(tau, rho_vals, r, b, cm0, spacing)
     return (Em + E_el + E_stress)
    
 def total_opt_stress(params, *args):
@@ -165,9 +167,6 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # between adjacent unstressed dislocations
     threshold = thr*spacing
     
-    # set <max_x> to be larger than the value used to relax the core structure
-    max_x = 5*max_x
-    
     # construct list of stresses to apply, using the gamma surface as a guide 
     # for the maximum possible value
     if dims == 1:
@@ -202,14 +201,16 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         else: # screw
             u = uy
     
+    # calculate initial mean location of the dislocation distribution
     rho = pn1.rho(u, r)
     cm0 = pn1.center_of_mass(rho, r, b)
+    
     # apply stress to the dislocation, starting with the positive direction
     new_par = dis_parameters
     for s in stresses:
         Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
                             max_x, gsf_func, K, b, spacing, s, disl_type,  dims, cm0)
-        
+
         # compare new displacement field to that of original (ie. unstressed)
         # dislocation
         if dims == 1:
@@ -224,6 +225,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         # calculate the stressed dislocation's centre            
         rhos = pn1.rho(us, r)        
         cm_new = pn1.center_of_mass(rhos, r, b) 
+
         # calculate distance of dislocation density c.o.m from the location of
         # the unstressed dislocation, recording the value if it exceeds specified
         # threshold
@@ -294,37 +296,184 @@ def sig_figs(value, n_figs):
 def com_constraint(par, *args):
     '''Constrains the location of the centre of mass of the 
     dislocation density distribution.
-    '''
     
-    # extract sim. parameters
+    '''# parse <args> to extract values for <total_stressed>. (Is there any reason
+    # why this cannot be done as part of <total_stressed>? This function seems
+    # largely redundant).
     n_funcs = args[0]
-    N = args[1]
+    max_x = args[1]
     energy_function = args[2]
-    b = args[3]
-    spacing = args[4]
-    K = args[5]
-    fix_centre = args[6]
-    dimensions = args[7]
-    if dimensions == 2:
-        disl_type = args[8]
+    K = args[3]
+    b = args[4]
+    spacing = args[5]
+    shift = args[6]
+    disl_type = args[7]
+    dims = args[8]
+    cm = args[-1]
     
     # calculate dislocation density
-    if dimensions == 1:
-        u = pn1.get_u1d(par, b, spacing, N)
-    elif dimensions == 2:
-        ux, uy = pn2.get_u2d(par, b, spacing, N, disl_type)
+    if dims == 1:
+        u = pn1.get_u1d(par, b, spacing, max_x)
+    elif dims == 2:
+        ux, uy = pn2.get_u2d(par, b, spacing, max_x, disl_type)
         if disl_type.lower() == 'edge':
             u = ux
         elif disl_type.lower() == 'screw':
             u = uy
      
     # calculate the dislocation density distribution
-    r = np.arange(-N*spacing, N*spacing, spacing)
+    r = spacing*np.arange(-max_x, max_x)
     rho = pn1.rho(u, r)
     
     # calculate dislocation density c.o.m.
     com = pn1.center_of_mass(rho, r, b)
     # return distance between current and desired centre of 
     # mass
-    return (com - fix_centre)
+    return (com - cm)
 
+def total_shifted(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
+                         shift, disl_type=None, dims=2, cm0=0.):
+    '''Calculate the (fully relaxed) energy of a 1- or 2-dimensional dislocation
+    under the action of an applied stress <tau>.
+    
+    #!!! Probably need some routine to check that the dimensions of <shift>,
+    <energy_function>, and <K> are compatible with <dims>
+    '''
+                                                            
+    # determine (from <dims>) which functions should be used to calculate the 
+    # elastic and inelastic (ie. misfit) components of the dislocation energy. 
+    if dims == 1:
+        el_func = pn1.elastic_energy          
+        misfit_func = pn1.misfit_energy
+    elif dims == 2:
+        el_func = pn2.elastic_energy2d
+        misfit_func = pn2.misfit_energy2d
+    
+    # calculate elastic and misfit energies 
+    E_el = el_func(A, x0, c, b, K)
+    Em = misfit_func(A, x0, c, max_x, energy_function, b, spacing)
+    
+    # calculate the component of the displacement field affected by the applied
+    # stress, and the corresponding dislocation distribution.
+    r = spacing*np.arange(-max_x, max_x)
+    if dims == 1:
+        u = pn1.u_field(r, A, x0, c, b, bc=shift)
+    if dims == 2:
+        if disl_type.lower() == 'edge':
+            # stress acts on edge component
+            u = pn1.u_field(r, A[:n_funcs/2], x0[:n_funcs/2], c[:n_funcs/2], b,
+                                                                bc=shift[0])
+        elif disl_type.lower() == 'screw':
+            # stress acts on screw component
+            u = pn1.u_field(r, A[n_funcs/2:], x0[n_funcs/2:], c[n_funcs/2:], b,
+                                                                bc=shift[1])
+        else: # will never evaluate inside this block if using <taup> function
+            raise ValueError("{} not a valid dislocation type.".format(acts_on))  
+            
+    return (Em + E_el)
+   
+def total_opt_shifted(params, *args):
+    '''Version of total_stressed that can be passed into the optimization 
+    routines in <scipy.optimize>.
+    '''
+    
+    # parse <args> to extract values for <total_stressed>. (Is there any reason
+    # why this cannot be done as part of <total_stressed>? This function seems
+    # largely redundant).
+    n_funcs = args[0]
+    max_x = args[1]
+    energy_function = args[2]
+    K = args[3]
+    b = args[4]
+    spacing = args[5]
+    shift = args[6]
+    disl_type = args[7]
+    dims = args[8]
+    cm0 = args[-1]
+    
+    # extract dislocation parameters and calculate energy
+    A = params[:n_funcs]
+    x0 = params[n_funcs:2*n_funcs]
+    c = params[2*n_funcs:]
+    
+    E = total_shifted(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
+                                         shift, disl_type, dims, cm0)
+    return E
+    
+    
+def shifted_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
+                                  disl_type=None, dims=1, cm0=0.):
+    '''Calculates the fully relaxed structure of a dislocation whose structure
+    has previously been determined under unstressed conditions. 
+    
+    #!!! are <disl_type> and <acts_on> the same variable?
+    '''
+                                                          
+    # check to make sure provided dislocation type (edge/screw) is supported
+    if dims == 1:
+        constraints = [pn1.cons_func, com_constraint]
+        shift = 0.5
+        lims = pn1.make_limits(n_funcs, np.inf)
+    elif dims == 2:
+        constraints, shift = pn2.supported_dislocation(disl_type) + [com_constraint]
+        lims = pn2.make_limits2d(n_funcs, np.inf, disl_type)
+    
+    in_args = (n_funcs, max_x, energy_function, K, b, spacing, shift, 
+                                                 disl_type, dims, cm0)
+    # obtain the relaxed structure of the dislocation in the applied stress 
+    # field
+    new_par = fmin_slsqp(total_opt_shifted, params, eqcons=constraints, args=in_args,
+                                                     bounds=lims, iprint=0, acc=1e-14)
+     
+    # calculate total self-interaction + misfit + stress energy                                   
+    E = total_opt_shifted(new_par, *in_args)       
+    
+    return E, new_par
+    
+def shift_energies(dis_parameters, max_x, gsf_func, K, b, spacing, dims=1, 
+                                                   disl_type=None, dx=0.05):
+    '''Calculate the dislocation core energy for a range of different mean positions.
+    '''
+
+    n_funcs = len(dis_parameters)/3
+    r = spacing*np.arange(-max_x, max_x)
+       
+    # find difference between the base dislocation and one that has been displaced
+    if dims == 1:
+        # get displacement field of unstressed dislocation, compare with 
+        # shifted dislocation
+        u = pn1.get_u1d(dis_parameters, b, spacing, max_x)
+    else: # dims == 2
+        ux, uy = pn2.get_u2d(dis_parameters, b, spacing, max_x, disl_type)
+        if disl_type.lower() == 'edge':
+            u = ux
+        else: # screw
+            u = uy
+    
+    rho = pn1.rho(u, r)
+    cm0 = pn1.center_of_mass(rho, r, b)
+    new_par = dis_parameters
+    
+    energies = []
+    
+    for xi in np.arange(0, spacing/2.+dx, dx):
+        E, new_par = shifted_dislocation(new_par, n_funcs, max_x, gsf_func, K, b, spacing,
+                                  disl_type=None, dims=1, cm0=(xi+cm0))
+        energies.append([cm0+xi, E])
+        
+    for xi in np.arange(0, spacing/2.+dx, dx):
+        E, new_par = shifted_dislocation(new_par, n_funcs, max_x, gsf_func, K, b, spacing,
+                                  disl_type=None, dims=1, cm0=(-xi+cm0))
+        energies.append([cm0-xi, E])
+        
+    return np.array(energies)
+    
+def sigmap_from_wp(positions, energies, b):
+    '''Calculates the Peierls stress for a dislocation using the energies 
+    calculated for the dislocation core at each position between adjacent 
+    dislocations.
+    '''
+
+    dx = positions[1]-positions[0]
+    dWdx = max((energies[1:]-energies[:-1])/dx)
+    return 1/b*dWdx

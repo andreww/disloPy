@@ -17,6 +17,8 @@ from pyDis.pn import peierls_barrier as pb
 from pyDis.pn import energy_coeff as coeff
 from pyDis.atomic import aniso
 
+atomic_to_GPa =  160.2176487
+
 def control_file(filename):
     '''Opens the control file <filename> for a PN simulation and constructs a 
     dictionary containing the (unformatted) values for all necessary simulation
@@ -159,7 +161,6 @@ def handle_pn_control(param_dict):
                      ('record', {'default':True, 'type':to_bool}),
                      ('nplanes', {'default':30, 'type':int}),
                      ('noisy', {'default': False, 'type': to_bool}),
-                     ('parameters', {'default':np.array([]), 'type':to_vector})
                    )
 
     # cards for the <&struc> namelist. Need to find some way to incorporate 
@@ -168,6 +169,7 @@ def handle_pn_control(param_dict):
                    ('b', {'default':'map struc > a: x -> x', 'type':float}),
                    ('burgers', {'default':'map struc > a: x -> x', 'type':float}),
                    ('spacing', {'default':'map struc > a: x -> x', 'type':float}),
+                   ('parameters', {'default':np.array([]), 'type':to_vector})
                   )
                   
     # cards for the &elast namelist. <k_para> and <k_norm> allow the user to 
@@ -206,7 +208,8 @@ def handle_pn_control(param_dict):
                  )
     
     # cards for the <&stress> namelist
-    stress_cards = (('calculate_stress', {'default':True, 'type':to_bool}),
+    stress_cards = (('calculate_stress', {'default':False, 'type':to_bool}),
+                    ('calculate_barrier', {'default':False, 'type':to_bool}),
                     ('dtau', {'default':0.0005, 'type':float}),
                     ('use_GPa', {'default':True, 'type':to_bool}),
                     ('threshold', {'default':0.5, 'type':float})
@@ -373,9 +376,9 @@ class PNSim(object):
         
         # check to see if the user has provided parameters specifying a trial
         # disregistry profile (in the order A x0 c).
-        if len(self.control('parameters')) != 0:
+        if len(self.struc('parameters')) != 0:
             # use supplied parameters and perform only a single energy minimization
-            inpar = self.control('parameters')
+            inpar = self.struc('parameters')
             niter = 1
         else:
             # no parameters -> tell program that it should generate a trial 
@@ -415,6 +418,8 @@ class PNSim(object):
         return
                                 
     def construct_gsf(self):
+        '''Makes a function mapping disregistry values to misfit energies.
+        '''
     
         gsf_grid, self.units = fg.read_numerical_gsf(self.control('gsf_file'))
 
@@ -596,10 +601,36 @@ class PNSim(object):
     def peierls(self):
         '''Calculate the Peierls stress for the lowest-energy dislocation.
         '''
-
-        if not self.stress('calculate_stress'):
-            pass
-        else:
+        
+        if self.stress('calculate_barrier'):
+            # calculate change in dislocation energy with position       
+            e_shifted = pb.shift_energies(self.par, 
+                                          self.control('max_x'),
+                                          self.gsf, 
+                                          self.K, 
+                                          self.struc('burgers'), 
+                                          self.struc('spacing'), 
+                                          dims=self.control('dimensions'),
+                                          disl_type=self.control('disl_type'))
+                                          
+            self.wp_shift = e_shifted[:, 1][-1]-e_shifted[:, 1][0]
+            
+            # calculate the Peierls stress
+            self.taup_shift = pb.sigmap_from_wp(e_shifted[:, 0], e_shifted[:, 1], 
+                                                        self.struc('burgers'))
+            if self.stress('use_GPa'):
+                self.taup_shift *= atomic_to_GPa
+                
+            if self.control('record'):
+                # retain a copy of the shifted dislocation energies
+                outstream_e = open('e_peierls.{}'.format(self.control('output')), 'w')
+                
+                for x, E in e_shifted:
+                    outstream_e.write('{:.3f} {:.6f}\n'.format(x, E))
+                    
+                outstream_e.close()
+             
+        if self.stress('calculate_stress'):
             self.taup, self.taup_av = pb.taup(
                                               self.par, 
                                               self.control('max_x'), 
@@ -617,10 +648,6 @@ class PNSim(object):
             # calculate average and direction-dependent Peierls barriers
             self.wp_av = pb.peierls_barrier(self.taup_av, self.struc('burgers'),
                                                   in_GPa=self.stress('use_GPa'))
-                                                  
-            self.wp = [pb.peierls_barrier(taup, self.struc('burgers'),
-                                        in_GPa=self.stress('use_GPa'))
-                                                for taup in self.taup]
                                                      
         return
         
@@ -648,11 +675,11 @@ class PNSim(object):
         
         # energy coefficients -> only write relevant coefficient if 1D
         if self.control('dimensions') == 2:
-            outstream.write('Edge energy coefficient: {:.3f} eV/ang.\n'.format(self.K[0]))
-            outstream.write('Screw energy coefficient: {:.3f} eV/ang.\n'.format(self.K[1]))
+            outstream.write('Edge energy coefficient: {:.3f} eV/ang.^3\n'.format(self.K[0]))
+            outstream.write('Screw energy coefficient: {:.3f} eV/ang.^3\n'.format(self.K[1]))
         else: # dimensions == 1
-            outstream.write('Edge energy coefficient: {:.3f} eV/ang.\n'.format(self.K_store[0]))
-            outstream.write('Screw energy coefficient: {:.3f} eV/ang.\n'.format(self.K_store[1]))
+            outstream.write('Edge energy coefficient: {:.3f} eV/ang.^3\n'.format(self.K_store[0]))
+            outstream.write('Screw energy coefficient: {:.3f} eV/ang.^3\n'.format(self.K_store[1]))
             
         outstream.write('\n\n')
         
@@ -722,25 +749,29 @@ class PNSim(object):
         # write results
         outstream.write('Results:\n')
         outstream.write('E = {:.3f} eV\n'.format(self.E))
+        
+        # write Peierls stress related stuff
+        if self.stress('use_GPa'):
+            units = 'GPa'
+        else:
+            units = 'eV/ang.^3'
+            
         if self.stress('calculate_stress'):
-            if self.stress('use_GPa'):
-                units = 'GPa'
-                outstream.write('Left Peierls stress = {:.3f} {}\n'.format(
-                                                         self.taup[0], units))
-                outstream.write('Right Peierls stress = {:.3f} {}\n'.format(
-                                                         self.taup[1], units))
-                outstream.write('Average Peierls stress = {:.3f} {}\n'.format(
-                                                         self.taup_av, units))
-            else:
-                units = 'eV/ang.^3'
-                outstream.write('Left Peierls stress = {:.6f} {}\n'.format( 
-                                                          self.taup[0], units))
-                outstream.write('Right Peierls stress = {:.6f} {}\n'.format(
-                                                          self.taup[1], units))
-                outstream.write('Average Peierls stress = {:.6f} {}\n'.format(
-                                                          self.taup_av, units))
+            outstream.write('Using applied stress method:\n')
+                
+            outstream.write('Left Peierls stress: {:.3f} {}\n'.format(
+                                                   self.taup[0], units))
+            outstream.write('Right Peierls stress: {:.3f} {}\n'.format(
+                                                    self.taup[1], units))
+            outstream.write('Average Peierls stress: {:.3f} {}\n'.format(
+                                                     self.taup_av, units))
                                                     
-            outstream.write('Peierls barrier: {:.3f} eV/Ang\n'.format(self.wp_av))
+            outstream.write('Peierls barrier: {:.3f} eV/ang\n\n'.format(self.wp_av))
+            
+        if self.stress('calculate_barrier'):
+            outstream.write('Using dislocation translation method:\n')
+            outstream.write('Peierls stress: {:.3f} {}\n'.format(self.taup_shift, units))
+            outstream.write('Peierls barrier: {:.3f} eV/ang.\n\n'.format(self.wp_shift))
             
         if self.prop('max_rho'):
             outstream.write('Maximum density: {:.3f}\n'.format(self.max_density))
