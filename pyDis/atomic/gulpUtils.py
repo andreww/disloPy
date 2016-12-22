@@ -407,7 +407,7 @@ def preamble(outstream, maxiter=500, do_relax=True, relax_type='conv',
     
 def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart=True,
                     add_constraints=False, relax_type='conv', impurities=None, prop=True,
-                                                pfractional=False, maxiter=500):
+                                   pfractional=False, maxiter=500, rI_centre=np.zeros(2)):
     '''Writes the crystal <gulp_struc> to <outstream>. If <defected> is True,
     then it uses the displaced coordinates, otherwise it uses the regular atomic
     coordinates (ie. their locations in a perfect crystal with the provided
@@ -441,7 +441,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
     # write simulation cell geometry to file
     if struc_type in rod_classes:
         if not (impurities is None):
-            struc.specifyRegions()
+            struc.specifyRegions(rI_centre=rI_centre)
             
         # polymer cell -> write cell height
         preamble(outstream, do_relax=do_relax, polymer=True, relax_type=relax_type,
@@ -819,7 +819,7 @@ def cluster_from_grs(filename, rI, rII, new_rI=None, r=None):
 
 def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
-                                                                do_calc=False):
+                                       do_calc=False, centre_on_impurity=False):
     '''Iterates through all atoms in <relaxedCluster> within distance <radius>
     of the dislocation line, and sequentially replaces one atom of type 
     <replaceType> with an impurity <newType>. dRMin is the minimum difference
@@ -835,6 +835,11 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     Tests to ensure that radius < (RI - dRMin) to be performed in the calling 
     routine (ie. <impurityEnergySurface> should only be called if radius < 
     (RI-dRMin) is True. 
+    
+    The keyword <centre_on_impurity> determines the axis of simulation region I
+    (ie. the cylinder of atoms whose coordinates are to be fully relaxed). If
+    this parameter is <True>, then this region is centred on each impurity in turn; 
+    otherwise, region I is centred on the axis of the cluster.
     '''
     
     # file to keep track of defect sites and IDs
@@ -911,8 +916,15 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
        
         # write structure to output file, including the coordinates of the 
         # impurity atom(s)
+        if centre_on_impurity:
+            # use coordinates of Impurity in the plane
+            rI_centre = coords[:-1]
+        else:
+            # centre on cylinder axis
+            rI_centre = np.zeros(2)
+            
         write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False, 
-                                                                 impurities=defect)
+                                            impurities=defect, rI_centre=rI_centre)
                                                                  
         # run calculation, if requested by user
         if do_calc:

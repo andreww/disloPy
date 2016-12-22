@@ -14,7 +14,7 @@ from pyDis.atomic import multisite as ms
 from pyDis.atomic import rodSetup as rs
 
 # path to GULP executable (set this to the path appropriate for your computer)
-gulpexec = '/home/richard/programs/atomistic/gulp/Src/gulp'
+gulpexec = os.environ['GULPPATH']
 
 def main(argv):
 

@@ -121,8 +121,14 @@ class TwoRegionCluster(PeriodicCluster):
     '''
     
     def __init__(self, unitCell=None, centre=np.zeros(2), R=None, regionI=None, 
-                   regionII=None, thickness=1, periodic_atoms=None, height=None):
+                  regionII=None, thickness=1, periodic_atoms=None, height=None,
+                                                         rI_centre=np.zeros(2)):
         '''Initializes a 1D periodic GULP cluster.
+        
+        <rIcentre> specifies the coordinates of the region I axis. This defaults
+        to the centre of the cluster (ie [0, 0]), but may be off-centre for 
+        certain types of calculation, such as those in which dislocation-point
+        defect interactions are being investigated.
         '''
         
         if R is None:
@@ -148,7 +154,8 @@ class TwoRegionCluster(PeriodicCluster):
         # Create list of atoms in region I
         self._r1Atoms = cry.Basis()
         self._r2Atoms = cry.Basis()
-        self.specifyRegions()
+        self._rI_centre = rI_centre.copy()
+        self.specifyRegions(rI_centre=rI_centre) # exp.
         
     def getRI(self):
         '''Returns the region I radius
@@ -185,7 +192,7 @@ class TwoRegionCluster(PeriodicCluster):
         self.specifyRegions()
         return
         
-    def specifyRegions(self, gulp_ordered=False): # experimental
+    def specifyRegions(self, gulp_ordered=False, rI_centre=np.zeros(2)): # experimental
         '''Specifies which atoms are in region I. If <gulp_ordered> is True,
         the x and y coordinates are, respectively, elements -1 and -2 of the
         atomic position vector.
@@ -194,7 +201,7 @@ class TwoRegionCluster(PeriodicCluster):
         self._r1Atoms.clearBasis()
         self._r2Atoms.clearBasis()
         for atom in self:
-            Rxy = L.norm(atom.getDisplacedCoordinates()[:2])
+            Rxy = L.norm(atom.getDisplacedCoordinates()[:2]-rI_centre)
             if Rxy < self._RI:
                 # If the computed radial distance is less than the specified
                 # region 1 radius, add atom to list of refinable atoms. Note 

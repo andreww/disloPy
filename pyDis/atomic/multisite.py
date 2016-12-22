@@ -261,7 +261,7 @@ def locate_bonded(site, siteindex, bondatom, supercell, nbonds):
 
 def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
-                    do_calc=False, oh_str='Oh', o_str='O'):
+                    do_calc=False, oh_str='Oh', o_str='O', centre_on_impurity=False):
     '''Similar to the function <calculateImpurity> in <gulpUtils>, but with 
     the ability to replace oxygen atoms bonded to H atoms with their hydroxyl
     counterparts.
@@ -350,8 +350,15 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
        
         # write structure to output file, including the coordinates of the 
         # impurity atom(s)
+        if centre_on_impurity:
+            # use coordinates of Impurity in the plane
+            rI_centre = coords[:-1]
+        else:
+            # centre on cylinder axis
+            rI_centre = np.zeros(2)           
+            
         gulp.write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False,
-                                                                impurities=full_defect)
+                                            impurities=full_defect, rI_centre=rI_centre)
                                                                  
         # run calculation, if requested by user
         if do_calc:
