@@ -201,8 +201,13 @@ class TwoRegionCluster(PeriodicCluster):
         self._r1Atoms.clearBasis()
         self._r2Atoms.clearBasis()
         for atom in self:
-            Rxy = L.norm(atom.getDisplacedCoordinates()[:2]-rI_centre)
-            if Rxy < self._RI:
+            # distance from the axis of the cluster
+            Rxy = L.norm(atom.getDisplacedCoordinates()[:2])
+            # distance from the axis of region I
+            Rxy_I = L.norm(atom.getDisplacedCoordinates()[:2]-rI_centre)
+            
+            # determine to which region the atom belongs
+            if Rxy_I < self._RI:
                 # If the computed radial distance is less than the specified
                 # region 1 radius, add atom to list of refinable atoms. Note 
                 # that this requires that the dislocation line be at the 

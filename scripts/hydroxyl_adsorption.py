@@ -24,6 +24,7 @@ def main(argv):
     r2 = int(argv[2])
     # height of simulation cell (line vector lengths)
     n = int(argv[3])
+    new_rI = int(argv[4])
     
     # construct cluster
     base_clus, sysinfo = gulp.cluster_from_grs(grsfile, r1, r2)
@@ -40,7 +41,8 @@ def main(argv):
     
     # construct defect-bearing clusters and calculate adsorption energies
     ms.calculate_hydroxyl(sysinfo, new_clus, 3, dfct, constraints=[z_constraint],
-                   oh_str='O2', o_str='O1', gulpexec=gulpexec, do_calc=True)   
+                   oh_str='O2', o_str='O1', gulpexec=gulpexec, do_calc=True, 
+					centre_on_impurity=True)   
 
 if __name__ == "__main__":
     main(sys.argv[1:])
