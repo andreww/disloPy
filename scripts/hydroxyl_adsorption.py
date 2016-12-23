@@ -38,11 +38,12 @@ def main(argv):
     # construct height constraint function
     z = new_clus.getHeight()
     z_constraint = lambda atom: mut.heightConstraint(0, z/n, atom, period=z)
+    phi_constraint = lambda atom: mut.azimuthConstraint(-np.pi/2, np.pi/2, atom)
     
     # construct defect-bearing clusters and calculate adsorption energies
-    ms.calculate_hydroxyl(sysinfo, new_clus, 3, dfct, constraints=[z_constraint],
-                   oh_str='O2', o_str='O1', gulpexec=gulpexec, do_calc=True, 
-					centre_on_impurity=True)   
+    ms.calculate_hydroxyl(sysinfo, new_clus, 3, dfct, oh_str='O2', o_str='O1',
+                     constraints=[z_constraint, phi_constraint], do_calc=True, 
+					                centre_on_impurity=True, gulpexec=gulpexec)   
 
 if __name__ == "__main__":
     main(sys.argv[1:])
