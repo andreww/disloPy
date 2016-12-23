@@ -27,7 +27,7 @@ def main(argv):
     new_rI = int(argv[4])
     
     # construct cluster
-    base_clus, sysinfo = gulp.cluster_from_grs(grsfile, r1, r2)
+    base_clus, sysinfo = gulp.cluster_from_grs(grsfile, r1, r2, new_rI=new_rI)
     new_clus = rs.extend_cluster(base_clus, n)
     
     # construct hydrous defect
