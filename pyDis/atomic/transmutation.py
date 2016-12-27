@@ -348,8 +348,27 @@ def undo_defect(simcell, defect_thingy):
     
     return
     
+def find_replaceable(supercell, defect):
+    '''Finds indices of all sites occupied by a species for which <defect> may
+    substitute. Works only for single impurities (ie. those that substitute at
+    a single lattice site, although substitution at nearby interstitial sites
+    is permitted).
+    '''
+    
+    # make sure that the defect is an Impurity object
+    if not is_single(defect):
+        raise TypeError("Defect must be an <Impurity> object.")
+    
+    # find atoms for which <defect> may substitute
+    indices = []
+    for i, atom in enumerate(supercell):
+        if atom.getSpecies() == defect.getSite():
+            indices.append(i)
+            
+    return indices
+    
 def is_single(testobject):
-    '''Tests to see if <testobject> is an isolated impurity.
+    '''Tests to see if <testobject> is an single impurity.
     '''
     
     if type(testobject) == Impurity:
@@ -503,4 +522,5 @@ def parseConstraint(constraintFile):
             except:
                 continue
             else:
-                pass        
+                pass    
+                    

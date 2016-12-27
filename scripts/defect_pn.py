@@ -41,8 +41,7 @@ def main(argv):
     dfct.to_cell_coords(new_slab)
     dfct.site_location(new_slab)
     
-    fulldfct = ms.hydroxyl_oxygens(dfct, new_slab, 'O2', oxy_str='O1', oned=False,
-                                    to_cart=False)
+    fulldfct = ms.hydroxyl_oxygens(dfct, new_slab, 'O2', oxy_str='O1', oned=False)
     
     # insert defect into slab and calculate generalised stacking fault energies
     sl.cluster_faults(new_slab, fulldfct, gulp.write_gulp, sys_info, 0.1, argv[1], 
