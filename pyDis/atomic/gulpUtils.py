@@ -101,25 +101,25 @@ class GulpAtom(cry.Atom):
         if frac:
             return np.copy(shelCoords % 1 - self.getCoordinates() % 1)
         elif pfrac:
-            # get shell coordinates
-            sx = shelCoords[1]
-            sy = shelCoords[2]
-            sz = shelCoords[0] % 1
+            # get shell coordinates. Note that z corresponds to index 0
+            s1 = shelCoords[0] % 1
+            s2 = shelCoords[1]
+            s3 = shelCoords[2]
             # get core coordinates
-            cx = self.getCoordinates()[1]
-            cy = self.getCoordinates()[2]
-            cz = self.getCoordinates()[0] % 1
+            c1 = self.getCoordinates()[0] % 1
+            c2 = self.getCoordinates()[1]
+            c3 = self.getCoordinates()[2]
             
             # calculate shortest distance between the core and any periodic image
             # of the shell along the dislocation line
-            dz = sz-cz
-            if abs(sz+1-cz) < abs(dz):
-                dz = sz+1-cz
-            if abs(sz-1-cz) < abs(dz):
-                dz = sz-1-cz
+            d1 = s1-c1
+            if abs(s1+1-c1) < abs(d1):
+                d1 = s1+1-c1
+            if abs(s1-1-c1) < abs(d1):
+                d1 = s1-1-c1
             
             # return final core-shell distance
-            return np.copy([sx-cx, sy-cy, dz])
+            return np.copy([d1, s2-c2, s3-c3])
         else:
             return np.copy(shelCoords - self.getCoordinates())
 
@@ -637,11 +637,7 @@ def extractAtom(atomRegex, atomsDict, frac=False, pfrac=False):
         else:
             tempCoords = atomRegex.group(3)
             tempCoords = tempCoords.split()
-            if frac:
-                # read in coordinates modulo 1
-                atomCoords = np.array([float(x) for x in tempCoords])
-            else:
-                atomCoords = np.array([float(x) for x in tempCoords])
+            atomCoords = np.array([float(x) for x in tempCoords])
                 
             # create atom and add it to the appropriate collection
             newAtom = GulpAtom(atomicSymbol, atomCoords)
