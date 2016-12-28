@@ -327,7 +327,7 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     for i in use_indices:
         coords = gulpcluster[i].getCoordinates()
         idfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(i, coords[0], 
-                                         coords[1], coords[2], norm(coords)))
+                                       coords[1], coords[2], norm(coords[:-1])))
             
     idfile.close()
       
