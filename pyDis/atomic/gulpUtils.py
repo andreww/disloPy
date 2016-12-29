@@ -725,9 +725,9 @@ def extractRegions(cluster_file, rIBasis, rIIBasis):
             # determine if line is an atom line
             foundAtom = re.search(atomLine, line)
             if inRI and foundAtom:
-                extractAtom(foundAtom, dictRI)
+                extractAtom(foundAtom, dictRI, pfrac=True)
             elif inRII and foundAtom:
-                extractAtom(foundAtom, dictRII)
+                extractAtom(foundAtom, dictRII, pfrac=True)
 
     # copy atoms from the temporary, element-sorted dictionaries into regions
     # and II. Since we are extracting from the dump file of a polymer calculation,
