@@ -404,7 +404,7 @@ def heightConstraint(zMin, zMax, atom, period=1, use_disp=False, index=-1):
     return useAtom
 
 def plane_constraint(atom, i, xmin=-np.inf, xmax=np.inf, use_polymer=True,
-                                                          tolerance=1e-12):
+                                                          tolerance=1e-1):
     '''Allows substitution iff coordinate of xmax(+tol) > <atom> > xmin(-tol). 
     The inclusion of a tolerance factor accounts for small deviations away from 
     symmetry plane, generally due to the use of CG or numerical BFGS. We assume
@@ -417,10 +417,10 @@ def plane_constraint(atom, i, xmin=-np.inf, xmax=np.inf, use_polymer=True,
         i = (i+1) % 3
 
     coord = atom.getCoordinates()[i] 
-    use_atom = in_range(coord, xmin-tolerance ,xmax)
+    use_atom = in_range(coord, xmin-tolerance, xmax)
     return use_atom
     
-def azimuthConstraint(thetaMin, thetaMax, atom):
+def azimuthConstraint(thetaMin, thetaMax, atom, tolerance=1e-2):
     '''Constraints impurity energies to be calculated in a finite range of angles.
     Useful when the defect (eg. screw dislocation) has some rotational symmetry.
     '''
@@ -430,7 +430,7 @@ def azimuthConstraint(thetaMin, thetaMax, atom):
     # atomic theta
     atomicTheta = np.arctan2(atomicY, atomicX)
     
-    useAtom = in_range(atomicTheta, thetaMin, thetaMax)
+    useAtom = in_range(atomicTheta, thetaMin-tolerance, thetaMax+tolerance)
     return useAtom
         
 def in_range(value, rangeMin, rangeMax):
