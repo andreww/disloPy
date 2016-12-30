@@ -260,8 +260,9 @@ def locate_bonded(site, siteindex, bondatom, supercell, nbonds):
             pass
 
 def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
-                   constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
-                    do_calc=False, oh_str='Oh', o_str='O', centre_on_impurity=False):
+                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
+                              oh_str='Oh', o_str='O', centre_on_impurity=False,
+                                                       do_calc=False, tol=1e-1):
     '''Similar to the function <calculateImpurity> in <gulpUtils>, but with 
     the ability to replace oxygen atoms bonded to H atoms with their hydroxyl
     counterparts.
@@ -294,7 +295,7 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         if atom.getSpecies() != defect.getSite():
             continue
         # 2. Is the atom within <radius> of the dislocation line?
-        if norm(atom.getCoordinates()[:-1]) > radius:
+        if norm(atom.getCoordinates()[:-1]) > (radius+tol):
             continue  
               
         # check <constraints>

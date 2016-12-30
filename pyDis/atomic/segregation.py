@@ -13,7 +13,7 @@ sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 
-from pyDis.atomic.atomistic_utils import extract_energy
+from pyDis.atomic.atomistic_utils import extract_energy, to_bool
 
 def parse_control(basename):
     '''Parses the control file to extract a list of sites together with their
@@ -82,6 +82,45 @@ def segregation_energy(excess_energy, e_bulk):
     
     return segregation_energies 
     
+def reflect_atoms(site_info, e_excess, e_seg, axis, tol=1e-1):
+    '''Reflects all atoms about the specified <axis> (which must take the values
+    0 or 1), excepting only those that are within <tol> of the mirror axis.
+    '''
+    
+    if axis != 0 and axis != 1:
+        raise ValueError("Axis must be either 0 (x) or 1 (y)")
+     
+    # list to hold info for full region
+    sites_full = []
+    e_excess_full = []
+    e_seg_full = [] 
+       
+    for site_i, Ei, dEi in zip(site_info, e_excess, e_seg):
+        # add atom to the full region
+        sites_full.append(site_i)
+        e_excess_full.append(Ei)
+        e_seg_full.append(dEi)
+        
+        # check to see if atom is on or near the mirror plane
+        x = site_i[1]
+        if abs(x[(axis+1) % 1]) < tol:
+            continue
+            
+        # otherwise, reflect atom about axis
+        if axis == 0:
+            new_x = [x[0], -x[1]]
+        else:
+            new_x = [-x[0], x[1]]
+            
+        phi_new = np.arctan2(new_x[1], new_x[0])            
+        new_site = [site_i[0], new_x, site_i[2], phi_new]
+        
+        sites_full.append(new_site)
+        e_excess_full.append(Ei)
+        e_seg_full.append(dEi)
+    
+    return sites_full, e_excess_full, e_seg_full
+    
 def write_energies(outname, site_info, e_excess, e_seg):
     '''Writes the excess and segregation energies for defects at each site to
     the specified output file.
@@ -111,6 +150,12 @@ def command_line_options():
                          'in the bulk crystal.')
     options.add_argument('-n', type=int, dest='n', help='Height of point-defect ' +
                          'bearing cells, in units of the dislocation line vector length.')
+    options.add_argument('-m', type=to_bool, default='False', dest='mirror',
+                         help='Tells the program to reflect the atoms about an axis')
+    options.add_argument('-mboth', type=to_bool, default='False', dest='mirror_both',
+                         help='Reflect atoms about the x and y axes.')
+    options.add_argument('-ax', type=int, default=0, dest='axis', 
+                         help='Axis about which to reflect atoms')
                          
     return options                     
 
@@ -127,10 +172,16 @@ def main():
     e_excess = defect_excess_energy(e_calc, args.E0, args.n)
     e_seg = segregation_energy(e_excess, args.dE0)
     
+    # reflect atoms about specified axis. Do so twice if atoms are to be reflected
+    # about both x and y
+    if (args.mirror and args.axis == 0) or args.mirror_both:
+        site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 0)
+    if (args.mirror and args.axis == 1) or args.mirror_both: 
+        site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 1)
+    
     # write to output file
     outname = '{}.energies.dat'.format(args.basename)
     write_energies(outname, site_info, e_excess, e_seg)
 
 if __name__ == "__main__":
-    main()
-    
+    main()    

@@ -815,7 +815,7 @@ def cluster_from_grs(filename, rI, rII, new_rI=None, r=None):
 
 def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
-                                       do_calc=False, centre_on_impurity=False):
+                            do_calc=False, centre_on_impurity=False, tol=1e-1):
     '''Iterates through all atoms in <relaxedCluster> within distance <radius>
     of the dislocation line, and sequentially replaces one atom of type 
     <replaceType> with an impurity <newType>. dRMin is the minimum difference
@@ -865,7 +865,7 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         if atom.getSpecies() != defect.getSite():
             continue
         # 2. Is the atom within <radius> of the dislocation line?
-        if norm(atom.getCoordinates()[:-1]) > radius:
+        if norm(atom.getCoordinates()[:-1]) > (radius+tol):
             continue  
               
         # check <constraints>
