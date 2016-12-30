@@ -420,9 +420,10 @@ def plane_constraint(atom, i, xmin=-np.inf, xmax=np.inf, use_polymer=True,
     use_atom = in_range(coord, xmin-tolerance, xmax)
     return use_atom
     
-def azimuthConstraint(thetaMin, thetaMax, atom, tol=1e-2):
+def azimuthConstraint(thetaMin, thetaMax, atom, tol=1e-2, scale_by_r=True):
     '''Constraints impurity energies to be calculated in a finite range of angles.
     Useful when the defect (eg. screw dislocation) has some rotational symmetry.
+    <scale_by_r> reduces the tolerance as r increases. 
     '''
     
     # atomic x and y coordinates
@@ -435,6 +436,10 @@ def azimuthConstraint(thetaMin, thetaMax, atom, tol=1e-2):
     if atomicTheta > thetaMax + tol:
         # calculate angular distance to the negative y axis
         atomicTheta = -2*np.pi + atomicTheta
+    
+    if scale_by_r:    
+        # calculate tolerance for this atom
+        tol = tol/np.sqrt(atomicX**2+atomicY**2)
  
     useAtom = in_range(atomicTheta, thetaMin, thetaMax, tol=tol)
     return useAtom
