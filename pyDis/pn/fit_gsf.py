@@ -13,9 +13,12 @@ import sys
 import os
 sys.path.append(os.environ['PYDISPATH'])
 
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
 from scipy.interpolate import RectBivariateSpline, interp1d, interp2d
+try:
+    from mpl_toolkits.mplot3d import Axes3D
+    from matplotlib import cm
+except ImportError:
+    print("Module <matplotlib> not found. Do not use plotting functions.")
 
 from pyDis.atomic import atomistic_utils as atm
 from pyDis.pn import fourier

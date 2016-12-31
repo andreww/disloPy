@@ -4,7 +4,10 @@ from __future__ import print_function
 import numpy as np
 import numpy.linalg as L
 
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    print("Module <matplotlib> not found. Do not use plotting functions.")
 
 def plotDisplacementFieldXY(fieldType, b, figureName, Sij=0.3):
     '''Produces a heat-map of the x and y components of displacement field 

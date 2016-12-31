@@ -12,6 +12,11 @@ import os
 sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.tri as tri
+except ImportError:
+    print("Module <matplotlib> not found. Do not use plotting functions.")
 
 from pyDis.atomic.atomistic_utils import extract_energy, to_bool
 
@@ -32,16 +37,17 @@ def parse_control(basename):
             # index of site
             i = int(site_line[0])
             # position of site relative to dislocation line. ignores z-coordinate
-            x = np.array([float(x) for x in site_line[1:3]])
+            x = float(site_line[1])
+            y = float(site_line[2])
             
             # calculate distance of site from dislocation line, and its azimuthal
             # location
-            r = np.linalg.norm(x)
-            phi = np.arctan2(x[1], x[0])
+            r = np.sqrt(x**2+y**2)
+            phi = np.arctan2(y, x)
             
-            site_info.append([i, x, r, phi])
+            site_info.append([i, x, y, r, phi])
             
-    return site_info
+    return np.array(site_info)
     
 def get_energies(basename, site_info, program='gulp', suffix='gout'):
     '''Extracts energies of defected simulation cells from GULP output files.
@@ -51,7 +57,7 @@ def get_energies(basename, site_info, program='gulp', suffix='gout'):
     # <site_info>
     energies = []    
     for site in site_info:
-        simname = '{}.{}.{}'.format(basename, site[0], suffix)
+        simname = '{}.{}.{}'.format(basename, int(site[0]), suffix)
         E, units = extract_energy(simname, program)
         energies.append(E)
         
@@ -102,7 +108,7 @@ def reflect_atoms(site_info, e_excess, e_seg, axis, tol=1e-1):
         e_seg_full.append(dEi)
         
         # check to see if atom is on or near the mirror plane
-        x = site_i[1]
+        x = site_i[1:3]
         if abs(x[(axis+1) % 1]) < tol:
             continue
             
@@ -113,7 +119,7 @@ def reflect_atoms(site_info, e_excess, e_seg, axis, tol=1e-1):
             new_x = [-x[0], x[1]]
             
         phi_new = np.arctan2(new_x[1], new_x[0])            
-        new_site = [site_i[0], new_x, site_i[2], phi_new]
+        new_site = [site_i[0], new_x[0], new_x[1], site_i[3], phi_new]
         
         sites_full.append(new_site)
         e_excess_full.append(Ei)
@@ -131,10 +137,83 @@ def write_energies(outname, site_info, e_excess, e_seg):
     
     for i, site in enumerate(site_info):
         line_fmt = '{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}\n'
-        outfile.write(line_fmt.format(site[0], site[1][0], site[1][1], site[2],
-                                site[3], e_excess[i], e_seg[i]))   
+        outfile.write(line_fmt.format(int(site[0]), site[1], site[1], site[3], 
+                                               site[4], e_excess[i], e_seg[i]))   
 
     outfile.close()
+    
+### PLOTTING FUNCTIONS
+
+def plot_energies_contour(sites, e_seg, figname, cmtype='coolwarm', refine=False,
+                                       units='eV', figformat='tif', levels=25):
+    '''Produces a contour plot of the segregation energy at sites around a 
+    dislocation. Use <levels> to control the number of contours.
+    '''
+    
+    # create contour plot of segregation energies using a Delauney triangulation
+    # scheme
+    x = sites[:, 1]
+    y = sites[:, 2]
+    triang = tri.Triangulation(x, y)
+    
+    fig = plt.figure()
+    plt.gca().set_aspect('equal')
+    
+    # plot energy contours
+    if refine:
+        # refine data for improved high-res plot
+        refiner = tri.UniformTriRefiner(triang)
+        tri_refi, es_refi = refiner.refine_field(e_seg, subdiv=3)
+        plt.tricontourf(tri_refi, es_refi, levels, cmap=plt.get_cmap(cmtype))
+    else:
+        # use raw data to produce contours
+        plt.tricontourf(triang, e_seg, levels, cmap=plt.get_cmap(cmtype))
+        
+    plt.xlabel('x ($\AA$)', size='x-large', family='serif')
+    plt.ylabel('y ($\AA$)', size='x-large', family='serif')
+    
+    cb = plt.colorbar()
+    cb.set_label('E ({})'.format(units), size='x-large', family='serif')
+
+    # add points to mark the locations of the atomic sites
+    plt.scatter(x, y, c='k', s=40)
+        
+    plt.xlim(x.min()-2, x.max()+2)
+    plt.ylim(y.min()-2, y.max()+2)
+    
+    plt.savefig('{}.{}'.format(figname, figformat))
+    plt.close()    
+    
+    return
+    
+def plot_energies_scatter(sites, e_seg, figname, cmtype='coolwarm', units='eV',
+                                                             figformat='tif'):
+    '''Produces a scatterplot showing all of the sites for which segregation 
+    energies were calculated, with each point coloured according to the 
+    segregation energy at that site.
+    '''
+
+    x = sites[:, 1]
+    y = sites[:, 2]
+
+    fig = plt.figure()
+    plt.gca().set_aspect('equal')
+    plt.scatter(x, y, c=e_seg, cmap=plt.get_cmap(cmtype), s=100)
+    
+    plt.xlim(x.min()-2, x.max()+2)
+    plt.ylim(y.min()-2, y.max()+2)
+    plt.xlabel('x ($\AA$)', size='x-large', family='serif')
+    plt.ylabel('y ($\AA$)', size='x-large', family='serif')
+    
+    cb = plt.colorbar()
+    cb.set_label('E ({})'.format(units), size='x-large', family='serif')
+    plt.savefig('{}.{}'.format(figname, figformat))
+    plt.close()
+    
+    return
+
+
+### END PLOTTING FUNCTIONS
 
 def command_line_options():
     '''Options to control parsing of the output from point-defect dislocation 
@@ -156,6 +235,13 @@ def command_line_options():
                          help='Reflect atoms about the x and y axes.')
     options.add_argument('-ax', type=int, default=0, dest='axis', 
                          help='Axis about which to reflect atoms')
+    options.add_argument('-ps', type=to_bool, default='False', dest='plot_scatter',
+                         help='Create scatter plot of segregation energies.')
+    options.add_argument('-pc', type=to_bool, default='False', dest='plot_contour', 
+                         help='Create contour plot of segregation energies')
+    options.add_argument('-pn', default=None, dest='plotname', help='Name to be '+
+                         'used for all figures produced.')
+    options.add_argument('-f', default='tif', dest='figformat', help='Image format.')
                          
     return options                     
 
@@ -182,6 +268,19 @@ def main():
     # write to output file
     outname = '{}.energies.dat'.format(args.basename)
     write_energies(outname, site_info, e_excess, e_seg)
+    
+    # create plots showing segregation energies
+    if args.plotname:
+        plotname = args.plotname
+    else:
+        plotname = args.basename
+        
+    if args.plot_scatter:
+        plot_energies_scatter(site_info, e_seg, plotname+'.scatter', 
+                                            figformat=args.figformat)
+    if args.plot_contour:
+        plot_energies_contour(site_info, e_seg, plotname+'.contour', 
+                                            figformat=args.figformat)
 
 if __name__ == "__main__":
     main()    

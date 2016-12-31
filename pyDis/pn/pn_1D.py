@@ -7,7 +7,10 @@ from numpy.linalg import norm
 
 from scipy.optimize import fmin_slsqp, curve_fit
 from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    print("Module <matplotlib> not found. Do not use plotting functions.")
 
 import sys
 import os
