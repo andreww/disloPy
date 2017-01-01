@@ -12,6 +12,7 @@ import os
 sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
+from scipy.optimize import curve_fit
 try:
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
@@ -88,6 +89,22 @@ def segregation_energy(excess_energy, e_bulk):
     
     return segregation_energies 
     
+def fit_seg_energy(e_seg, sites):
+    '''Fits the calculated segregation energy to a function of the form 
+    A0*sin(theta)/r + A1/r**2 (see de Batist p. 29-30), with the first term
+    representing between interaction a spherical defect and the dislocation,
+    and the second an interaction energy arising from the inhomogeneity effect.
+    '''
+    
+    def energy_function(x, A0, A1):
+        r = np.sqrt(x[0]**2+x[1]**2)
+        th = np.arctan2(x[1], x[0])
+        return A0*np.sin(th)/r + A1/r**2
+        
+    par, pcov = curve_fit(energy_function, (sites[:, 1], sites[:, 2]), e_seg)
+    perr = np.sqrt(np.diag(pcov))
+    return par, perr
+    
 def reflect_atoms(site_info, e_excess, e_seg, axis, tol=1e-1):
     '''Reflects all atoms about the specified <axis> (which must take the values
     0 or 1), excepting only those that are within <tol> of the mirror axis.
@@ -125,15 +142,17 @@ def reflect_atoms(site_info, e_excess, e_seg, axis, tol=1e-1):
         e_excess_full.append(Ei)
         e_seg_full.append(dEi)
     
-    return sites_full, e_excess_full, e_seg_full
+    return np.array(sites_full), e_excess_full, e_seg_full
     
-def write_energies(outname, site_info, e_excess, e_seg):
+def write_energies(outname, site_info, e_excess, e_seg, pars=None):
     '''Writes the excess and segregation energies for defects at each site to
     the specified output file.
     ''' 
     
     outfile = open(outname, 'w')
     outfile.write('# site-id x y r phi E_excess E_segregation\n')
+    if pars is not None:
+        outfile.write(pars)
     
     for i, site in enumerate(site_info):
         line_fmt = '{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}\n'
@@ -242,6 +261,8 @@ def command_line_options():
     options.add_argument('-pn', default=None, dest='plotname', help='Name to be '+
                          'used for all figures produced.')
     options.add_argument('-f', default='tif', dest='figformat', help='Image format.')
+    options.add_argument('-fit', type=to_bool, default='False', dest='fit',
+                         help='Fit the form of the calculated segregation energies.')
                          
     return options                     
 
@@ -264,10 +285,18 @@ def main():
         site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 0)
     if (args.mirror and args.axis == 1) or args.mirror_both: 
         site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 1)
+        
+    # fit segregation energies to obtain homogeneous and inhomogeneous contributions
+    if args.fit:
+        par, perr = fit_seg_energy(e_seg, site_info)
+        fit_str = '# A0 = {:.4f} +/- {:.4f}; A1 = {:.4f} +/- {:.4f}\n'.format(par[0],
+                                                        perr[0], par[1], perr[1])
+    else:
+        fit_str = None 
     
     # write to output file
     outname = '{}.energies.dat'.format(args.basename)
-    write_energies(outname, site_info, e_excess, e_seg)
+    write_energies(outname, site_info, e_excess, e_seg, pars=fit_str)
     
     # create plots showing segregation energies
     if args.plotname:
