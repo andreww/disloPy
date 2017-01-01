@@ -267,20 +267,26 @@ class Lattice(object):
     '''
     
     def __init__(self, x=ei(1), y=ei(2), z=ei(3)):
-        # <x>, <y>, <z> are 3*1 np arrays. If no arguments are given,
-        # set all lattice vectors to zero.
+        ''' <x>, <y>, <z> are 3*1 np arrays. If no arguments are given,
+        set all lattice vectors to zero.
+        '''
+        
         self.__a = np.copy(x)
         self.__b = np.copy(y)
         self.__c = np.copy(z)
         
     def rotate(self, ax=np.array([0, 0, 1]), theta=0.0):
-        # rotates around <ax> (a numpy array) by <theta> (in degrees).
-        # Currently just a Dummy function
+        '''Rotates around <ax> (a numpy array) by <theta> (in degrees).
+        Currently just a Dummy function
+        '''
+        
         pass
         
     def scale(self, scaleFactor):
-        # scales all lattice vectors by <scaleVector>. Useful for 
-        # isostructural materials
+        '''scales all lattice vectors by <scaleVector>. Useful for 
+        isostructural materials
+        '''
+        
         self.__a = scaleFactor*self.__a
         self.__b = scaleFactor*self.__b
         self.__c = scaleFactor*self.__c

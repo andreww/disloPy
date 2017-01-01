@@ -29,7 +29,7 @@ def input_options():
     options.add_argument('-o', '--output', type=str, dest='output_name', default='',
                          help='Destination for structure with permutated lattice vector.s')
     options.add_argument('-p', '-permutation', nargs=3, type=int, dest='perm',
-                         default=np.array([1, 2, 3]), help='New order of indices')
+                         default=np.array([0, 1, 2]), help='New order of indices')
     options.add_argument('-prog', '--program', type=str, dest='prog',
                          help='Name of atomistic simulation code used.')
                          
@@ -57,7 +57,7 @@ def permute_vectors(incell, permutation):
 
     vecs = [incell.getA(), incell.getB(), incell.getC()]
     for i, p in enumerate(permutation):
-        incell.setVector(vecs[i][permutation], p)
+        incell.setVector(vecs[p][permutation], i)
     
     return
     

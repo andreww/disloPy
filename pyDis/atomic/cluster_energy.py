@@ -410,8 +410,8 @@ def EDis(r, Ecore, K, b, rcore=10.):
     
     return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
     
-def fitCoreEnergy(basename, b, rcore=10, fit_K=False, in_K=None,
-                                                        using_atomic=False):
+def fitCoreEnergy(basename, b, rcore=10, fit_K=False, in_K=-1,
+                                            using_atomic=False):
     '''Fit the core energy and energy coefficient of the dislocation whose 
     radius-energy data is stored in <basename>.energies. Returns K in eV/ang**3
     and Ecore in eV/ang. <thickness> is the length of the simulation cell.
@@ -426,7 +426,7 @@ def fitCoreEnergy(basename, b, rcore=10, fit_K=False, in_K=None,
         def specific_energy(r, Ecore, K):
             return Ecore + K*b**2/(4*np.pi)*np.log(r/rcore)
     else:
-        if in_K is None: # prompt user to provide energy coefficient
+        if in_K == -1: # prompt user to provide energy coefficient
             K = raw_input("Enter the energy coefficient K (in GPa): ")
         else:
             K = in_K
