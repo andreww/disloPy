@@ -455,9 +455,7 @@ def shift_energies(dis_parameters, max_x, gsf_func, K, b, spacing, dims=1,
     new_par = dis_parameters
     
     energies = []
-    #!!!
     pars = []
-    #!!!
     
     for xi in np.arange(0, spacing/2.+dx, dx):
         E, new_par = shifted_dislocation(new_par, n_funcs, max_x, gsf_func, K, b, spacing,
