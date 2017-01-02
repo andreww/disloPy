@@ -209,7 +209,7 @@ def handle_pn_control(param_dict):
     
     # cards for the <&stress> namelist
     stress_cards = (('calculate_stress', {'default':False, 'type':to_bool}),
-                    ('calculate_barrier', {'default':False, 'type':to_bool}),
+                    ('calculate_barrier', {'default':True, 'type':to_bool}),
                     ('dtau', {'default':0.0005, 'type':float}),
                     ('use_GPa', {'default':True, 'type':to_bool}),
                     ('threshold', {'default':0.5, 'type':float})
@@ -352,20 +352,20 @@ class PNSim(object):
         
         if self.control('noisy'):
             print("Core relaxation complete.")
+            
+        # calculate Peierls stress and Peierls barrier, if requested
+        if self.control('noisy'):
+            print('Calculating Peierls stress.')
+            
+        self.peierls() 
+               
+        if self.control('noisy'):
+            print('Peierls stress calculated.')
         
         # do post-processing and/or plotting, if requested by the user
         if self.control('noisy'):
             print('Doing post-processing.')       
         self.post_processing()
-        
-        # calculate Peierls stress and Peierls barrier, if requested
-        if self.control('noisy'):
-            print('Calculating Peierls stress.')
-            
-        self.peierls()
-        
-        if self.control('noisy'):
-            print('Peierls stress calculated.')
 
         # write results to ouput
         self.write_output()
@@ -604,7 +604,7 @@ class PNSim(object):
         
         if self.stress('calculate_barrier'):
             # calculate change in dislocation energy with position       
-            e_shifted = pb.shift_energies(self.par, 
+            e_shifted, pars = pb.shift_energies(self.par, 
                                           self.control('max_x'),
                                           self.gsf, 
                                           self.K, 
@@ -612,7 +612,15 @@ class PNSim(object):
                                           self.struc('spacing'), 
                                           dims=self.control('dimensions'),
                                           disl_type=self.control('disl_type'))
-                                          
+            
+            # Check to see if any of the shifted energies is lower than the 
+            # original energy calculated for the dislocation. If so, use the
+            # parameters for the shifted dislocation
+            En = e_shifted[np.argmin(e_shifted[:, 1]), 1]
+            if En < self.E:
+                self.E = En
+                self.par = pars[np.argmin(e_shifted[:, 1])]
+             
             self.wp_shift = e_shifted[:, 1][-1]-e_shifted[:, 1][0]
             
             # calculate the Peierls stress

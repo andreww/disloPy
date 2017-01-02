@@ -455,18 +455,23 @@ def shift_energies(dis_parameters, max_x, gsf_func, K, b, spacing, dims=1,
     new_par = dis_parameters
     
     energies = []
+    #!!!
+    pars = []
+    #!!!
     
     for xi in np.arange(0, spacing/2.+dx, dx):
         E, new_par = shifted_dislocation(new_par, n_funcs, max_x, gsf_func, K, b, spacing,
                                   disl_type=None, dims=1, cm0=(xi+cm0))
         energies.append([cm0+xi, E])
+        pars.append(new_par)
         
     for xi in np.arange(0, spacing/2.+dx, dx):
         E, new_par = shifted_dislocation(new_par, n_funcs, max_x, gsf_func, K, b, spacing,
                                   disl_type=None, dims=1, cm0=(-xi+cm0))
         energies.append([cm0-xi, E])
+        pars.append(new_par)
         
-    return np.array(energies)
+    return np.array(energies), pars
     
 def sigmap_from_wp(positions, energies, b):
     '''Calculates the Peierls stress for a dislocation using the energies 

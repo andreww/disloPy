@@ -261,13 +261,17 @@ def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True, nplanes=30
 def elastic_energy(A, x0, c, b=1, K=1):
     '''Calculates the elastic energy of the dislocation characterised by 
     parameters A, x0, and c, with Burgers vector b and elastic coefficient K.
+    
+    NOTE: The factor of 1/2 in the expression given by Bulatov and Cai (eqn. 
+    8.25) appears to be a mistake, and yields an energy inconsistent with that
+    obtained by explicit numerical integration.
     '''
     
     E = 0.
     for Ai, xi, ci in zip(A, x0, c):
         for Aj, xj, cj in zip(A, x0, c):
             E += Ai*Aj*np.log((xi-xj)**2+(ci+cj)**2)
-    return -0.5*K*E*b**2*2 # need to check the numerical coefficient
+    return -0.5*K*E*b**2 # need to check the numerical coefficient
     
 def misfit_energy(A, x0, c, N, energy_function, b, spacing, translate=0.):
     '''Calculates the inelastic energy associated with a dislocation defined
