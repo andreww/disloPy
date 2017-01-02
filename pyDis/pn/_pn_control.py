@@ -621,7 +621,7 @@ class PNSim(object):
                 self.E = En
                 self.par = pars[np.argmin(e_shifted[:, 1])]
              
-            self.wp_shift = e_shifted[:, 1],max()-e_shifted[:, 1].min()
+            self.wp_shift = e_shifted[:, 1].max()-e_shifted[:, 1].min()
             
             # calculate the Peierls stress
             self.taup_shift = pb.sigmap_from_wp(e_shifted[:, 0], e_shifted[:, 1], 
