@@ -271,7 +271,7 @@ def elastic_energy(A, x0, c, b=1, K=1):
     for Ai, xi, ci in zip(A, x0, c):
         for Aj, xj, cj in zip(A, x0, c):
             E += Ai*Aj*np.log((xi-xj)**2+(ci+cj)**2)
-    return -K*E*b**2 # need to check the numerical coefficient
+    return -0.5*K*E*b**2 # need to check the numerical coefficient
     
 def misfit_energy(A, x0, c, N, energy_function, b, spacing, translate=0.):
     '''Calculates the inelastic energy associated with a dislocation defined

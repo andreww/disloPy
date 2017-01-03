@@ -14,9 +14,7 @@ def stress_energy(tau, rho, x_vals, b, cm0, spacing):
     '''Calculate total stress energy.
     '''
 
-    #return -tau*(pn1.center_of_mass(rho, x_vals, b)-cm0)*spacing 
-    
-    return -tau*(rho*(x_vals[1:]-spacing/2.)).sum()*spacing
+    return -tau*(rho*((x_vals[1:]-spacing/2.)**2-(x_vals[:-1]-spacing/2.)**2)).sum()/2.
     
 def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
                          shift, tau, disl_type=None, dims=2, cm0=0.):
@@ -115,7 +113,7 @@ def stressed_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
     # obtain the relaxed structure of the dislocation in the applied stress 
     # field
     new_par = fmin_slsqp(total_opt_stress, params, eqcons=constraints, args=in_args,
-                                                     bounds=lims, iprint=0, acc=1e-14)
+                                                     bounds=lims, iprint=0, acc=1e-6)
      
     # calculate total self-interaction + misfit + stress energy                                   
     E = total_opt_stress(new_par, *in_args)       
@@ -457,18 +455,18 @@ def shift_energies(dis_parameters, max_x, gsf_func, K, b, spacing, dims=1,
     energies = []
     pars = []
     
-    for xi in np.arange(0, spacing/2.+dx, dx):
+    for xi in np.arange(0, spacing+dx, dx):
         E, new_par = shifted_dislocation(new_par, n_funcs, max_x, gsf_func, K, b, spacing,
                                   disl_type=None, dims=1, cm0=(xi+cm0))
         energies.append([cm0+xi, E])
         pars.append(new_par)
-   
+    '''
     for xi in np.arange(0, spacing/2.+dx, dx):
         E, new_par = shifted_dislocation(new_par, n_funcs, max_x, gsf_func, K, b, spacing,
                                   disl_type=None, dims=1, cm0=(-xi+cm0))
         energies.append([cm0-xi, E])
         pars.append(new_par)
-    
+    '''
     return np.array(energies), pars
     
 def sigmap_from_wp(positions, energies, b):

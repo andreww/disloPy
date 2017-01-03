@@ -197,7 +197,7 @@ def handle_pn_control(param_dict):
                   ('map_ux', {'default':'remap: (ux, uy) -> ux', 'type':str}),
                   ('map_uy', {'default':'remap: (ux, uy) -> uy', 'type':str}),
                   ('gamma_shift', {'default':0., 'type':float}),
-                  ('has_vacuum', {'default':False, 'type':to_bool}),
+                  ('has_vacuum', {'default':True, 'type':to_bool}),
                   ('do_fourier', {'default':False, 'type':to_bool}),
                   ('fourier_N', {'default':2, 'type': int})
                  )
