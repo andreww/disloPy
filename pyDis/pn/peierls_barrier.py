@@ -14,7 +14,11 @@ def stress_energy(tau, rho, x_vals, b, cm0, spacing):
     '''Calculate total stress energy.
     '''
 
-    return -tau*(rho*((x_vals[1:]-spacing/2.)**2-(x_vals[:-1]-spacing/2.)**2)).sum()/2.
+    #return -b*tau*(rho[1:]*((x_vals[1:-1])**2-(x_vals[:-2])**2)).sum()/2.
+    E = 0
+    for i in range(1, len(rho)):
+        E += rho[:i].sum()
+    return tau*E*spacing**2
     
 def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
                          shift, tau, disl_type=None, dims=2, cm0=0.):
@@ -24,7 +28,7 @@ def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing,
     #!!! Probably need some routine to check that the dimensions of <shift>,
     <energy_function>, and <K> are compatible with <dims>
     '''
-                                                            
+                                                       
     # determine (from <dims>) which functions should be used to calculate the 
     # elastic and inelastic (ie. misfit) components of the dislocation energy. 
     if dims == 1:
@@ -115,7 +119,7 @@ def stressed_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
     new_par = fmin_slsqp(total_opt_stress, params, eqcons=constraints, args=in_args,
                                                      bounds=lims, iprint=0, acc=1e-6)
      
-    # calculate total self-interaction + misfit + stress energy                                   
+    # calculate total self-interaction + misfit + stress energy
     E = total_opt_stress(new_par, *in_args)       
     
     return E, new_par
@@ -206,7 +210,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # apply stress to the dislocation, starting with the positive direction
     new_par = dis_parameters
     for s in stresses:
-        Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
+        Ed, new_par = stressed_dislocation(dis_parameters, len(dis_parameters)/3, 
                             max_x, gsf_func, K, b, spacing, s, disl_type,  dims, cm0)
 
         # compare new displacement field to that of original (ie. unstressed)
@@ -219,22 +223,22 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
                 us = uxs
             else: # screw
                 us = uys
-        
+                
         # calculate the stressed dislocation's centre            
         rhos = pn1.rho(us, r)        
         cm_new = pn1.center_of_mass(rhos, r, b) 
 
         # calculate distance of dislocation density c.o.m from the location of
         # the unstressed dislocation, recording the value if it exceeds specified
-        # threshold
-        if abs(cm_new - cm0) >= threshold:
-            tau_p_plus = s
+        # threshold or the dislocation density starts to go to zero
+        if abs(cm_new - cm0) >= threshold or abs(rhos.sum()*spacing-b)/b > 0.1:
+            tau_p_plus = s-dtau/2.
             break
 
     # apply negative stress
     new_par = dis_parameters
     for s in -stresses:
-        Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
+        Ed, new_par = stressed_dislocation(dis_parameters, len(dis_parameters)/3, 
                              max_x, gsf_func, K, b, spacing, s, disl_type, dims, cm0)
         
         # compare with unstressed dislocation                     
@@ -250,12 +254,10 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         # calculate centre of mass of the stressed dislocation
         rhos = pn1.rho(us, r)
         cm_new = pn1.center_of_mass(rhos, r, b)
-        
-        # calculate distance of dislocation density c.o.m from the location of
-        # the unstressed dislocation, recording the value if it exceeds specified
-        # threshold
-        if abs(cm_new - cm0) >= threshold:
-            tau_p_minus = -s
+
+        # as above, determine if the dislocation has started to move freely
+        if abs(cm_new - cm0) >= threshold or abs(rhos.sum()*spacing-b)/b > 0.1:
+            tau_p_minus = -(s+dtau/2.)
             break
                    
     peierls_stresses = [tau_p_minus, tau_p_plus]
@@ -264,7 +266,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         # express Peierls stresses in GPa
         peierls_stresses = [atomic_to_GPa*tau for tau in peierls_stresses]
             
-    peierls_stresses = [sig_figs(tau, 3) for tau in peierls_stresses]
+    peierls_stresses = [sig_figs(tau, 6) for tau in peierls_stresses]
     
     # calculate the average Peierls stress
     taup_av = sum(peierls_stresses)/2
@@ -429,7 +431,7 @@ def shifted_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
     return E, new_par
     
 def shift_energies(dis_parameters, max_x, gsf_func, K, b, spacing, dims=1, 
-                                                   disl_type=None, dx=0.05):
+                                                   disl_type=None, dx=0.1):
     '''Calculate the dislocation core energy for a range of different mean positions.
     '''
 
@@ -469,12 +471,11 @@ def shift_energies(dis_parameters, max_x, gsf_func, K, b, spacing, dims=1,
     '''
     return np.array(energies), pars
     
-def sigmap_from_wp(positions, energies, b):
+def sigmap_from_wp(spacing, energies, b):
     '''Calculates the Peierls stress for a dislocation using the energies 
     calculated for the dislocation core at each position between adjacent 
     dislocations.
     '''
 
-    dx = positions[1]-positions[0]
-    dWdx = max((energies[1:]-energies[:-1])/dx)
-    return 1/b*dWdx
+    dW = energies.max()-energies.min()
+    return np.pi*dW/b**2

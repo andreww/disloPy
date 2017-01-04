@@ -624,7 +624,7 @@ class PNSim(object):
             self.wp_shift = e_shifted[:, 1].max()-e_shifted[:, 1].min()
             
             # calculate the Peierls stress
-            self.taup_shift = pb.sigmap_from_wp(e_shifted[:, 0], e_shifted[:, 1], 
+            self.taup_shift = pb.sigmap_from_wp(self.struc('spacing'), e_shifted[:, 1], 
                                                         self.struc('burgers'))
             if self.stress('use_GPa'):
                 self.taup_shift *= atomic_to_GPa
