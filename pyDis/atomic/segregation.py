@@ -89,7 +89,7 @@ def segregation_energy(excess_energy, e_bulk):
     
     return segregation_energies 
     
-def fit_seg_energy(e_seg, sites):
+def fit_seg_energy(e_seg, sites, min_r=2.):
     '''Fits the calculated segregation energy to a function of the form 
     A0*sin(theta)/r + A1/r**2 (see de Batist p. 29-30), with the first term
     representing between interaction a spherical defect and the dislocation,
@@ -100,8 +100,13 @@ def fit_seg_energy(e_seg, sites):
         r = np.sqrt(x[0]**2+x[1]**2)
         th = np.arctan2(x[1], x[0])
         return A0*np.sin(th)/r + A1/r**2
-        
-    par, pcov = curve_fit(energy_function, (sites[:, 1], sites[:, 2]), e_seg)
+    
+    # determine indices of sites that are not in the immediate vicinity of the 
+    # dislocation core (where inelastic interactions dominate)
+    i = np.where(sites[:, 3] > min_r)[0]
+    e_seg = np.array(e_seg)
+    # fit point defect-dislocation binding energy    
+    par, pcov = curve_fit(energy_function, (sites[:, 1][i], sites[:, 2][i]), e_seg[i])
     perr = np.sqrt(np.diag(pcov))
     return par, perr
     

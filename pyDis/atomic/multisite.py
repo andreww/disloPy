@@ -128,9 +128,10 @@ def closest_atom_in_direction(atomindex, supercell, direction, use_displaced=Tru
     return closest_index 
     
 def closest_atom_oftype(atom, supercell, atomtype, use_displaced=True, oned=False,
-                                                                    to_cart=True):
+                                                       to_cart=True, skip_atoms=[]):
     '''Locates the closest atom of species <atomtype> to <atom> in the 
-    provided <supercell>. Primarily useful for locating hydroxyl oxygens.
+    provided <supercell>. Primarily useful for locating hydroxyl oxygens. 
+    <skip_atoms> is a list indices for atoms which should NOT be considered.
     '''
     
     if type(supercell) == cry.Crystal:
@@ -140,7 +141,7 @@ def closest_atom_oftype(atom, supercell, atomtype, use_displaced=True, oned=Fals
     index = -1
     
     for i, atom2 in enumerate(supercell):
-        if atom2.getSpecies() != atomtype:
+        if atom2.getSpecies() != atomtype or i in skip_atoms:
             # wrong species, carry on
             continue
 
@@ -193,7 +194,9 @@ def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str, program='gulp',
     else: # <Impurity> object
         hydrous_defect.site_location(supercell)
     
-    # find hydroxyl oxygens
+    # find hydroxyl oxygens, making sure that no oxygen for part of more than
+    # one hydroxyl group 
+    already_replaced = []
     for H in hydrous_defect:
         # add an impurity of type <hydroxyl_str> to <hydroxyls>
         new_hydrox = mutate.Impurity(oxy_str, 'hydroxyl oxygen')
@@ -209,10 +212,11 @@ def hydroxyl_oxygens(hydrous_defect, supercell, hydroxyl_str, program='gulp',
                
         # locate index of site containing nearest oxygen atom
         site_index = closest_atom_oftype(H, supercell, oxy_str, oned=oned, 
-                                                            to_cart=to_cart)
+                             to_cart=to_cart, skip_atoms=already_replaced)
 
         new_hydrox.set_index(site_index)
         new_hydrox.site_location(supercell)
+        already_replaced.append(site_index)
 
         hydroxyl_oxys.append(new_hydrox.copy())
 
