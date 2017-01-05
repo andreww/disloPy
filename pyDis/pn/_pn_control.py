@@ -199,7 +199,7 @@ def handle_pn_control(param_dict):
                   ('gamma_shift', {'default':0., 'type':float}),
                   ('has_vacuum', {'default':True, 'type':to_bool}),
                   ('do_fourier', {'default':False, 'type':to_bool}),
-                  ('fourier_N', {'default':2, 'type': int})
+                  ('fourier_N', {'default':3, 'type': int})
                  )
 
     # cards for the <&properties> namelist
@@ -208,8 +208,8 @@ def handle_pn_control(param_dict):
                  )
     
     # cards for the <&stress> namelist
-    stress_cards = (('calculate_stress', {'default':False, 'type':to_bool}),
-                    ('calculate_barrier', {'default':True, 'type':to_bool}),
+    stress_cards = (('calculate_stress', {'default':True, 'type':to_bool}),
+                    ('calculate_barrier', {'default':False, 'type':to_bool}),
                     ('dtau', {'default':0.0005, 'type':float}),
                     ('use_GPa', {'default':True, 'type':to_bool}),
                     ('threshold', {'default':0.5, 'type':float})

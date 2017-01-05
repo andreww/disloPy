@@ -14,11 +14,7 @@ def stress_energy(tau, rho, x_vals, b, cm0, spacing):
     '''Calculate total stress energy.
     '''
 
-    #return -b*tau*(rho[1:]*((x_vals[1:-1])**2-(x_vals[:-2])**2)).sum()/2.
-    E = 0
-    for i in range(1, len(rho)):
-        E += rho[:i].sum()
-    return tau*E*spacing**2
+    return -tau*rho.sum()*spacing
     
 def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
                          shift, tau, disl_type=None, dims=2, cm0=0.):
@@ -62,7 +58,8 @@ def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing,
     rho_vals = pn1.rho(u, r)
     
     # calculate the stress energy
-    E_stress = stress_energy(tau, rho_vals, r, b, cm0, spacing)
+    #E_stress = stress_energy(tau, rho_vals, r, b, cm0, spacing)
+    E_stress = stress_energy(tau, u, r, b, cm0, spacing)
     return (Em + E_el + E_stress)
    
 def total_opt_stress(params, *args):
@@ -210,7 +207,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # apply stress to the dislocation, starting with the positive direction
     new_par = dis_parameters
     for s in stresses:
-        Ed, new_par = stressed_dislocation(dis_parameters, len(dis_parameters)/3, 
+        Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
                             max_x, gsf_func, K, b, spacing, s, disl_type,  dims, cm0)
 
         # compare new displacement field to that of original (ie. unstressed)
@@ -238,7 +235,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # apply negative stress
     new_par = dis_parameters
     for s in -stresses:
-        Ed, new_par = stressed_dislocation(dis_parameters, len(dis_parameters)/3, 
+        Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
                              max_x, gsf_func, K, b, spacing, s, disl_type, dims, cm0)
         
         # compare with unstressed dislocation                     
@@ -458,17 +455,11 @@ def shift_energies(dis_parameters, max_x, gsf_func, K, b, spacing, dims=1,
     pars = []
     
     for xi in np.arange(0, spacing+dx, dx):
-        E, new_par = shifted_dislocation(new_par, n_funcs, max_x, gsf_func, K, b, spacing,
+        E, new_par = shifted_dislocation(dis_parameters, n_funcs, max_x, gsf_func, K, b, spacing,
                                   disl_type=None, dims=1, cm0=(xi+cm0))
         energies.append([cm0+xi, E])
         pars.append(new_par)
-    '''
-    for xi in np.arange(0, spacing/2.+dx, dx):
-        E, new_par = shifted_dislocation(new_par, n_funcs, max_x, gsf_func, K, b, spacing,
-                                  disl_type=None, dims=1, cm0=(-xi+cm0))
-        energies.append([cm0-xi, E])
-        pars.append(new_par)
-    '''
+        
     return np.array(energies), pars
     
 def sigmap_from_wp(spacing, energies, b):
