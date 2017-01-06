@@ -57,7 +57,7 @@ def generate_c(N):
     '''Generates N random dislocation half-widths.
     '''
     
-    c = rand.lognormal(0, 1, N)
+    c = rand.lognormal(1, 1, N)
     return c
         
 def gen_inparams(n_funcs, spacing):
@@ -129,11 +129,6 @@ def symmetrise(A, x0, c, spacing, normalize=False):
     x_mean = sum([ai*xi for ai, xi in zip(A, x0)])
     x0 = [(x-(x_mean-(x_mean % spacing))) for x in x0]
     return A, x0, c
-    
-def generate_input(N, spacing, use_sym=False):
-    '''Generate a trial set of parameters {Ai; xi; ci} for a 1D dislocation
-    distribution.
-    '''
 
 def u_field(x, A, x0, c, b, bc=0.5):
     '''Calculates disregistry value at x, for a given set of partial dislocations

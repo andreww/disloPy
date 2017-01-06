@@ -145,7 +145,7 @@ def handle_pn_control(param_dict):
     TO DO: List defining control parameters
     '''
 
-    # cards for the <&control> namelist 
+    # cards for the <&control> namelist.
     control_cards = (('gsf_file', {'default':None, 'type':str}),
                      ('output', {'default':'pyDisPN.out', 'type':str}),
                      ('title_line', {'default':'Peierls-Nabarro model', 'type':str}),
@@ -210,7 +210,7 @@ def handle_pn_control(param_dict):
     # cards for the <&stress> namelist
     stress_cards = (('calculate_stress', {'default':True, 'type':to_bool}),
                     ('calculate_barrier', {'default':False, 'type':to_bool}),
-                    ('dtau', {'default':0.0005, 'type':float}),
+                    ('dtau', {'default':0.0001, 'type':float}),
                     ('use_GPa', {'default':True, 'type':to_bool}),
                     ('threshold', {'default':0.5, 'type':float})
                    )
