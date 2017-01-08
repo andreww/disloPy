@@ -161,7 +161,7 @@ def write_energies(outname, site_info, e_excess, e_seg, pars=None):
     
     for i, site in enumerate(site_info):
         line_fmt = '{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}\n'
-        outfile.write(line_fmt.format(int(site[0]), site[1], site[1], site[3], 
+        outfile.write(line_fmt.format(int(site[0]), site[1], site[2], site[3], 
                                                site[4], e_excess[i], e_seg[i]))   
 
     outfile.close()

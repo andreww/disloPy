@@ -118,6 +118,7 @@ def handle_atomistic_control(param_dict):
                      ('calc_type', {'default': None, 'type': str}),
                      ('program', {'default': None, 'type': str}),
                      ('run_sim', {'default': False, 'type': to_bool}),
+                     ('make_input', {'default': False, 'type': to_bool}),
                      ('basename', {'default': 'dis', 'type': str}),
                      ('suffix', {'default': 'in', 'type': str}),
                      ('executable', {'default': '', 'type': str}),
@@ -435,7 +436,7 @@ class AtomisticSim(object):
         
         print("Constructing cluster...", end='')
             
-        if self.control('program') == 'gulp': # add option for LAMMPS later      
+        if self.control('program') == 'gulp' and self.control('make_input'):   
             sysout = open('{}.{:.0f}.{:.0f}.sysInfo'.format(self.control('basename'),
                                                                         r1, r2), 'w')
             sysout.write('pcell\n')
@@ -478,11 +479,11 @@ class AtomisticSim(object):
                 self.run_simulation('dis.{}'.format(outname))
                 self.run_simulation('ndf.{}'.format(outname))
                 
-            # calculate core energy -> putting this here so that core energies
-            # can be easily recalculated without needing to re-run the cluster
-            # relaxation calculations. USE WITH CARE.
-            if self.control('calculate_core_energy'):
-                self.core_energy_cluster(r1, r2)
+        # calculate core energy -> putting this here so that core energies
+        # can be easily recalculated without needing to re-run the cluster
+        # relaxation calculations. USE WITH CARE.
+        if self.control('calculate_core_energy'):
+            self.core_energy_cluster(r1, r2)
                 
         print('done')
             
@@ -641,70 +642,70 @@ class AtomisticSim(object):
                              
         print('Finished.')              
             
-        def core_energy_sc(self):
-            '''Calculates the dislocation core energy from supercell calculations.
-            '''
+    def core_energy_sc(self):
+        '''Calculates the dislocation core energy from supercell calculations.
+        '''
             
-            # check that valid method has been supplied
-            if not (self.multipole('method') in ['compare', 'edge']):
-                raise ValueError(("{} does not correspond to a valid way to " +
+        # check that valid method has been supplied
+        if not (self.multipole('method') in ['compare', 'edge']):
+            raise ValueError(("{} does not correspond to a valid way to " +
                    "calculate the core energy.").format(self.cluster('method')))
 
-            # determine suffix of atomistic simulation output files
-            if self.control('program') == 'gulp':
-                suffix = 'gout'
-            elif self.control('program') == 'qe':
-                suffix = 'out'
-            elif self.control('program') == 'castep':
-                suffix = 'castep'
+        # determine suffix of atomistic simulation output files
+        if self.control('program') == 'gulp':
+            suffix = 'gout'
+        elif self.control('program') == 'qe':
+            suffix = 'out'
+        elif self.control('program') == 'castep':
+            suffix = 'castep'
                 
-            # calculate excess energy of the dislocation
-            # read in energy of dislocated cells
-            edis = mp.gridded_energies(self.control('basename'), self.control('program'), 
+        # calculate excess energy of the dislocation
+        # read in energy of dislocated cells
+        edis = mp.gridded_energies(self.control('basename'), self.control('program'), 
                               suffix, self.multipole('nx'), j_index=self.multipole('ny'), 
                                               relax=True, gridded=self.multipole('grid')) 
                         
-            if self.multipole('method') == 'compare':
-                # read in energy of undislocated reference cell
-                eperf = mp.gridded_energies('ndf.{}'.format(self.control('basename')),
-                                    self.control('program'), suffix, self.multipole('nx'),
-                                    self.multipole('ny'), relax=False, gridded=self.multipole('grid'))
+        if self.multipole('method') == 'compare':
+            # read in energy of undislocated reference cell
+            eperf = mp.gridded_energies('ndf.{}'.format(self.control('basename')),
+                             self.control('program'), suffix, self.multipole('nx'),
+                   self.multipole('ny'), relax=False, gridded=self.multipole('grid'))
                 
-                # calculate excess energy of the cell introduced by dislocations    
-                dE = mp.excess_energy(edis, 'compare', eperf)
+            # calculate excess energy of the cell introduced by dislocations    
+            dE = mp.excess_energy(edis, 'compare', eperf)
                 
-            elif self.multipole('method') == 'edge':
-                # calculate excess energy from energies of atoms in perfect crystal
-                if self.atomic_energies is None:
-                    # prompt use to enter energies for all atoms
-                    self.atomic_energies = ce.make_atom_dict()
+        elif self.multipole('method') == 'edge':
+            # calculate excess energy from energies of atoms in perfect crystal
+            if self.atomic_energies is None:
+                # prompt use to enter energies for all atoms
+                self.atomic_energies = ce.make_atom_dict()
                     
-                dE = mp.excess_energy(edis, 'edge', Edict=self.atomic_energies,
+            dE = mp.excess_energy(edis, 'edge', Edict=self.atomic_energies,
                         parse_fn=self.parse_fn, in_suffix=self.control('suffix'))
                         
-            # fit the core energy and other parameters
-            if self.multipole('npoles') == 4:
-                ndis = np.array([2, 2])
-            elif self.multipole('npoles') == 2:
-                if self.multipole('bdir') == 0:
-                    ndis = np.array([2, 1])
-                else:
-                    ndis = np.array([1, 2])
-                    
-            if self.multipole('fit_K'):        
-                par, err = mp.fit_core_energy_mp(dE, self.base_struc, norm(self.burgers),
-                                                        self.elast('rcore'), ndis=ndis)
+        # fit the core energy and other parameters
+        if self.multipole('npoles') == 4:
+            ndis = np.array([2, 2])
+        elif self.multipole('npoles') == 2:
+            if self.multipole('bdir') == 0:
+                ndis = np.array([2, 1])
             else:
-                par, err = mp.fit_core_energy_mp(dE, self.base_struc, norm(self.burgers),
+                ndis = np.array([1, 2])
+                    
+        if self.multipole('fit_K'):        
+            par, err = mp.fit_core_energy_mp(dE, self.base_struc, norm(self.burgers),
+                                                        self.elast('rcore'), ndis=ndis)
+        else:
+            par, err = mp.fit_core_energy_mp(dE, self.base_struc, norm(self.burgers),
                                                 self.elast('rcore'), ndis=ndis, K=self.K)
             
-            return
+        return
         
-        def write_output(self):
-            '''Writes relevant output information to <control('output')>.
-            '''
+    def write_output(self):
+        '''Writes relevant output information to <control('output')>.
+        '''
             
-            return
+        return
         
 def main(filename):
     new_simulation = AtomisticSim(filename)
