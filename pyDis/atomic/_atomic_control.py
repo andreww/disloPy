@@ -436,7 +436,8 @@ class AtomisticSim(object):
         
         print("Constructing cluster...", end='')
             
-        if self.control('program') == 'gulp' and self.control('make_input'):   
+        if self.control('program') == 'gulp' and (self.control('make_input') or
+                                                  self.control('run_sim')):   
             sysout = open('{}.{:.0f}.{:.0f}.sysInfo'.format(self.control('basename'),
                                                                         r1, r2), 'w')
             sysout.write('pcell\n')

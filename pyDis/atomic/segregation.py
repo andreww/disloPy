@@ -168,7 +168,7 @@ def write_energies(outname, site_info, e_excess, e_seg, pars=None):
     
 ### PLOTTING FUNCTIONS
 
-def plot_energies_contour(sites, e_seg, figname, cmtype='coolwarm', refine=False,
+def plot_energies_contour(sites, e_seg, figname, cmtype='coolwarm', refine=T,
                                        units='eV', figformat='tif', levels=25):
     '''Produces a contour plot of the segregation energy at sites around a 
     dislocation. Use <levels> to control the number of contours.
