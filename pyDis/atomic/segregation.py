@@ -110,7 +110,7 @@ def fit_seg_energy(e_seg, sites, min_r=2.):
     perr = np.sqrt(np.diag(pcov))
     return par, perr
     
-def reflect_atoms(site_info, e_excess, e_seg, axis, tol=1e-1):
+def reflect_atoms(site_info, e_excess, e_seg, axis, tol=1.):
     '''Reflects all atoms about the specified <axis> (which must take the values
     0 or 1), excepting only those that are within <tol> of the mirror axis.
     '''
