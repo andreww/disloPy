@@ -430,18 +430,22 @@ def azimuthConstraint(thetaMin, thetaMax, atom, tol=1e-2, scale_by_r=True):
     atomicX, atomicY = atom.getCoordinates()[0], atom.getCoordinates()[1]
     # atomic angle
     atomicTheta = np.arctan2(atomicY, atomicX)
-
-    # test to see if atom is in specified range, taking care to note the
-    # periodicity of theta
-    if atomicTheta > thetaMax + tol:
-        # calculate angular distance to the negative y axis
-        atomicTheta = -2*np.pi + atomicTheta
     
     if scale_by_r:    
         # calculate tolerance for this atom
         tol = tol/np.sqrt(atomicX**2+atomicY**2)
- 
-    useAtom = in_range(atomicTheta, thetaMin, thetaMax, tol=tol)
+
+    # test to see if atom is in specified range, taking care to note the
+    # periodicity of theta
+    if thetaMax > thetaMin:
+        if atomicTheta > thetaMax + tol:
+            # calculate angular distance to the negative y axis
+            atomicTheta = -2*np.pi + atomicTheta
+            
+        useAtom = in_range(atomicTheta, thetaMin, thetaMax, tol=tol)
+    else: # thetaMax < thetaMin
+        useAtom = not(in_range(atomicTheta, thetaMax, thetaMin, tol=tol))
+    
     return useAtom
         
 def in_range(value, rangeMin, rangeMax, tol=1e-2):
