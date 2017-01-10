@@ -168,7 +168,7 @@ def write_energies(outname, site_info, e_excess, e_seg, pars=None):
     
 ### PLOTTING FUNCTIONS
 
-def plot_energies_contour(sites, e_seg, figname, cmtype='coolwarm', refine=T,
+def plot_energies_contour(sites, e_seg, figname, cmtype='coolwarm', refine=False,
                                        units='eV', figformat='tif', levels=25):
     '''Produces a contour plot of the segregation energy at sites around a 
     dislocation. Use <levels> to control the number of contours.
@@ -257,16 +257,16 @@ def command_line_options():
                          help='Tells the program to reflect the atoms about an axis')
     options.add_argument('-mboth', type=to_bool, default='False', dest='mirror_both',
                          help='Reflect atoms about the x and y axes.')
-    options.add_argument('-ax', type=int, default=0, dest='axis', 
+    options.add_argument('-ax', type=int, default=1, dest='axis', 
                          help='Axis about which to reflect atoms')
-    options.add_argument('-ps', type=to_bool, default='False', dest='plot_scatter',
+    options.add_argument('-ps', type=to_bool, default='True', dest='plot_scatter',
                          help='Create scatter plot of segregation energies.')
-    options.add_argument('-pc', type=to_bool, default='False', dest='plot_contour', 
+    options.add_argument('-pc', type=to_bool, default='True', dest='plot_contour', 
                          help='Create contour plot of segregation energies')
-    options.add_argument('-pn', default=None, dest='plotname', help='Name to be '+
+    options.add_argument('-pn', default='segregation', dest='plotname', help='Name to be '+
                          'used for all figures produced.')
     options.add_argument('-f', default='tif', dest='figformat', help='Image format.')
-    options.add_argument('-fit', type=to_bool, default='False', dest='fit',
+    options.add_argument('-fit', type=to_bool, default='True', dest='fit',
                          help='Fit the form of the calculated segregation energies.')
                          
     return options                     
