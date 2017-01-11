@@ -34,7 +34,7 @@ def command_line_options():
                          help="Each GSF point is in its own directory")
     options.add_argument("-m", dest="mirror", default='False', help="Reflect (about x if 2D)")
     options.add_argument("-my", dest="mirrory", default='False', help="Reflect about y.")
-    options.add_argument("-plot", action="store_true", default=False,
+    options.add_argument("-plot", type=atm.to_bool, default='False', dest='plot',
                             help="Plot gamma line/surface.")
     options.add_argument("-sc", "--scale", type=float, dest="scale", default=1.,
                             help="Scale the GSF energies by this value.")
