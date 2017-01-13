@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 
 atomic_to_GPa =  160.2176487 # convert from eV/Ang**3 to GPa
 
-def stress_energy(tau, rho, x_vals, b, cm0, spacing):
+def stress_energy(tau, u, x_vals, spacing):
     '''Calculate total stress energy.
     '''
 
-    return -tau*rho.sum()*spacing
+    return -tau*u.sum()*spacing
     
 def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
                          shift, tau, disl_type=None, dims=2, cm0=0.):
@@ -28,15 +28,12 @@ def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing,
     # determine (from <dims>) which functions should be used to calculate the 
     # elastic and inelastic (ie. misfit) components of the dislocation energy. 
     if dims == 1:
-        el_func = pn1.elastic_energy          
-        misfit_func = pn1.misfit_energy
+        E_el = pn1.elastic_energy(A, x0, c, b, K)         
+        Em = pn1.misfit_energy(A, x0, c, max_x, energy_function, b, spacing)
     elif dims == 2:
-        el_func = pn2.elastic_energy2d
-        misfit_func = pn2.misfit_energy2d
-    
-    # calculate elastic and misfit energies 
-    E_el = el_func(A, x0, c, b, K)
-    Em = misfit_func(A, x0, c, max_x, energy_function, b, spacing)
+        E_el = pn2.elastic_energy2d(A, x0, c, b, K)
+        Em = pn2.misfit_energy2d(A, x0, c, max_x, energy_function, b, spacing,
+                                                                  shift=shift)
     
     # calculate the component of the displacement field affected by the applied
     # stress, and the corresponding dislocation distribution.
@@ -58,8 +55,7 @@ def total_stressed(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing,
     rho_vals = pn1.rho(u, r)
     
     # calculate the stress energy
-    #E_stress = stress_energy(tau, rho_vals, r, b, cm0, spacing)
-    E_stress = stress_energy(tau, u, r, b, cm0, spacing)
+    E_stress = stress_energy(tau, u, r, spacing)
     return (Em + E_el + E_stress)
    
 def total_opt_stress(params, *args):
@@ -67,9 +63,7 @@ def total_opt_stress(params, *args):
     routines in <scipy.optimize>.
     '''
     
-    # parse <args> to extract values for <total_stressed>. (Is there any reason
-    # why this cannot be done as part of <total_stressed>? This function seems
-    # largely redundant).
+    # parse <args> to extract values for <total_stressed>. 
     n_funcs = args[0]
     max_x = args[1]
     energy_function = args[2]
@@ -203,7 +197,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # calculate initial mean location of the dislocation distribution
     rho = pn1.rho(u, r)
     cm0 = pn1.center_of_mass(rho, r, b)
-    
+
     # apply stress to the dislocation, starting with the positive direction
     new_par = dis_parameters
     for s in stresses:
@@ -258,7 +252,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
             break
                    
     peierls_stresses = [tau_p_minus, tau_p_plus]
-    
+
     if in_GPa:
         # express Peierls stresses in GPa
         peierls_stresses = [atomic_to_GPa*tau for tau in peierls_stresses]

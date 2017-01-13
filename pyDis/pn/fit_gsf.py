@@ -227,30 +227,12 @@ def projection(gsf_func, const=0, axis=0):
     screw) dislocations, <const> defaults to 0.
     '''
     
-    # check that the specified axis label is valid
-    if axis == 0 or axis == 1:
-        pass
-    else:
-        raise ValueError("{} is an invalid axis label.".format(axis))
-    
-    #!!! Note to self: because 2d spline fits require that both arguments have
-    #!!! the same length, we need to add an array to the <const> value. This
-    #!!! is a kludgey fix, and it would be nice to come up with a neater (an
-    #!!! more efficient) solution.
     if axis == 0:
-        def g(x):
-            if type(x) == float:
-                return gsf_func(x, const)
-            else:
-                return gsf_func(x, const+np.zeros(len(x)))
-    elif axis == 1: 
-        def g(x):
-            if type(x) == float:
-                return gsf_func(const, x)
-            else:
-                return gsf_func(const+np.zeros(len(x)), x)
+        g = lambda x: gsf_func(x, const)
+    elif axis == 1:
+        g = lambda x: gsf_func(const, x)  
     else:
-        raise ValueError("{} is an invalid axis to project onto.".format(axis))
+        raise ValueError("{} is an invalid axis label.".format(axis))       
     
     return g
     

@@ -434,6 +434,7 @@ class PNSim(object):
                                                  hasvac=self.surf('has_vacuum'),
                                                  do_fourier_fit=self.surf('do_fourier'),
                                                  n_order=self.surf('fourier_N'))
+                                                 
         elif n_columns == 3: # 2-dimensional misfit function
             # fit the gamma surface
             if self.control('dimensions') == 2:
@@ -446,7 +447,7 @@ class PNSim(object):
                                              n_order=self.surf('fourier_N'))
                                                   
                 self.gsf = fg.new_gsf(base_func, self.surf('map_ux'), self.surf('map_uy'))
-                                             
+                            
             elif self.control('dimensions') == 1: 
                 # begin by performing a spline fit to the surface 
                 base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), 
@@ -477,6 +478,7 @@ class PNSim(object):
                                                            self.struc('burgers'))
                 else:
                     self.gsf = temp_1d2
+                     
         else:
             raise ValueError("GSF grid has invalid number of dimensions")
 
