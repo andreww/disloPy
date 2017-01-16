@@ -400,6 +400,7 @@ class PNSim(object):
                                                noisy=self.control('noisy'),
                                                params=inpar
                                               ) # Done Monte Carlo 1D
+            
         elif self.control('dimensions') == 2:
             self.E, self.par = pn2.run_monte2d(
                                                niter,
@@ -683,13 +684,27 @@ class PNSim(object):
         outstream.write('Number of iterations: {}\n'.format(self.control('n_iter')))
         outstream.write('Number of atomic planes used: {}\n'.format(2*self.control('max_x')+1))
         
+        # write stacking fault energy at midpoint of gamma line
+        if self.control('dimensions') == 1:
+            sfe = self.gsf(self.struc('burgers')/2.)
+        else:
+            if self.control('disl_type') == 'edge':
+                sfe = self.gsf(self.struc('burgers')/2., 0.)
+            else:
+                sfe = self.gsf(0., self.struc('burgers')/2.)
+                
+        if not self.surf('do_fourier'):
+            sfe = sfe[0]      
+            
+        outstream.write('Stacking fault energy: {:.4f} eV/ang.^2\n'.format(sfe))
+        
         # energy coefficients -> only write relevant coefficient if 1D
         if self.control('dimensions') == 2:
-            outstream.write('Edge energy coefficient: {:.3f} eV/ang.^3\n'.format(self.K[0]))
-            outstream.write('Screw energy coefficient: {:.3f} eV/ang.^3\n'.format(self.K[1]))
+            outstream.write('Edge energy coefficient: {:.4f} eV/ang.^3\n'.format(self.K[0]))
+            outstream.write('Screw energy coefficient: {:.4f} eV/ang.^3\n'.format(self.K[1]))
         else: # dimensions == 1
-            outstream.write('Edge energy coefficient: {:.3f} eV/ang.^3\n'.format(self.K_store[0]))
-            outstream.write('Screw energy coefficient: {:.3f} eV/ang.^3\n'.format(self.K_store[1]))
+            outstream.write('Edge energy coefficient: {:.4f} eV/ang.^3\n'.format(self.K_store[0]))
+            outstream.write('Screw energy coefficient: {:.4f} eV/ang.^3\n'.format(self.K_store[1]))
             
         outstream.write('\n\n')
         
