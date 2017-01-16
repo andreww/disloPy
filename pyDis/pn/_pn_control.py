@@ -694,8 +694,8 @@ class PNSim(object):
                 sfe = self.gsf(0., self.struc('burgers')/2.)
                 
         if not self.surf('do_fourier'):
-            sfe = sfe[0]      
-            
+            sfe = float(sfe)
+                
         outstream.write('Stacking fault energy: {:.4f} eV/ang.^2\n'.format(sfe))
         
         # energy coefficients -> only write relevant coefficient if 1D
