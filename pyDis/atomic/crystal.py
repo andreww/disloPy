@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import numpy as np
 import numpy.linalg as L
+import sys
 
 # Define helper functions
 
@@ -495,33 +496,43 @@ class Basis(object):
             atom.translateAtom(disp_vec, reset_disp, modulo)
         return    
         
-    def applyField(self, fieldType, disCores, disBurgers, Sij=0):
+    def applyField(self, fieldType, disCores, disBurgers, Sij=0, use_dip=False, at_dip=False):
         '''Total displacement due to many dislocations.
         '''
         for atom in self:
-            self.totalDisplacement(fieldType, atom, disCores, disBurgers, Sij)
+            self.totalDisplacement(fieldType, atom, disCores, disBurgers, Sij, use_dip=use_dip,
+                                                                                at_dip=at_dip)
             
-    def totalDisplacement(self, u, atom, disCores, disBurgers, Sij=0):
+    def totalDisplacement(self, u, atom, disCores, disBurgers, Sij=0, at_dip=False, use_dip=False):
         '''Sums the displacements at x due to each dislocation in <disCores>, with
         Burgers vectors given in <disBurgers> and <Sij> are the relevant elasticity
-        parameters.
+        parameters. <at_dip> tells the program to compute displacement at the displaced
+        coordinates, <use_dip> add displacement to displaced coordinates
         '''
         if len(disCores) != len(disBurgers):
             print('Error: number of cores and number of given Burgers vectors do ',)
             print('not match. Exiting...')
             sys.exit(1)
+        
+        if at_dip:    
+            x0 = atom.getDisplacedCoordinates() 
+        else:
+            x0 = atom.getCoordinates()
             
-        x = atom.getCoordinates() 
+        if use_dip:
+            x1 = atom.getDisplacedCoordinates()
+        else:
+            x1 = atom.getCoordinates()
         
         # apply displacements due to each dislocation                              
         uT = np.array([0., 0., 0.])
         for i in range(len(disCores)):
-            uT += u(x, disBurgers[i], disCores[i], Sij)
+            uT += u(x0, disBurgers[i], disCores[i], Sij)
             
         # Apply displacement to atomic coordinates
-        x += uT
+        x1 += uT
         # ...and then set this to be the displaced coordinate of the atom
-        atom.setDisplacedCoordinates(x)
+        atom.setDisplacedCoordinates(x1)
 
     def write(self, outstream, defected=True, add_constraints=False):
         '''Writes atoms in basis to output stream.
