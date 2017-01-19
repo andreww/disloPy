@@ -42,10 +42,16 @@ def check_permutation(permutation):
     '''
     
     # check that all lattice indices are represented in <permutation>
+    if (not 0 in permutation) or (not 1 in permutation) or (not 2 in permutation):
+        raise ValueError("Not a valid permutation.")
     
     # test for multiplicity and throw a warning if it is odd
-    
-    warnings.warn('The permutation is of odd multiplicity.')
+    print_warning = False
+    if ((permutation[0] == 0 and permutation[1] != 1) or 
+        (permutation[0] == 1 and permutation[1] != 2) or 
+        (permutation[0] == 2 and permutation[1] != 0)):
+        
+        warnings.warn('The permutation is of odd multiplicity.')
     
     return
     
@@ -100,6 +106,18 @@ def permute_kgrid(kgrid, permutation):
     kgrid['spacing'] = new_grid
     return
     
+def permute_cell(base_struc, program, permutation):
+    '''Applies the permutation to a unit cell.
+    '''
+    
+    permute_vectors(base_struc, permutation)
+    if program == 'gulp':
+        # permute shell coordinates as well
+        permute_atomic_coords(base_struc, permutation, shell_allowed=True)
+    else:
+        permute_atomic_coords(base_struc, permutation)
+    return
+    
 def main():
     '''Read in and permute structure.
     '''
@@ -125,13 +143,9 @@ def main():
                 
     sys_info = read_fn(args.input_struc, base_struc)
     
-    # permute stuff
-    permute_vectors(base_struc, args.perm)
-    if args.prog == 'gulp':
-        # permute shell coordinates as well
-        permute_atomic_coords(base_struc, args.perm, shell_allowed=True)
-    else:
-        permute_atomic_coords(base_struc, args.perm)
+    # check permutation and permute coordinates
+    check_permutation(args.perm)
+    permute_cell(base_struc, args.prog, args.perm)
         
     if ab_initio:
         # permute order of k-points
