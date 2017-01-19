@@ -117,7 +117,7 @@ def isiter(x):
         return False
 
 def write_xyz(input_crystal, filename, defected=False, description='xyz file',
-                                                       to_cart=False, r=np.inf):
+                                                               to_cart=False):
     '''Writes the atoms in <input_basis> to the specified .xyz file. 
     '''
     
@@ -127,11 +127,8 @@ def write_xyz(input_crystal, filename, defected=False, description='xyz file',
     
     for atom in input_crystal:
         # check that atom is to be written to output
-        if norm(atom.getDisplacedCoordinates()[:-1]) > r:
+        if not atom.writeToOutput():
             continue
-        
-        #else
-        natoms += 1
             
         # write coordinates in deformed crystal if <defected> is True
         if defected:
@@ -149,7 +146,7 @@ def write_xyz(input_crystal, filename, defected=False, description='xyz file',
                                                                      x[1], x[2])
                                                                      
     xyz_file = open(filename, 'w')
-    xyz_file.write('{}\n'.format(natoms))
+    xyz_file.write('{}\n'.format(len(input_crystal)))
     xyz_file.write('{}\n'.format(description))
     xyz_file.write(xyz_lines)
         

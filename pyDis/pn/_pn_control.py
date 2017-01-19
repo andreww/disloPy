@@ -15,6 +15,7 @@ from pyDis.pn import pn_2D as pn2
 from pyDis.pn import fit_gsf as fg
 from pyDis.pn import peierls_barrier as pb
 from pyDis.pn import energy_coeff as coeff
+from pyDis.pn import visualise_pn as vp
 from pyDis.atomic import aniso
 
 atomic_to_GPa =  160.2176487
@@ -126,16 +127,23 @@ def to_bool(in_str):
         
     return new_value
     
-def to_vector(in_str):
+def to_vector(in_str, datatype=float):
     '''Converts <in_str>, which is a list of numbers, in an array with elements
     of type float.
     '''
     
     new_vec = []
     for x in re.finditer('-?\d+\.?\d*', in_str):
-        new_vec.append(float(x.group()))
+        new_vec.append(datatype(x.group()))
     
-    return np.array(new_vec)
+    return np.array(new_vec, dtype=datatype)
+    
+def to_int_vector(in_str):
+    '''Calls <to_vector> with datatype=int. Used for parsing the PN input file.
+    '''
+    
+    arr = to_vector(in_str, datatype=int)
+    return arr
 
 def handle_pn_control(param_dict):
     '''handle each possible card in turn. If default value is <None>, the card is 
@@ -145,8 +153,11 @@ def handle_pn_control(param_dict):
     TO DO: List defining control parameters
     '''
 
-    # cards for the <&control> namelist.
-    control_cards = (('gsf_file', {'default':None, 'type':str}),
+    # cards for the <&control> namelist. If <run_sim> is False, we won't actually
+    # run the PN simulation. Do this only if you want to visualise the results
+    # without re-running the simulation
+    control_cards = (('run_sim', {'default':True, 'type':to_bool}),
+                     ('gsf_file', {'default':None, 'type':str}),
                      ('output', {'default':'pyDisPN.out', 'type':str}),
                      ('title_line', {'default':'Peierls-Nabarro model', 'type':str}),
                      ('n_iter', {'default':1, 'type':int}),
@@ -158,6 +169,7 @@ def handle_pn_control(param_dict):
                      ('plot', {'default':False, 'type':to_bool}),
                      ('plot_name', {'default':'pn_plot.tif', 'type':str}),
                      ('plot_both', {'default':False, 'type':to_bool}),
+                     ('visualize', {'default':False, 'type':to_bool}),
                      ('record', {'default':True, 'type':to_bool}),
                      ('nplanes', {'default':30, 'type':int}),
                      ('noisy', {'default': False, 'type': to_bool}),
@@ -214,9 +226,23 @@ def handle_pn_control(param_dict):
                     ('use_GPa', {'default':True, 'type':to_bool}),
                     ('threshold', {'default':0.5, 'type':float})
                    )
+                   
+    # cards for the <&visualize> namelist
+    vis_cards = (('xyz_name', {'default':'pn.xyz', 'type':str}),
+                 ('unitcell', {'default':'', 'type':str}),
+                 ('path_to_cell', {'default':'./', 'type':str}),
+                 ('threshold', {'default':1., 'type':float}),
+                 ('sym_thresh', {'default':0.3, 'type':float}),
+                 ('radius', {'default':10., 'type':float}),
+                 ('program', {'default':'', 'type':str}),
+                 ('shift', {'default':0., 'type':float}),
+                 ('permutation', {'default':np.array([0, 1, 2], dtype=int), 'type':to_int_vector}),
+                 ('parameter_file', {'default':'', 'type':str})
+                )
     
     # list of valid namelists 
-    namelists = ['control', 'struc', 'elast', 'surface', 'properties', 'stress']
+    namelists = ['control', 'struc', 'elast', 'surface', 'properties', 'stress',
+                                                        'visualize']
     # check that all namelists were in the control file and add them as keys
     # (with empty dicts as values) in the control dictionary
     for name in namelists:
@@ -226,7 +252,7 @@ def handle_pn_control(param_dict):
     # handle the input namelists, except for the elasticity namelist, which
     # requires special handling.
     for i, cards in enumerate([control_cards, struc_cards, elast_cards, surf_cards, 
-                                                        prop_cards, stress_cards]):
+                                               prop_cards, stress_cards, vis_cards]):
         if namelists[i] == 'elast':
             # handle the elastic parameters later
             continue
@@ -308,67 +334,74 @@ class PNSim(object):
         self.surf = lambda card: self.sim['surface'][card]
         self.prop = lambda card: self.sim['properties'][card]
         self.stress = lambda card: self.sim['stress'][card]
+        self.vis = lambda card: self.sim['visualize'][card]
+        
+        if self.control('run_sim'):
+            # calculate the energy coefficients
+            if self.elast('coefficients') == 'specific':          
+                self.K = coeff.predefined(self.elast('k_parallel'), self.elast('k_normal'),
+                                                    using_atomic=not(self.elast('in_gpa')))
+            elif self.elast('coefficients') == 'aniso':
+                self.K = coeff.anisotropic_K(self.elast('cij'),
+                                             self.elast('b_edge'),
+                                             self.elast('b_screw'),
+                                             self.elast('normal'),
+                                             using_atomic=not(self.elast('in_gpa'))
+                                            )
+            elif self.elast('coefficients') == 'iso_nu':
+                self.K = coeff.isotropic_nu(self.elast('poisson'), self.elast('shear'),
+                                                 using_atomic=not(self.elast('in_gpa')))
+            elif self.elast('coefficients') == 'iso_bulk':
+                self.K = coeff.isotropic_K(self.elast('bulk'), self.elast('shear'),
+                                               using_atomic=not(self.elast('in_gpa')))
+                                               
 
-        # calculate the energy coefficients
-        if self.elast('coefficients') == 'specific':          
-            self.K = coeff.predefined(self.elast('k_parallel'), self.elast('k_normal'),
-                                                using_atomic=not(self.elast('in_gpa')))
-        elif self.elast('coefficients') == 'aniso':
-            self.K = coeff.anisotropic_K(self.elast('cij'),
-                                         self.elast('b_edge'),
-                                         self.elast('b_screw'),
-                                         self.elast('normal'),
-                                         using_atomic=not(self.elast('in_gpa'))
-                                        )
-        elif self.elast('coefficients') == 'iso_nu':
-            self.K = coeff.isotropic_nu(self.elast('poisson'), self.elast('shear'),
-                                             using_atomic=not(self.elast('in_gpa')))
-        elif self.elast('coefficients') == 'iso_bulk':
-            self.K = coeff.isotropic_K(self.elast('bulk'), self.elast('shear'),
-                                           using_atomic=not(self.elast('in_gpa')))
-                                           
-
-        # if restricting calculation to one component of displacement, extract
-        # the appropriate energy coefficient.    
-        if self.control('dimensions') == 1:
-            # store a copy of the edge and screw energy coefficients
-            self.K_store = self.K
-            if self.control('disl_type').lower() == 'edge':
-                self.K = self.K[0]
-            else:
-                # for the moment, default to shear
-                self.K = self.K[1]
-        
-        # construct the gamma surface/gamma line
-        if self.control('noisy'):
-            print("Constructing gamma surface/line")
-        self.construct_gsf()
-        
-        # calculate fit parameters and energy of the dislocation
-        if self.control('noisy'):
-            print("Relaxing dislocation core structure.")
-             
-        self.run_sim()
-        
-        if self.control('noisy'):
-            print("Core relaxation complete.")
+            # if restricting calculation to one component of displacement, extract
+            # the appropriate energy coefficient.    
+            if self.control('dimensions') == 1:
+                # store a copy of the edge and screw energy coefficients
+                self.K_store = self.K
+                if self.control('disl_type').lower() == 'edge':
+                    self.K = self.K[0]
+                else:
+                    # for the moment, default to shear
+                    self.K = self.K[1]
             
-        # calculate Peierls stress and Peierls barrier, if requested
-        if self.control('noisy'):
-            print('Calculating Peierls stress.')
+            # construct the gamma surface/gamma line
+            if self.control('noisy'):
+                print("Constructing gamma surface/line")
+            self.construct_gsf()
             
-        self.peierls() 
-               
-        if self.control('noisy'):
-            print('Peierls stress calculated.')
-        
-        # do post-processing and/or plotting, if requested by the user
-        if self.control('noisy'):
-            print('Doing post-processing.')       
-        self.post_processing()
+            # calculate fit parameters and energy of the dislocation
+            if self.control('noisy'):
+                print("Relaxing dislocation core structure.")
+                 
+            self.run_sim()
+            
+            if self.control('noisy'):
+                print("Core relaxation complete.")
+                
+            # calculate Peierls stress and Peierls barrier, if requested
+            if self.control('noisy'):
+                print('Calculating Peierls stress.')
+                
+            self.peierls() 
+                   
+            if self.control('noisy'):
+                print('Peierls stress calculated.')
+            
+            # do post-processing and/or plotting, if requested by the user
+            if self.control('noisy'):
+                print('Doing post-processing.')       
+            self.post_processing()
 
-        # write results to ouput
-        self.write_output()
+            # write results to ouput
+            self.write_output()
+        
+        if self.control('visualize'):
+            if self.control('noisy'):
+                print('Visualising core structure.')
+            self.visualise()
         
     def run_sim(self):
         '''Calculates an optimum(ish) dislocation structure.
@@ -806,6 +839,32 @@ class PNSim(object):
         outstream.write('\n\n**Finished**')
         outstream.close()
         return
+        
+    def visualise(self):
+        '''Constructs an atomistic representation of the dislocation core.
+        '''
+        
+        if not self.control('run_sim'):
+            # read in dislocation parameters
+            dims, self.par = vp.import_pn_pars(self.control('output'))
+            
+        if not self.vis('program'):
+            raise AttributeError("Atomistic simulation code not specified")
+        else:
+            basestruc = vp.read_unit_cell(self.vis('unitcell'), 
+                                          self.vis('program'),
+                                          self.vis('shift'), 
+                                          permutation=self.vis('permutation'),
+                                          path=self.vis('path_to_cell'))
+        
+        # construct elastic displacement field function
+        field = aniso.makeAnisoField(self.elast('cij'), n=self.elast('b_edge'),
+                                        m=self.elast('normal')) 
+                                
+        vp.make_xyz(basestruc, self.par, self.control('dimensions'), self.struc('burgers'),
+                                   self.struc('spacing'), self.control('disl_type'), field,
+                       self.vis('radius'), self.vis('xyz_name'), thr=self.vis('threshold'), 
+                      sym_thr=self.vis('sym_thresh'), description=self.control('title_line'))
         
 def main(filename):
     new_sim = PNSim(filename)

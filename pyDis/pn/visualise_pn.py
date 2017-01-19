@@ -36,7 +36,7 @@ def read_unit_cell(cellname, program, shift, permutation=[0, 1, 2], path='./'):
     
     sinfo = parse_fn(cellname, basestruc, path=path)
     
-    basestruc.translate_cell(shift)
+    basestruc.translate_cell(np.array([0., shift, 0.]), modulo=True)
     
     # permute the coordinates of the unit cell. Usually necessary as the glide
     # plane normal is usually aligned along z for GSF calculations, whereas here
@@ -64,7 +64,7 @@ def import_pn_pars(pnfile):
     dims = int(re.search('Dimensions:\s+(?P<d>\d)', pn_output).group('d'))
     return dims, pars
 
-def construct_xyz(unitcell, r, pn_pars, dims, spacing, b, f0):
+def construct_xyz(unitcell, r, pn_pars, dims, spacing, b, f0, disl_type):
     '''Constructs a cluster/slab of atoms containing a dislocation whose
     structure is determined from the output of a PN simulation.
     '''
@@ -72,9 +72,16 @@ def construct_xyz(unitcell, r, pn_pars, dims, spacing, b, f0):
     # construct basic cluster
     xyz = rs.TwoRegionCluster(unitCell=unitcell, R=r, regionI=r, regionII=r+1)
     
+    # make sure that b is a vector
+    if isinstance(b, int) or isinstance(b, float):
+        if disl_type == 'edge':
+            b = np.array([b, 0., 0.])
+        elif disl_type == 'screw':
+            b = np.array([0., 0., b])
+    
     # generated field of lattice planes
-    max_x = ceil(r/spacing)+5
-    nplanes = 2*max_x+1
+    max_x = np.ceil(r/spacing)+5
+    nplanes = 2*int(max_x)+1
     planes = np.arange(-max_x*spacing, max_x*spacing, spacing) 
     
     # calculate the magnitude of the inelastic displacement field
@@ -138,18 +145,22 @@ def symmetrise_cluster(cluster, axis=0., threshold=1., sym_thresh=0.3, use_displ
                 xi = atom_i.getDisplacedCoordinates()
             else:
                 xi = atom_i.getCoordinates()
+             
         # test to see if atom is close to axis of cluster AND in the lower half
         # of said cluster
-        
-
         if xi[1] > 0:
             continue
 
+        # bounds for the central region
+        lower = axis - sym_thresh
+        upper = axis + sym_thresh
+        
+        # delete atoms that have moved too far
         if use_displaced:
-            if xi[0] > axis+1e-6 and atom_i.getCoordinates()[0] < axis-1e-6:
+            if xi[0] > upper and atom_i.getCoordinates()[0] < lower:
                 atom_i.switchOutputMode()
                 continue
-            elif xi[0] < axis-1e-6 and atom_i.getCoordinates()[0] > axis+1e-6:
+            elif xi[0] < lower and atom_i.getCoordinates()[0] > upper:
                 atom_i.switchOutputMode()
                 continue
         did_merge=False
@@ -173,8 +184,8 @@ def symmetrise_cluster(cluster, axis=0., threshold=1., sym_thresh=0.3, use_displ
                 else:
                     # calculate interatomic distance
                     delta1 = np.linalg.norm(xj-xi)
-                    delta2 = np.linalg.norm(xj-array([xi[0], xi[1], xi[2]+cluster.getHeight()]))
-                    delta3 = np.linalg.norm(xj-array([xi[0], xi[1], xi[2]-cluster.getHeight()]))
+                    delta2 = np.linalg.norm(xj-np.array([xi[0], xi[1], xi[2]+cluster.getHeight()]))
+                    delta3 = np.linalg.norm(xj-np.array([xi[0], xi[1], xi[2]-cluster.getHeight()]))
                     delta = min(delta1, delta2, delta3)
                     if delta < threshold:
                         did_merge = True
@@ -195,7 +206,7 @@ def symmetrise_cluster(cluster, axis=0., threshold=1., sym_thresh=0.3, use_displ
                 else:
                     cluster[i].setCoordinates(new_xi)
 
-def centre_from_par(par, b, spacing, dims, disl_type)
+def centre_from_par(par, b, spacing, dims, disl_type):
     '''Calculates the centre of a dislocation using the fit parameters output
     by a PN simulation.
     '''
@@ -221,30 +232,36 @@ def centre_dislocation(xyz, par, b, spacing, dims, disl_type=None):
     cm = centre_from_par(par, b, spacing, dims, disl_type)
     
     # translate the dislocation so that its centre is at the origin
-    xyx.translate_cell(np.array([-cm, 0., 0.]), reset_disp=True)
+    xyz.translate_cell(np.array([-cm, 0., 0.]), reset_disp=False)
 
 def restrict_region(xyz, r, use_disp=True):
     '''Restricts cluster <xyz> to only those atoms within <r> of the origin.
     '''
     
     for atom in xyz:
+        if not atom.writeToOutput():
+            continue
         if use_disp:
             x = atom.getDisplacedCoordinates()
         else:
             x = atom.getCoordinates()
+            
         if np.linalg.norm(x[:-1]) > r:
             atom.switchOutputMode()
                     
-def make_xyz(unitcell, pars, dim, b, spacing, disl_type, field, r, outname,
-                                      thr=1.5, description='PN dislocation'):
+def make_xyz(unitcell, pars, dims, b, spacing, disl_type, field, r, outname,
+                           thr=1.5, sym_thr=0.3, description='PN dislocation'):
     '''Control function to read in unit cell, construct a cluster containing
     an isolated dislocation, and write it to a .xyz file.
     '''
     
     # construct cluster with dislocation and symmetrise its lower half
-    xyz = construct_xyz(unitcell, r+10, pars, dim, spacing, b, field, disl_type) 
+    xyz = construct_xyz(unitcell, r+10, pars, dims, spacing, b, field, disl_type) 
     centre_dislocation(xyz, pars, b, spacing, dims, disl_type)
-    symmetrise_cluster(xyz, threshold=thr)
+    symmetrise_cluster(xyz, threshold=thr, sym_thresh=sym_thr)
+    
+    # make cell cylindrical
+    restrict_region(xyz, r)
 
     util.write_xyz(xyz, outname, defected=True, description=description)
     return 
