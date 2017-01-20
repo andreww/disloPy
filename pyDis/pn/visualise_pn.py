@@ -64,13 +64,15 @@ def import_pn_pars(pnfile):
     dims = int(re.search('Dimensions:\s+(?P<d>\d)', pn_output).group('d'))
     return dims, pars
 
-def construct_xyz(unitcell, r, pn_pars, dims, spacing, b, f0, disl_type):
+def construct_xyz(unitcell, r, pn_pars, dims, spacing, b, f0, disl_type, thickness=1):
     '''Constructs a cluster/slab of atoms containing a dislocation whose
     structure is determined from the output of a PN simulation.
     '''
     
-    # construct basic cluster
+    # construct basic cluster and extend (if necessary)
     xyz = rs.TwoRegionCluster(unitCell=unitcell, R=r, regionI=r, regionII=r+1)
+    if thickness > 1:
+        xyz = rs.extend_cluster(xyz, thickness)
     
     # make sure that b is a vector
     if isinstance(b, int) or isinstance(b, float):
@@ -249,14 +251,15 @@ def restrict_region(xyz, r, use_disp=True):
         if np.linalg.norm(x[:-1]) > r:
             atom.switchOutputMode()
                     
-def make_xyz(unitcell, pars, dims, b, spacing, disl_type, field, r, outname,
-                           thr=1.5, sym_thr=0.3, description='PN dislocation'):
+def make_xyz(unitcell, pars, dims, b, spacing, disl_type, field, r, outname, thr=1.5,
+                              sym_thr=0.3, description='PN dislocation', thickness=1):
     '''Control function to read in unit cell, construct a cluster containing
     an isolated dislocation, and write it to a .xyz file.
     '''
     
     # construct cluster with dislocation and symmetrise its lower half
-    xyz = construct_xyz(unitcell, r+10, pars, dims, spacing, b, field, disl_type) 
+    xyz = construct_xyz(unitcell, r+10, pars, dims, spacing, b, field, disl_type,
+                                            thickness=thickness) 
     centre_dislocation(xyz, pars, b, spacing, dims, disl_type)
     symmetrise_cluster(xyz, threshold=thr, sym_thresh=sym_thr)
     

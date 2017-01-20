@@ -237,7 +237,7 @@ def handle_pn_control(param_dict):
                  ('program', {'default':'', 'type':str}),
                  ('shift', {'default':0., 'type':float}),
                  ('permutation', {'default':np.array([0, 1, 2], dtype=int), 'type':to_int_vector}),
-                 ('parameter_file', {'default':'', 'type':str})
+                 ('thickness', {'default': 1, 'type':int})
                 )
     
     # list of valid namelists 
@@ -848,7 +848,7 @@ class PNSim(object):
             # read in dislocation parameters
             dims, self.par = vp.import_pn_pars(self.control('output'))
             
-        if not self.vis('program'):
+        if self.vis('program') == '':
             raise AttributeError("Atomistic simulation code not specified")
         else:
             basestruc = vp.read_unit_cell(self.vis('unitcell'), 
@@ -864,7 +864,8 @@ class PNSim(object):
         vp.make_xyz(basestruc, self.par, self.control('dimensions'), self.struc('burgers'),
                                    self.struc('spacing'), self.control('disl_type'), field,
                        self.vis('radius'), self.vis('xyz_name'), thr=self.vis('threshold'), 
-                      sym_thr=self.vis('sym_thresh'), description=self.control('title_line'))
+                      sym_thr=self.vis('sym_thresh'), description=self.control('title_line'),
+                                                        thickness=self.vis('thickness'))
         
 def main(filename):
     new_sim = PNSim(filename)
