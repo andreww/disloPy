@@ -94,7 +94,7 @@ def construct_xyz(unitcell, r, pn_pars, dims, spacing, b, f0, disl_type, thickne
             ux = np.zeros(nplanes)
             rhox = np.zeros(nplanes-1)
             uz = u
-            rhoy = rho
+            rhoz = rho
         elif disl_type == 'edge':
             ux = u
             rhox = rho
