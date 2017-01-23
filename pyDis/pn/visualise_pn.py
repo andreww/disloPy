@@ -119,10 +119,11 @@ def construct_xyz(unitcell, r, pn_pars, dims, spacing, b, f0, disl_type, thickne
 
             atom.setDisplacedCoordinates(np.array([xn, xd[1], zn]))
             atom.setCoordinates(np.array([xn, xd[1], zn]))
-    
+
     # partial dislocation located between atomic planes (for symmetry)
     newplanes = planes+spacing/2
-    for i in range(len(rhox)):           
+    length = min(len(rhox), len(rhoz))
+    for i in range(length):           
         # calculate displacement due to this partial disloaction
         partial = np.array([rhox[i]*b[0], 0., rhoz[i]*b[-1]])
         xyz.applyField(f0, [[newplanes[i], 0.]], [partial], use_branch=False,
