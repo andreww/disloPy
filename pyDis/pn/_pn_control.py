@@ -235,7 +235,7 @@ def handle_pn_control(param_dict):
                  ('sym_thresh', {'default':0.3, 'type':float}),
                  ('radius', {'default':10., 'type':float}),
                  ('program', {'default':'', 'type':str}),
-                 ('shift', {'default':0., 'type':float}),
+                 ('shift', {'default':np.zeros(3), 'type':to_vector}),
                  ('permutation', {'default':np.array([0, 1, 2], dtype=int), 'type':to_int_vector}),
                  ('thickness', {'default': 1, 'type':int})
                 )

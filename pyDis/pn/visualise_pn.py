@@ -36,7 +36,14 @@ def read_unit_cell(cellname, program, shift, permutation=[0, 1, 2], path='./'):
     
     sinfo = parse_fn(cellname, basestruc, path=path)
     
-    basestruc.translate_cell(np.array([0., shift, 0.]), modulo=True)
+    if len(shift) < 3:
+        # create 3-vector, populating first n elements from shift
+        new_shift = np.zeros(3)
+        for i in range(len(shift)):
+            new_shift[i] = shift[i]
+        shift = new_shift
+        
+    basestruc.translate_cell(np.array(shift), modulo=True)
     
     # permute the coordinates of the unit cell. Usually necessary as the glide
     # plane normal is usually aligned along z for GSF calculations, whereas here
