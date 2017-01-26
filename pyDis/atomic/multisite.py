@@ -102,7 +102,7 @@ def as_unit(vector):
     return vector/norm(vector)
     
 def closest_atom_in_direction(atomtype, site, supercell, direction, oned=False,
-                                           use_displaced=True,  to_cart=True):
+                     use_displaced=True,  to_cart=True, phitol=1e-6, dtol=1e-6):
     '''Finds the closest atom in the specified direction.
     '''
     
@@ -131,7 +131,9 @@ def closest_atom_in_direction(atomtype, site, supercell, direction, oned=False,
         unit_vec = as_unit(vec)
         
         # check to see if <atom> is the closest atom (along <direction>) so far
-        if dist-1e-6 < mindist and abs(np.dot(unit_vec, unit_dir) - 1) < 1e-6:
+        # <phitol> specifies how closely the interatomic separation must align
+        # with the specified direction
+        if dist-dtol < mindist and abs(np.dot(unit_vec, unit_dir) - 1) < phitol:
                 mindist = dist
                 closest_index = i
 
