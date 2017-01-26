@@ -36,12 +36,20 @@ def periodic_distance(atom1, atom2, lattice, use_displaced=True, oned=False,
             scale[i] = norm(lattice[i])
     
     # extract appropriate coordinates
-    if use_displaced:
+    if isinstance(atom1, np.ndarray):
+        x1 = atom1
+    elif use_displaced:
         x1 = atom1.getDisplacedCoordinates()
+    else: 
+        # use non-defected coordinates
+        x1 = atom1.getCoordinates()
+        
+    if isinstance(atom2, np.ndarray):
+        x2 = atom2
+    elif use_displaced:
         x2 = atom2.getDisplacedCoordinates()
     else: 
-        # use defected coordinates
-        x1 = atom1.getCoordinates()
+        # use non-defected coordinates
         x2 = atom2.getCoordinates()
         
     # if <to_cart> has been specified (typically only for supercells), multiply 
@@ -93,18 +101,20 @@ def as_unit(vector):
         
     return vector/norm(vector)
     
-def closest_atom_in_direction(atomindex, supercell, direction, use_displaced=True,
-                                          atomtype=None, oned=False, to_cart=True):
+def closest_atom_in_direction(atomtype, site, supercell, direction, oned=False,
+                                           use_displaced=True,  to_cart=True):
     '''Finds the closest atom in the specified direction.
     '''
     
     # convert direction vector to unit length
     unit_dir = as_unit(direction)
     
-    # get species of atom for which we are searching
-    if atomtype is None:
-        # use type of <atomindex>
-        atomtype = supercell[atomindex].getSpecies()
+    if isinstance(site, int):
+        # assume that <site> is a site index
+        atomindex = site
+        site = supercell[site]
+    else:
+        atomindex = np.nan
     
     mindist = np.inf
     closest_index = np.nan
@@ -116,8 +126,8 @@ def closest_atom_in_direction(atomindex, supercell, direction, use_displaced=Tru
         
         # calculate the direction and magnitude of the shortest distance between
         # atom <atomindex> and any periodic repeat of <atom>
-        dist, vec = periodic_distance(atom, supercell[atomindex], supercell, 
-                                                  to_cart=to_cart, oned=oned)
+        dist, vec = periodic_distance(atom, site, supercell, to_cart=to_cart,
+                                                                    oned=oned)
         unit_vec = as_unit(vec)
         
         # check to see if <atom> is the closest atom (along <direction>) so far
