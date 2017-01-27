@@ -194,7 +194,7 @@ def main():
             for j in xrange(args.y_max+1):
                 E, units = get_gsf_energy(args.base_name, args.program, args.suffix, 
                                            i, j, indir=args.indir, gnorm=args.gnorm)
-                energies[i, j] = E
+                energies[i, j] = E*args.scale
 
         # record energy units used
         outstream.write("# units {}\n".format(units))
