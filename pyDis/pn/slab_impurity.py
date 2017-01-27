@@ -89,7 +89,8 @@ def cluster_faults(slab_cell, defectcluster, write_fn, sys_info, resolution,
                        mkdir=False, relax=relax)
     else: # dim == 2
         gsf.gamma_surface(slab_cell, resolution, write_fn, sys_info, mkdir=mkdir,
-                                 basename=basename, suffix=suffix, limits=limits)
+                                 basename=basename, suffix=suffix, limits=limits,
+                                                                   vacuum=vacuum)
     
     # return the slab to its original state
     mutate.undo_defect(slab_cell, defectcluster)
