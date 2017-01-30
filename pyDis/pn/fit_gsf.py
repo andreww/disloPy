@@ -298,13 +298,12 @@ def contour_plot(X, Y, Z, xlabel, ylabel, size):
     return 
     
 def plot_gamma_surface(gsf_file, a, b, plotname='gamma_surface.tif', 
-                                                     angle=np.pi/2.):
+                                             angle=np.pi/2., hasvac=False):
     
     # read in gridded data and units                                                
     gsf_grid, units = read_numerical_gsf(gsf_file)
-    print(gsf_grid)
     
-    gsf_func = spline_fit2d(gsf_grid, a, b, angle=angle, two_planes=True)
+    gsf_func = spline_fit2d(gsf_grid, a, b, angle=angle, hasvac=hasvac)
     
     #!!! Should make the number of increments adaptive; still this probably
     #!!! provides sufficient sampling density for display purposes
