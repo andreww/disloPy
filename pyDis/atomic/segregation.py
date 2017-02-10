@@ -131,7 +131,7 @@ def reflect_atoms(site_info, e_excess, e_seg, axis, tol=1.):
         
         # check to see if atom is on or near the mirror plane
         x = site_i[1:3]
-        if abs(x[(axis+1) % 1]) < tol:
+        if abs(x[(axis+1) % 2]) < tol:
             continue
             
         # otherwise, reflect atom about axis
