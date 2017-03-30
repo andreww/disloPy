@@ -349,8 +349,6 @@ def check_parameters2d(x_try, n_funcs, limits, disl_type):
     components of displacement.
     '''
     
-    dist = 1e-1
-    
     # extract edge and screw components
     Aboth = x_try[:n_funcs]
     x0both = x_try[n_funcs:2*n_funcs]
@@ -364,14 +362,14 @@ def check_parameters2d(x_try, n_funcs, limits, disl_type):
     # check that none of the x0 have reached the bounds of the spatial region
     # to which dislocations are constrained.
     for x in (list(x01)+list(x02)):
-        if abs(x-limits_x[0]) < dist or abs(x-limits_x[-1]) < dist:
+        if abs(x) > abs(limits_x[0]):
             return False
             
     # check c parameters. 
     for c in list(c1)+list(c2):
-        if abs(c-limits_c[-1]) < dist:
+        if abs(c) < limits_c[0]:
             return False
-        elif c < limits_c[0]:
+        elif c > limits_c[-1]:
             return False
            
     # Check that the component of disregistry perpendicular to the Burgers vector

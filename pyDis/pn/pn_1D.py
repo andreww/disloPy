@@ -316,11 +316,11 @@ def make_limits(n_funcs, max_x):
     
     unbound = (-np.inf, np.inf)
     spatial_bounds = (-max_x/2., max_x/2.)
-    non_negative = (0, 100.)
-    positive = (1e-4, 100.)
+    non_negative = (0, 20.)
+    positive = (1e-2, 20.)
     
-    A_bounds = [non_negative for i in xrange(n_funcs)]
-    c_bounds = [non_negative for i in xrange(n_funcs)]
+    A_bounds = [positive for i in xrange(n_funcs)]
+    c_bounds = [positive for i in xrange(n_funcs)]
     x_bounds = [spatial_bounds for i in xrange(n_funcs)]
     
     lims = A_bounds + x_bounds + c_bounds
@@ -430,8 +430,6 @@ def check_parameters1d(x_try, n_funcs, limits):
     unstable solutions.
     '''
     
-    dist = 1e-1
-    
     # extract parameters and limits
     A0 = x_try[:n_funcs]
     limits_A = limits[0]
@@ -443,14 +441,14 @@ def check_parameters1d(x_try, n_funcs, limits):
     # check that none of the x0 have reached the bounds of the spatial region
     # to which dislocations are constrained.
     for x in x0:
-        if abs(x-limits_x[0]) < dist or abs(x-limits_x[-1]) < dist:
+        if abs(x) > abs(limits_x[0]):
             return False
             
     # check c parameters. 
     for c in c0:
-        if abs(c-limits_c[-1]) < dist:
+        if c < limits_c[0]:
             return False
-        elif c < limits_c[0]:
+        elif c > limits_c[-1]:
             return False
     
     return True

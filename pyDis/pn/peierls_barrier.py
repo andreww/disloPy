@@ -155,10 +155,16 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     dislocation misfit profiles.
     '''
     
+    # Number of parameters
+    N = len(dis_parameters)/3
+    
     # <threshold> is the amount by which the difference between a stressed 
     # dislocation and an unstressed dislocation must exceed the difference
     # between adjacent unstressed dislocations
     threshold = thr*spacing
+    
+    ### TEST LIMITS ###
+    lims = pn1.make_limits(N, 50)
     
     # construct list of stresses to apply, using the gamma surface as a guide 
     # for the maximum possible value
@@ -201,7 +207,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # apply stress to the dislocation, starting with the positive direction
     new_par = dis_parameters
     for s in stresses:
-        Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
+        Ed, new_par = stressed_dislocation(new_par, N, 
                             max_x, gsf_func, K, b, spacing, s, disl_type,  dims, cm0)
 
         # compare new displacement field to that of original (ie. unstressed)
@@ -218,18 +224,23 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         # calculate the stressed dislocation's centre            
         rhos = pn1.rho(us, r)        
         cm_new = pn1.center_of_mass(rhos, r, b) 
+        
+        # check validity of parameters
+        is_valid = pn1.check_parameters1d(new_par, N, lims)
 
         # calculate distance of dislocation density c.o.m from the location of
         # the unstressed dislocation, recording the value if it exceeds specified
         # threshold or the dislocation density starts to go to zero
-        if abs(cm_new - cm0) >= threshold or abs(rhos.sum()*spacing-b)/b > 0.1:
+        #print(new_par)
+        if (abs(cm_new - cm0) >= threshold or abs(rhos.sum()*spacing-b)/b > 0.1 or
+                            not is_valid):
             tau_p_plus = s-dtau/2.
             break
 
     # apply negative stress
     new_par = dis_parameters
     for s in -stresses:
-        Ed, new_par = stressed_dislocation(new_par, len(dis_parameters)/3, 
+        Ed, new_par = stressed_dislocation(new_par, N, 
                              max_x, gsf_func, K, b, spacing, s, disl_type, dims, cm0)
         
         # compare with unstressed dislocation                     
@@ -245,10 +256,15 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         # calculate centre of mass of the stressed dislocation
         rhos = pn1.rho(us, r)
         cm_new = pn1.center_of_mass(rhos, r, b)
+        
+        # check validity of parameters
+        is_valid = pn1.check_parameters1d(new_par, N, lims)
 
         # as above, determine if the dislocation has started to move freely
-        if abs(cm_new - cm0) >= threshold or abs(rhos.sum()*spacing-b)/b > 0.1:
-            tau_p_minus = -(s+dtau/2.)
+        #print(new_par)
+        if (abs(cm_new - cm0) >= threshold or abs(rhos.sum()*spacing-b)/b > 0.1 or
+                                not is_valid):
+            tau_p_minus = -s-dtau/2.
             break
                    
     peierls_stresses = [tau_p_minus, tau_p_plus]
