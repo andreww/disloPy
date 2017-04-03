@@ -164,7 +164,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     threshold = thr*spacing
     
     ### TEST LIMITS ###
-    lims = pn1.make_limits(N, 50)
+    lims = pn1.make_limits(N, 1000)
     
     # construct list of stresses to apply, using the gamma surface as a guide 
     # for the maximum possible value
@@ -186,23 +186,15 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # Eng.
     tau_p_minus = None
     tau_p_plus = None
-    r = spacing*np.arange(-max_x, max_x)
+    #r = spacing*np.arange(-max_x, max_x)
        
     # find difference between the base dislocation and one that has been displaced
     if dims == 1:
         # get displacement field of unstressed dislocation, compare with 
         # shifted dislocation
-        u = pn1.get_u1d(dis_parameters, b, spacing, max_x)
+        cm0 = pn1.com_from_pars(dis_parameters, b, spacing, max_x)
     else: # dims == 2
-        ux, uy = pn2.get_u2d(dis_parameters, b, spacing, max_x, disl_type)
-        if disl_type.lower() == 'edge':
-            u = ux
-        else: # screw
-            u = uy
-    
-    # calculate initial mean location of the dislocation distribution
-    rho = pn1.rho(u, r)
-    cm0 = pn1.center_of_mass(rho, r, b)
+        cm0 = pn2.com_from_pars2d(dis_parameters, b, spacing, max_x, disl_type)
 
     # apply stress to the dislocation, starting with the positive direction
     new_par = dis_parameters
@@ -213,17 +205,9 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         # compare new displacement field to that of original (ie. unstressed)
         # dislocation
         if dims == 1:
-            us = pn1.get_u1d(new_par, b, spacing, max_x)
+            cm_new = pn1.com_from_pars(new_par, b, spacing, max_x)
         else: # two-dimensions
-            uxs, uys = pn2.get_u2d(new_par, b, spacing, max_x, disl_type)
-            if disl_type == 'edge':
-                us = uxs
-            else: # screw
-                us = uys
-                
-        # calculate the stressed dislocation's centre            
-        rhos = pn1.rho(us, r)        
-        cm_new = pn1.center_of_mass(rhos, r, b) 
+            cm_new = pn2.com_from_pars2d(new_par, b, spacing, max_x, disl_type)
         
         # check validity of parameters
         is_valid = pn1.check_parameters1d(new_par, N, lims)
@@ -231,9 +215,7 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         # calculate distance of dislocation density c.o.m from the location of
         # the unstressed dislocation, recording the value if it exceeds specified
         # threshold or the dislocation density starts to go to zero
-        #print(new_par)
-        if (abs(cm_new - cm0) >= threshold or abs(rhos.sum()*spacing-b)/b > 0.1 or
-                            not is_valid):
+        if (abs(cm_new - cm0) >= threshold or not is_valid):
             tau_p_plus = s-dtau/2.
             break
 
@@ -245,25 +227,15 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
         
         # compare with unstressed dislocation                     
         if dims == 1:
-            us = pn1.get_u1d(new_par, b, spacing, max_x)
+            cm_new = pn1.com_from_pars(new_par, b, spacing, max_x)
         else: # two-dimensions
-            uxs, uys = pn2.get_u2d(new_par, b, spacing, max_x, disl_type)
-            if disl_type == 'edge':
-                us = uxs
-            else: # screw
-                us = uys
-        
-        # calculate centre of mass of the stressed dislocation
-        rhos = pn1.rho(us, r)
-        cm_new = pn1.center_of_mass(rhos, r, b)
+            cm_new = pn2.com_from_pars2d(new_par, b, spacing, max_x, disl_type)
         
         # check validity of parameters
         is_valid = pn1.check_parameters1d(new_par, N, lims)
 
         # as above, determine if the dislocation has started to move freely
-        #print(new_par)
-        if (abs(cm_new - cm0) >= threshold or abs(rhos.sum()*spacing-b)/b > 0.1 or
-                                not is_valid):
+        if (abs(cm_new - cm0) >= threshold or not is_valid):
             tau_p_minus = -s-dtau/2.
             break
                    
@@ -302,11 +274,10 @@ def sig_figs(value, n_figs):
 
 def com_constraint(par, *args):
     '''Constrains the location of the centre of mass of the 
-    dislocation density distribution.
+    dislocation density distribution.    
+    '''
     
-    '''# parse <args> to extract values for <total_stressed>. (Is there any reason
-    # why this cannot be done as part of <total_stressed>? This function seems
-    # largely redundant).
+    # parse <args> to extract values for <total_stressed>. 
     n_funcs = args[0]
     max_x = args[1]
     energy_function = args[2]
@@ -320,22 +291,10 @@ def com_constraint(par, *args):
     
     # calculate dislocation density
     if dims == 1:
-        u = pn1.get_u1d(par, b, spacing, max_x)
+        com = pn1.com_from_pars(par, b, spacing, max_x)
     elif dims == 2:
-        ux, uy = pn2.get_u2d(par, b, spacing, max_x, disl_type)
-        if disl_type.lower() == 'edge':
-            u = ux
-        elif disl_type.lower() == 'screw':
-            u = uy
-     
-    # calculate the dislocation density distribution
-    r = spacing*np.arange(-max_x, max_x)
-    rho = pn1.rho(u, r)
-    
-    # calculate dislocation density c.o.m.
-    com = pn1.center_of_mass(rho, r, b)
-    # return distance between current and desired centre of 
-    # mass
+        com = pn2.com_from_pars2d(par, b, spacing, max_x, disl_type)
+        
     return (com - cm)
 
 def total_shifted(A, x0, c, n_funcs, max_x, energy_function, K, b, spacing, 
@@ -384,9 +343,7 @@ def total_opt_shifted(params, *args):
     routines in <scipy.optimize>.
     '''
     
-    # parse <args> to extract values for <total_stressed>. (Is there any reason
-    # why this cannot be done as part of <total_stressed>? This function seems
-    # largely redundant).
+    # parse <args> to extract values for <total_stressed>
     n_funcs = args[0]
     max_x = args[1]
     energy_function = args[2]
@@ -412,8 +369,6 @@ def shifted_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
                                   disl_type=None, dims=1, cm0=0.):
     '''Calculates the fully relaxed structure of a dislocation whose structure
     has previously been determined under unstressed conditions. 
-    
-    #!!! are <disl_type> and <acts_on> the same variable?
     '''
                                                           
     # check to make sure provided dislocation type (edge/screw) is supported
@@ -449,16 +404,12 @@ def shift_energies(dis_parameters, max_x, gsf_func, K, b, spacing, dims=1,
     if dims == 1:
         # get displacement field of unstressed dislocation, compare with 
         # shifted dislocation
-        u = pn1.get_u1d(dis_parameters, b, spacing, max_x)
+        cm0 = pn1.com_from_pars(dis_parameters, b, spacing, max_x)
+        #u = pn1.get_u1d(dis_parameters, b, spacing, max_x)
     else: # dims == 2
-        ux, uy = pn2.get_u2d(dis_parameters, b, spacing, max_x, disl_type)
-        if disl_type.lower() == 'edge':
-            u = ux
-        else: # screw
-            u = uy
+        cm0 = pn2.com_from_pars2d(dis_parameters, b, spacing, max_x, disl_type)
     
-    rho = pn1.rho(u, r)
-    cm0 = pn1.center_of_mass(rho, r, b)
+    # keep record of original parameters    
     new_par = dis_parameters
     
     energies = []

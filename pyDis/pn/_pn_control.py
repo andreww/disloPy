@@ -215,8 +215,9 @@ def handle_pn_control(param_dict):
                  )
 
     # cards for the <&properties> namelist
-    prop_cards = (('max_rho', {'default':False, 'type':to_bool}),
-                  ('width', {'default':False, 'type':to_bool}),
+    prop_cards = (('max_rho', {'default':True, 'type':to_bool}),
+                  ('width', {'default':True, 'type':to_bool}),
+                  ('center', {'default':True, 'type':to_bool})
                  )
     
     # cards for the <&stress> namelist
@@ -621,17 +622,26 @@ class PNSim(object):
             # calculate dislocation width and height
             if (self.control('disl_type') in 'edge' 
                 or self.control('dimensions') == 1):
-                self.rho = pn1.rho(self.ux, r)
+                self.rhos = pn1.rho(self.ux, r)
             else: # screw
-                self.rho = pn1.rho(self.uy, r)
+                self.rhos = pn1.rho(self.uy, r)
             
             if self.control('disl_type') in 'edge' or self.control('dimensions') == 1:
                 self.dis_width = pn1.dislocation_width(self.ux, r, self.struc('burgers'))
             else: # screw dislocation with edge component of displacement 
                 self.dis_width = pn1.dislocation_width(self.uy, r, self.struc('burgers'))
                 
-            self.max_density = pn1.max_rho(self.rho, self.struc('spacing'))
+            self.max_density = pn1.max_rho(self.rhos, self.struc('spacing'))
             
+            # calculate the centre of mass
+            if self.control('dimensions') == 1:
+                self.com = pn1.com_from_pars(self.par, self.struc('burgers'),
+                               self.struc('spacing'), self.control('max_x'))
+            else:
+                self.com = pn2.com_from_pars2d(self.par, self.struc('burgers'),
+                                  self.struc('spacing'), self.control('max_x'),
+                                                      self.control('disl_type'))
+
         return
             
     def peierls(self):
@@ -835,6 +845,10 @@ class PNSim(object):
             outstream.write('Maximum density: {:.3f}\n'.format(self.max_density))
         if self.prop('width'):
             outstream.write('Dislocation width: {:.3f} ang.\n'.format(abs(self.dis_width)))
+        if self.prop('center'):
+            outstream.write('Dislocation centre (/spacing): {:.3f}\n'.format(
+                                            self.com/self.struc('spacing')))
+            outstream.write('Dislocation centre (ang.): {:.3f}\n'.format(self.com))
             
         outstream.write('\n\n**Finished**')
         outstream.close()

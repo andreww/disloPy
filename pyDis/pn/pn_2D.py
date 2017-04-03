@@ -215,6 +215,23 @@ def supported_dislocation(disl_type):
             shift = [0., 0.5] 
            
         return constraints, shift
+    
+def com_from_pars2d(pars, b, spacing, max_x, disl_type):
+    '''Calculates the centre of mass of a discrete dislocation density distribution
+    using the fit parameters.
+    '''
+    
+    # extract the dislocation density distribution
+    uxs, uys = get_u2d(pars, b, spacing, max_x, disl_type)
+    if disl_type == 'edge':
+        us = uxs
+    else: # screw
+        us = uys
+        
+    r = spacing*np.arange(-max_x, max_x)
+    rhos = pn1.rho(us, r)
+    
+    return pn1.center_of_mass(rhos, r, b)
       
 ### CONSTRAINTS ON THE A[:] COEFFICIENTS FOR A SCREW DISLOCATION
 
@@ -341,6 +358,24 @@ def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
                     print("Unreasonable dislocation energy calculated...")
                 else:
                     pass
+                    
+    # check that a solution was found
+    if x_opt is None:
+        raise ValueError("Solution <x_opt> was not found.")
+        
+    # translate the dislocation distribution so that the centre lies between 0
+    # and <spacing>
+    cm0 = com_from_pars2d(x_opt, b, spacing, max_x, disl_type)
+    
+    # distance between calculated COM and unique COM
+    d_cm = cm0 - (cm0 % spacing)
+    
+    # extract parameters and shift x0
+    x0 = list(np.array(x_opt[N:2*N]) - d_cm)
+    A = list(x_opt[:N])
+    c = list(x_opt[2*N:])
+    
+    x_opt = np.array(A + x0 + c)
             
     return Emin, x_opt
     

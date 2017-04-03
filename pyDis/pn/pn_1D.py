@@ -169,6 +169,18 @@ def center_of_mass(rho, x, b):
     
     return 1/(2.*b)*(rho*(x[1:]**2 - x[:-1]**2)).sum()
     
+def com_from_pars(pars, b, spacing, max_x):
+    '''Calculates the centre of mass of a discrete dislocation density distribution
+    using the fit parameters.
+    '''
+    
+    # extract the dislocation density distribution
+    u = get_u1d(pars, b, spacing, max_x)
+    r = spacing*np.arange(-max_x, max_x)
+    rhos = rho(u, r)
+    
+    return center_of_mass(rhos, r, b)
+    
 def dislocation_width(u, r, b, bc=0.5):
     '''Calculates the distance over which the disregistry increases from 0.25*b
     to 0.75*b.
@@ -421,7 +433,22 @@ def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False
                     print("Unreasonable dislocation energy calculated...")
                 else:
                     pass
-            
+                    
+    # check that a solution was found
+    if x_opt is None:
+        raise ValueError("Solution <x_opt> was not found.")
+                    
+    # re-centre the dislocation distribution so that x0 is between 0 and <spacing>
+    cm0 = com_from_pars(x_opt, b, spacing, max_x)
+
+    # distance between calculated COM and unique COM
+    d_cm = cm0 - (cm0 % spacing)
+    
+    x0 = list(np.array(x_opt[N:2*N]) - d_cm)
+    A = list(x_opt[:N])
+    c = list(x_opt[2*N:3*N])
+    
+    x_opt = np.array(A + x0 + c)       
     return Emin, x_opt
     
 def check_parameters1d(x_try, n_funcs, limits):

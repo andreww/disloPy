@@ -215,31 +215,16 @@ def symmetrise_cluster(cluster, axis=0., threshold=1., sym_thresh=0.3, use_displ
                     cluster[i].setDisplacedCoordinates(new_xi)
                 else:
                     cluster[i].setCoordinates(new_xi)
-
-def centre_from_par(par, b, spacing, dims, disl_type):
-    '''Calculates the centre of a dislocation using the fit parameters output
-    by a PN simulation.
-    '''
-    
-    if dims == 1:
-        u = pn1.get_u1d(par, b, spacing, 100)
-    else: # dims == 2
-        ux, uy = pn2.get_u2d(par, b, spacing, 100, disl_type)
-        if disl_type.lower() == 'edge':
-            u = ux
-        else: # screw
-            u = uy
-    
-    r = np.arange(-100, 100)*spacing        
-    rho = pn1.rho(u, r)
-    cm = pn1.center_of_mass(rho, r, b)
-    return cm
                  
 def centre_dislocation(xyz, par, b, spacing, dims, disl_type=None):
     '''Centres the dislocation at the origin.
     '''
 
-    cm = centre_from_par(par, b, spacing, dims, disl_type)
+    # calculate com
+    if dims == 1:
+        cm = pn1.com_from_pars(par, b, spacing, 100)
+    else: # dims == 2
+        cm = pn2.com_fom_pars2d(par, b, spacing, 100, disl_type)
     
     # translate the dislocation so that its centre is at the origin
     xyz.translate_cell(np.array([-cm, 0., 0.]), reset_disp=False)
