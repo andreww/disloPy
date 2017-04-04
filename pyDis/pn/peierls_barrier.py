@@ -90,8 +90,6 @@ def stressed_dislocation(params, n_funcs, max_x, energy_function, K, b, spacing,
                                   tau, disl_type=None, dims=1, cm0=0.):
     '''Calculates the fully relaxed structure of a dislocation whose structure
     has previously been determined under unstressed conditions. 
-    
-    #!!! are <disl_type> and <acts_on> the same variable?
     '''
                                                           
     # check to make sure provided dislocation type (edge/screw) is supported
@@ -199,8 +197,8 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # apply stress to the dislocation, starting with the positive direction
     new_par = dis_parameters
     for s in stresses:
-        Ed, new_par = stressed_dislocation(new_par, N, 
-                            max_x, gsf_func, K, b, spacing, s, disl_type,  dims, cm0)
+        Ed, new_par = stressed_dislocation(dis_parameters, N, max_x, gsf_func, K, 
+                                            b, spacing, s, disl_type,  dims, cm0)
 
         # compare new displacement field to that of original (ie. unstressed)
         # dislocation
@@ -222,8 +220,8 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # apply negative stress
     new_par = dis_parameters
     for s in -stresses:
-        Ed, new_par = stressed_dislocation(new_par, N, 
-                             max_x, gsf_func, K, b, spacing, s, disl_type, dims, cm0)
+        Ed, new_par = stressed_dislocation(dis_parameters, N, max_x, gsf_func, K,
+                                             b, spacing, s, disl_type, dims, cm0)
         
         # compare with unstressed dislocation                     
         if dims == 1:

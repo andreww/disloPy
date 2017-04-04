@@ -831,8 +831,11 @@ class PNSim(object):
                                                    self.taup[0], units))
             outstream.write('Right Peierls stress: {:.3f} {}\n'.format(
                                                     self.taup[1], units))
-            outstream.write('Average Peierls stress: {:.3f} {}\n'.format(
-                                                     self.taup_av, units))
+                                                    
+            # average Peierls stress with APPROXIMATE uncertainty
+            e_taup = abs(self.taup[0] - self.taup_av)
+            outstream.write('Average Peierls stress: {:.3f} +/- {:.3f}{}\n'.format(
+                                                     self.taup_av, e_taup, units))
                                                     
             outstream.write('Peierls barrier: {:.3f} eV/ang\n\n'.format(self.wp_av))
             
