@@ -53,11 +53,11 @@ def generate_x(N, A, spacing, sigma=1.):
         x_mean = (A*x).sum()
         return (x-(x_mean-(x_mean % spacing)))
     
-def generate_c(N):
+def generate_c(N, mean=4, sigma=0.5):
     '''Generates N random dislocation half-widths.
     '''
     
-    c = rand.lognormal(1, 1, N)
+    c = rand.lognormal(mean, sigma, N)
     return c
         
 def gen_inparams(n_funcs, spacing):
