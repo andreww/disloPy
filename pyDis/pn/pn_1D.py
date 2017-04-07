@@ -268,17 +268,14 @@ def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True, nplanes=30
 def elastic_energy(A, x0, c, b=1, K=1):
     '''Calculates the elastic energy of the dislocation characterised by 
     parameters A, x0, and c, with Burgers vector b and elastic coefficient K.
-    
-    NOTE: The factor of 1/2 in the expression given by Bulatov and Cai (eqn. 
-    8.25) appears to be a mistake, and yields an energy inconsistent with that
-    obtained by explicit numerical integration.
     '''
     
     E = 0.
     for Ai, xi, ci in zip(A, x0, c):
         for Aj, xj, cj in zip(A, x0, c):
             E += Ai*Aj*np.log((xi-xj)**2+(ci+cj)**2)
-    return -0.5*K*E*b**2 # need to check the numerical coefficient
+    Eelast = -0.5*K*E*b**2 
+    return Eelast
     
 def misfit_energy(A, x0, c, N, energy_function, b, spacing, translate=0.):
     '''Calculates the inelastic energy associated with a dislocation defined
@@ -287,8 +284,22 @@ def misfit_energy(A, x0, c, N, energy_function, b, spacing, translate=0.):
     relative to the crystal lattice.
     '''
     
+    # check that the dislocation is not well outside the integration region
+    for xi in x0:
+        if abs(xi) > N:
+            return np.inf 
+    
+    # re-centre the dislocation distribution so that x0 is between 0 and <spacing>
+    cm0 = com_from_pars(list(A)+list(x0)+list(c), b, spacing, N)
+
+    # distance between calculated COM and unique COM
+    d_cm = cm0 - (cm0 % spacing)
+
+    x0 = list(np.array(x0) - d_cm)
+
     r = spacing*(np.arange(-N, N))+translate
     u = u_field(r, A, x0, c, b)
+               
     Em = energy_function(u).sum()*spacing
     return Em
     
@@ -345,6 +356,34 @@ def cons_func(inparams, *args):
     n_funcs = args[0]
     A = inparams[:n_funcs]
     return 1.-sum(A)
+    
+def pos_com(inparams, *args):
+    '''Ensures that the dislocation centre is >= 0.
+    '''
+    
+    # extract relevant simulation parameters
+    N = args[1]
+    b = args[3]
+    spacing = args[4]
+    
+    cm0 = com_from_pars(inparams, b, spacing, N)
+    
+    return cm0
+    
+    
+def in_spacing_com(inparams, *args):
+    '''Ensures that the dislocation centre is <= spacing (ie. within the unique
+    centre region.
+    '''
+    
+    # extract relevant simulation parameters
+    N = args[1]
+    b = args[3]
+    spacing = args[4]
+    
+    cm0 = com_from_pars(inparams, b, spacing, N)
+    
+    return spacing-cm0
 
 def dislocation1d(N, max_x, energy_function, lims, use_sym, b, spacing, K,
                                           inpar=None, noopt=False):
@@ -379,6 +418,7 @@ def dislocation1d(N, max_x, energy_function, lims, use_sym, b, spacing, K,
         try:
             # optimise dislocation disregistry field
             new_par = fmin_slsqp(total_optimizable, params, eqcons=[cons_func],
+                                            ieqcons=[in_spacing_com, pos_com],
                                   args=(N, max_x, energy_function, b, spacing, K),
                                              bounds=lims, iprint=0, acc=1e-14)
             # calculate energy           
@@ -475,7 +515,7 @@ def check_parameters1d(x_try, n_funcs, limits):
     for c in c0:
         if c < limits_c[0]:
             return False
-        elif c > limits_c[-1]:
+        elif c > limits_c[-1]-1e-6:
             return False
     
     return True
