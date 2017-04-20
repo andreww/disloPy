@@ -103,7 +103,7 @@ def handle_segregation_control(param_dict):
     ''' 
     
     # cards for the <&control> namelist
-    control_cards = (('dislocation_file', {'default': None, 'type': str}),
+    control_cards = (('dislocation_file', {'default': '', 'type': str}),
                      ('program', {'default': 'gulp', 'type': str}),
                      ('executable', {'default': '', 'type': str}),
                      ('region_r', {'default': 10, 'type': int}),
@@ -193,6 +193,10 @@ class SegregationSim(object):
             raise ValueError('{} is not a supported atomistic simulation code.'.format(self.control('program')) +
                                                      'Supported codes are: GULP.')
         if not self.control('no_setup'):
+            # check that the user has supplied a .grs file containing a dislocation
+            if self.control('dislocation_file'):
+                raise ValueError('Must supply a dislocation.')
+                
             # make cluster
             self.make_cluster()
             
