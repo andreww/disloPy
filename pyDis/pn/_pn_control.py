@@ -27,7 +27,6 @@ def control_file(filename):
     '''
     
     sim_parameters = dict()
-    lines = []
     input_style = re.compile('\s*(?P<par>.+)\s*=\s*[\'"]?(?P<value>[^\'"]*)[\'"]?\s*;')
     in_namelist = False
     with open(filename) as f:

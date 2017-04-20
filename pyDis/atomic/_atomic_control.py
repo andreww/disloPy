@@ -307,7 +307,7 @@ class AtomisticSim(object):
         if self.control('program') in supported_codes:
             pass
         else: 
-            raise ValueError("{} is not a supported atomistic simulation code." +
+            raise ValueError("{} is not a supported atomistic simulation code.".format(self.control('program')) +
                          "Supported codes are: GULP; QE; CASTEP.")
         
         # read in the unit cell and atomistic simulation parameters

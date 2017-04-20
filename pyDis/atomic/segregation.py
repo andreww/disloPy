@@ -236,8 +236,53 @@ def plot_energies_scatter(sites, e_seg, figname, cmtype='coolwarm', units='eV',
     
     return
 
-
 ### END PLOTTING FUNCTIONS
+
+def analyse_segregation_results(basename, e0, de, n, mirror=False, ax=1, 
+                mirror_both=False, plot_scatter=True, plot_contour=True, 
+                                 plotname='', figformat='tif', fit=True):
+    '''Processes the output files from a segregation energy surface calculation.
+    '''
+    
+    # read in control file containing list of sites and get segregation energies
+    site_info = parse_control(basename)
+    e_calc = get_energies(basename, site_info)
+    e_excess = defect_excess_energy(e_calc, e0, n)
+    e_seg = segregation_energy(e_excess, de)
+    
+    # reflect atoms about specified axis. Do so twice if atoms are to be reflected
+    # about both x and y
+    if (mirror and ax == 0) or mirror_both:
+        site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 0)
+    if (mirror and ax == 1) or mirror_both: 
+        site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 1)
+        
+    # fit segregation energies to obtain homogeneous and inhomogeneous contributions
+    if fit:
+        par, perr = fit_seg_energy(e_seg, site_info)
+        fit_str = '# A0 = {:.4f} +/- {:.4f}; A1 = {:.4f} +/- {:.4f}\n'.format(par[0],
+                                                        perr[0], par[1], perr[1])
+    else:
+        fit_str = None 
+    
+    # write to output file
+    outname = '{}.energies.dat'.format(basename)
+    write_energies(outname, site_info, e_excess, e_seg, pars=fit_str)
+    
+    # create plots showing segregation energies
+    if plotname:
+        plotname = plotname
+    else:
+        plotname = basename
+        
+    if plot_scatter:
+        plot_energies_scatter(site_info, e_seg, plotname+'.scatter', 
+                                            figformat=figformat)
+    if plot_contour:
+        plot_energies_contour(site_info, e_seg, plotname+'.contour', 
+                                            figformat=figformat)
+    
+    return  
 
 def command_line_options():
     '''Options to control parsing of the output from point-defect dislocation 
@@ -269,52 +314,17 @@ def command_line_options():
     options.add_argument('-fit', type=to_bool, default='True', dest='fit',
                          help='Fit the form of the calculated segregation energies.')
                          
-    return options                     
-
+    return options    
+    
 def main():
     
     options = command_line_options()
     args = options.parse_args()
     
-    # read in control file
-    site_info = parse_control(args.basename)
-    
-    # calculate excess and segregation energies
-    e_calc = get_energies(args.basename, site_info)
-    e_excess = defect_excess_energy(e_calc, args.E0, args.n)
-    e_seg = segregation_energy(e_excess, args.dE0)
-    
-    # reflect atoms about specified axis. Do so twice if atoms are to be reflected
-    # about both x and y
-    if (args.mirror and args.axis == 0) or args.mirror_both:
-        site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 0)
-    if (args.mirror and args.axis == 1) or args.mirror_both: 
-        site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 1)
-        
-    # fit segregation energies to obtain homogeneous and inhomogeneous contributions
-    if args.fit:
-        par, perr = fit_seg_energy(e_seg, site_info)
-        fit_str = '# A0 = {:.4f} +/- {:.4f}; A1 = {:.4f} +/- {:.4f}\n'.format(par[0],
-                                                        perr[0], par[1], perr[1])
-    else:
-        fit_str = None 
-    
-    # write to output file
-    outname = '{}.energies.dat'.format(args.basename)
-    write_energies(outname, site_info, e_excess, e_seg, pars=fit_str)
-    
-    # create plots showing segregation energies
-    if args.plotname:
-        plotname = args.plotname
-    else:
-        plotname = args.basename
-        
-    if args.plot_scatter:
-        plot_energies_scatter(site_info, e_seg, plotname+'.scatter', 
-                                            figformat=args.figformat)
-    if args.plot_contour:
-        plot_energies_contour(site_info, e_seg, plotname+'.contour', 
-                                            figformat=args.figformat)
-
+    analyse_segregation_results(args.basename, args.E0, args.dE0, args.n,
+                  mirror=args.mirror, ax=args.axis, mirror_both=args.mirror_both,
+                  plot_scatter=args.plot_scatter, plot_contour=args.plot_contour,
+                  plotname=args.plotname, figformat=args.figformat, fit=args.fit)
+                  
 if __name__ == "__main__":
     main()    
