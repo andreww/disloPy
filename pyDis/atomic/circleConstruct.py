@@ -21,8 +21,8 @@ def grid(radius,cellParams):
     a = L.norm(cellParams[0])
     b = L.norm(cellParams[1])
     
-    Nx = ceiling(float(radius)/a)
-    Ny = ceiling(float(radius)/b)
+    Nx = int(ceiling(float(radius)/a))
+    Ny = int(ceiling(float(radius)/b))
     return np.ones((2*Ny+1,2*Nx+1))
     
 def centre(x1,x2):
