@@ -6,9 +6,12 @@ from __future__ import print_function
 
 import re
 import numpy as np
+import subprocess
 import sys
 import os
 sys.path.append(os.environ['PYDISPATH'])
+
+from numpy.linalg import norm
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import atomistic_utils as atm
@@ -17,10 +20,10 @@ class LammpsAtom(cry.Atom):
     '''Same as <cry.Atom>, but with charge.
     '''
 
-    def __init__(self, atomic_symbol, coordinates=np.zeros(3), q=0.0, 
-                                                        index=0):
+    def __init__(self, atomic_symbol, coordinates=np.zeros(3), q=None, index=0):
         '''Creates an <Atom> object with additional properties relating to
-        the realization of atoms in LAMMPS. 
+        the realization of atoms in LAMMPS. Note that, if the specified atom_style
+        is <atomic>, then <charge> will not be printed
         '''
 
         super(LammpsAtom, self).__init__(atomic_symbol, coordinates)
@@ -35,6 +38,11 @@ class LammpsAtom(cry.Atom):
         to the atom, one MUST be given here. If <index> is specified, this value
         supercedes the one given in <self._number>.
         '''
+        
+        # scales for the x, y, and z components of the atomic coordinates
+        scalex = norm(lattice[0])
+        scaley = norm(lattice[1])
+        scalez = norm(lattice[2])
 
         # test to see if atom should be output
         if not self.writeToOutput():
@@ -83,7 +91,7 @@ class LammpsAtom(cry.Atom):
         '''
 
         new_atom = LammpsAtom(self.getSpecies(), self.getCoordinates(),
-                                                    index=self._index)
+                                      index=self._index, q=self._charge)
         
         # make sure new atom is writable to output
         if self.writeToOutput():
@@ -102,7 +110,7 @@ def assign_indices(lmp_struc):
 
     return
 
-def parse_lammps(basename, unit_cell, use_data=False, datafile=None, path='./'):
+def parse_lammps(basename, unit_cell, path='./'):
     '''Parses LAMMPS file (FILES?) contained in <basename>, extracting geometrical
     parameters to <unit_cell> and simulation parameters to <sys_info>.
 
@@ -118,7 +126,7 @@ def parse_lammps(basename, unit_cell, use_data=False, datafile=None, path='./'):
 
     # regex to find the projection of the b and c lattice vectors onto the x (b)
     # and x and y (c) axes, because LAMMPS is weird. What's wrong with a 3x3 array?
-    tilt_reg = re.compile('\s*(?P<proj>-?\d+\.?\d*(?:e\+\d+)?(?:\s+-?\d+\.?\d*'+'
+    tilt_reg = re.compile('\s*(?P<proj>-?\d+\.?\d*(?:e\+\d+)?(?:\s+-?\d+\.?\d*'+
                                 '(?:e\+\d+)?){2})\s+xy\s+xz\s+yz')
 
     
@@ -195,3 +203,5 @@ def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_ca
         atom.write(outstream, lattice=lattice, defected=defected, to_cart=to_cart)
 
     pass
+    
+def run_lammps(

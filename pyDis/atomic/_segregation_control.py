@@ -194,7 +194,7 @@ class SegregationSim(object):
                                                      'Supported codes are: GULP.')
         if not self.control('no_setup'):
             # check that the user has supplied a .grs file containing a dislocation
-            if self.control('dislocation_file'):
+            if not self.control('dislocation_file'):
                 raise ValueError('Must supply a dislocation.')
                 
             # make cluster
