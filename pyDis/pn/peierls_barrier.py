@@ -161,8 +161,11 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
     # between adjacent unstressed dislocations
     threshold = thr*spacing
     
-    ### TEST LIMITS ###
-    lims = pn1.make_limits(N, 1000)
+    # create parameter limits
+    if dims == 1:
+        lims = pn1.make_limits(N, max_x)
+    else: # dims == 2
+        lims = pn2.make_limits2d(N, max_x, disl_type)
     
     # construct list of stresses to apply, using the gamma surface as a guide 
     # for the maximum possible value
@@ -208,7 +211,10 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
             cm_new = pn2.com_from_pars2d(new_par, b, spacing, max_x, disl_type)
         
         # check validity of parameters
-        is_valid = pn1.check_parameters1d(new_par, N, lims)
+        if dims == 1:
+            is_valid = pn1.check_parameters1d(new_par, N, lims)
+        else: # dims == 2
+            is_valid = pn2.check_parameters2d(new_par, N, lims, disl_type)
 
         # calculate distance of dislocation density c.o.m from the location of
         # the unstressed dislocation, recording the value if it exceeds specified
@@ -230,7 +236,10 @@ def taup(dis_parameters, max_x, gsf_func, K, b, spacing,  dims=1, disl_type=None
             cm_new = pn2.com_from_pars2d(new_par, b, spacing, max_x, disl_type)
         
         # check validity of parameters
-        is_valid = pn1.check_parameters1d(new_par, N, lims)
+        if dims == 1:
+            is_valid = pn1.check_parameters1d(new_par, N, lims)
+        else: # dims == 2
+            is_valid = pn2.check_parameters2d(new_par, N, lims, disl_type)
 
         # as above, determine if the dislocation has started to move freely
         if (abs(cm_new - cm0) >= threshold or not is_valid):

@@ -92,14 +92,15 @@ def spline_fit1d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev',
         
     # fit a fourier series, if specified by the user
     if do_fourier_fit:
-        gamma_n = gline_fourier(gamma, n_order, a)
+        gamma_n = fourier.fourier_series1d(gamma, n_order, a)#gline_fourier(gamma, n_order, a)
     else:
         gamma_n = gamma
           
     return gamma_n
 
 def spline_fit2d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev',
-                                         do_fourier_fit=False, n_order=2):
+                                         do_fourier_fit=False, n_order=2,
+                                                               m_order=2):
     '''extract coordinates of calculations, and gs-energies at each point
     grid values are given in integer values -> need to convert to \AA
     '''
@@ -134,7 +135,7 @@ def spline_fit2d(num_gsf, a, b, angle=np.pi/2., hasvac=False, units='ev',
     
     # fit a fourier series, if specified by the user
     if do_fourier_fit:
-        gamma_n = gsurf_fourier(gamma, n_order, a, b)
+        gamma_n = fourier.fourier_series2d(gamma, n_order, m_order, a, b)#gsurf_fourier(gamma, n_order, m_order, a, b)
     else:
         gamma_n = gamma
                   
@@ -150,13 +151,13 @@ def get_axis(gsf_array, index, length):
     values *= length/float(values.max())
     return values
     
-def gsurf_fourier(gsurf_func, n_order, T1, T2):
+def gsurf_fourier(gsurf_func, n_order, m_order, T1, T2):
     '''Fits a fourier series of order <n_order> to <gsurf_func>, the gamma
     surface energy function, which is periodic in x and y (with periods <T1> and
     <T2>, respectively).
     '''
     
-    fourier_func = fourier.fourier_series2d(gsurf_func, n_order, T1, T2)
+    fourier_func = fourier.fourier_series2d(gsurf_func, n_order, m_order, T1, T2)
     
     return fourier_func
     
