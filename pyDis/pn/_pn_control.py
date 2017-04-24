@@ -210,7 +210,8 @@ def handle_pn_control(param_dict):
                   ('gamma_shift', {'default':0., 'type':float}),
                   ('has_vacuum', {'default':True, 'type':to_bool}),
                   ('do_fourier', {'default':False, 'type':to_bool}),
-                  ('fourier_N', {'default':3, 'type': int})
+                  ('fourier_N', {'default':3, 'type': int}),
+                  ('fourier_M', {'default':-1, 'type':int})
                  )
 
     # cards for the <&properties> namelist
@@ -472,13 +473,19 @@ class PNSim(object):
         elif n_columns == 3: # 2-dimensional misfit function
             # fit the gamma surface
             if self.control('dimensions') == 2:
+                if self.surf('fourier_M') < 0:
+                    m_order = self.surf('fourier_N')
+                else:
+                    m_order = self.surf('fourier_M')
+                    
                 base_func = fg.spline_fit2d(gsf_grid, self.surf('x_length'), 
                                                       self.surf('y_length'),
                                                    angle=self.surf('angle'),
                                                            units=self.units,
                                              hasvac=self.surf('has_vacuum'),
                                      do_fourier_fit=self.surf('do_fourier'),
-                                             n_order=self.surf('fourier_N'))
+                                             n_order=self.surf('fourier_N'),
+                                             m_order=m_order)
                                                   
                 self.gsf = fg.new_gsf(base_func, self.surf('map_ux'), self.surf('map_uy'))
                             

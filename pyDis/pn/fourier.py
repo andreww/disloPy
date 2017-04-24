@@ -45,6 +45,9 @@ def coeffs_1d(f, N, T):
     '''Calculates the fourier coefficients of <f> (up to order <n>).
     '''
     
+    # make sure that N is an integer
+    N = int(N)
+    
     a_n = np.zeros(N+1)
     b_n = np.zeros(N+1)
     
@@ -138,8 +141,19 @@ def beta_nm(f, n, m, T1, T2):
     bnm = kappa(n, m)*integrate2d(int_func, T1, T2)
     return bnm
     
+def gamma_nm(f, n, m, T1, T2):
+    '''Calculates the coefficients of the (n,m)-th sin*cos term in a 2D fourier
+    series approximation to f.
+    '''
+    
+    w1 = 2*np.pi/T1
+    w2 = 2*np.pi/T2
+    int_func = lambda x, y: f(x, y)*np.sin(n*w1*x)*np.sin(m*w2*y)
+    cnm = kappa(n, m)*integrate2d(int_func, T1, T2)
+    return cnm
+    
 def delta_nm(f, n, m, T1, T2):
-    '''Calculate the coefficient of the (n,m)-th cos*cos term in a 2D fourier
+    '''Calculate the coefficient of the (n,m)-th sin*sin term in a 2D fourier
     series approximation to the function f.
     '''
     
@@ -149,30 +163,30 @@ def delta_nm(f, n, m, T1, T2):
     dnm = kappa(n, m)*integrate2d(int_func, T1, T2)
     return dnm
     
-def coeffs_2d(f, N, T1, T2):
+def coeffs_2d(f, N, M, T1, T2):
     '''Calculates all fourier coefficients with n <= N and m <= N.
     '''
     
-    anm = np.zeros((N+1, N+1))
-    bnm = np.zeros((N+1, N+1))
-    cnm = np.zeros((N+1, N+1))
-    dnm = np.zeros((N+1, N+1))
+    # check to make sure that N and M are integers
+    N = int(N)
+    M = int(M)
+    
+    anm = np.zeros((N+1, M+1))
+    bnm = np.zeros((N+1, M+1))
+    cnm = np.zeros((N+1, M+1))
+    dnm = np.zeros((N+1, M+1))
     
     # start by calculating components of <anm>, <bnm>, and <dnm>
     for n in range(N+1):
-        for m in range(N+1):
+        for m in range(M+1):
             anm[n, m] = alpha_nm(f, n, m, T1, T2)
             bnm[n, m] = beta_nm(f, n, m , T1, T2)
+            cnm[n, m] = gamma_nm(f, n, m, T1, T2)
             dnm[n, m] = delta_nm(f, n, m, T1, T2)
-            
-    # populate <cnm> using the entries of <bnm>
-    for n in range(N+1):
-        for m in range(N+1):
-            cnm[n, m] = bnm[m, n]
             
     return anm, bnm, cnm, dnm
     
-def fourier_series2d(f, N, T1, T2):
+def fourier_series2d(f, N, M, T1, T2):
     '''Constructs the order-N fourier series representation of the function <f>,
     which we assume to be 2D-periodic, with periods <T1> and <T2> in the x1 and
     x2 directions, respectively. 
@@ -183,7 +197,7 @@ def fourier_series2d(f, N, T1, T2):
     w2 = 2*np.pi/T2
     
     # calculate fourier series coefficients
-    anm, bnm, cnm, dnm = coeffs_2d(f, N, T1, T2)
+    anm, bnm, cnm, dnm = coeffs_2d(f, N, M, T1, T2)
     
     # construct fourier series
     def fourier_approx(x, y):
@@ -192,7 +206,7 @@ def fourier_series2d(f, N, T1, T2):
         
         approx = 0.
         for n in range(N+1):
-            for m in range(N+1):
+            for m in range(M+1):
                 approx += anm[n, m]*np.cos(n*w1*x)*np.cos(m*w2*y)
                 approx += bnm[n, m]*np.cos(n*w1*x)*np.sin(m*w2*y)
                 approx += cnm[n, m]*np.sin(n*w1*x)*np.cos(m*w2*y)
