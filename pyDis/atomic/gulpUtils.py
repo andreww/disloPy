@@ -54,10 +54,13 @@ class GulpAtom(cry.Atom):
         if shellType in 'bshe':
             # using a breathing shell model
             self.__isBSM = True
+            
+        # default to free relaxation of shell coordinates
+        self._fix_shell = False
 
         return
 
-    def copyShell(self, shelDisplacement, shellType='shel'):
+    def copyShell(self, shelDisplacement, shellType='shel', fixshell=False):
         '''When copying atoms, shell is already expressed as a displacement
         from the core, which means that we do not need to invoke
         <GulpAtom.getShellDistance()>.
@@ -67,6 +70,8 @@ class GulpAtom(cry.Atom):
         self.__hasShell = True
         if shellType in 'bshe':
             self.__isBSM = True
+            
+        self._fix_shell = fixshell
 
         return
 
@@ -222,6 +227,18 @@ class GulpAtom(cry.Atom):
 
         # recording that we are using cluster-ordered coordinate indices
         self._cluster_ordered = False
+        
+    def shell_fix(self):
+        '''Sets the shell coordinates to be fixed.
+        '''
+        
+        self._fix_shell = True
+       
+    def shell_free(self):
+        '''Sets the shell coordinates to be free.
+        '''
+        
+        self._fix_shell = False
 
     def write(self, outstream, lattice=cry.Lattice(), defected=True, to_cart=True,
                                          add_constraints=False):
@@ -251,8 +268,8 @@ class GulpAtom(cry.Atom):
 
         if add_constraints:
             # add constraints if non-trivial
-            outstream.write(' 1.0 {} {} {}\n'.format(self.get_constraints()[0],
-                          self.get_constraints()[1], self.get_constraints()[2]))
+            outstream.write(' 1.0 {:d} {:d} {:d}\n'.format(int(self.get_constraints()[0]),
+                          int(self.get_constraints()[1]), int(self.get_constraints()[2])))
         else:
             outstream.write('\n')
 
@@ -275,8 +292,9 @@ class GulpAtom(cry.Atom):
                                   new_shel_coords[0], new_shel_coords[1],
                                                       new_shel_coords[2]))
 
-            if add_constraints:
-                # always relax shells
+            if add_constraints and self._fix_shell:
+                outstream.write(' 1.0 0 0 0 \n')
+            elif add_constraints and not self._fix_shell:
                 outstream.write(' 1.0 1 1 1\n')
             else:
                 outstream.write('\n')
@@ -293,9 +311,14 @@ class GulpAtom(cry.Atom):
         # ...then copy the displaced coordinates and the shell coordinates (if
         # the atom has a shell)
         new_atom.setDisplacedCoordinates(self.getDisplacedCoordinates())
+        
+        # copy constraints
+        new_atom.set_constraints(self.get_constraints())
+        
+        # add shell
         if self.hasShell():
-            new_atom.copyShell(self.getShell(), 'bshe' if self.__isBSM
-                                                             else 'shel')
+            new_atom.copyShell(self.getShell(), 'bshe' if self.__isBSM else 'shel',
+                                                             self._fix_shell)
         else:
             # core only
             pass
@@ -335,7 +358,7 @@ def writeSuper(cell, sys_info, outFile, relax='conv', coordinateType='frac',
 
     return
 
-def write1DCluster(cluster, sys_info, outname, maxiter=100):
+def write1DCluster(cluster, sys_info, outname, add_constraints=True, maxiter=100):
     '''Writes 1D-periodic simulation cell to file. Always write an accompanying
     undislocated cluster, so that dislocation energy can be calculated. <maxiter>
     gives the maximum number of iterations allowed. GULP defaults to 100, but
@@ -355,12 +378,15 @@ def write1DCluster(cluster, sys_info, outname, maxiter=100):
             basename = 'ndf.{}'.format(outname)
         else:
             disloc = True
-            relax = 'conv'
+            if add_constraints:
+                relax = ''
+            else:
+                relax = 'conv'
             do_relax = True
             prefix = 'dis.{}'.format(outname)
 
         write_gulp(outstream, cluster, sys_info, defected=disloc, do_relax=do_relax, 
-                                                  relax_type=relax, maxiter=maxiter)
+                 relax_type=relax, maxiter=maxiter, add_constraints=add_constraints)
 
     return
 
@@ -371,8 +397,8 @@ atomLine = re.compile(r'([A-Z][a-z]?\d*)\s+(core|c|shel|s|bshe|bcor)' + \
 #speciesLine = re.compile('^([A-Z][a-z]?\d*?)\s+(core|c|shel|s|bshe|bcor)' + \
 #                                                          '\s+-?\d+\.\d+\s*$')
 
-def preamble(outstream, maxiter=500, do_relax=True, relax_type='conv',
-                                   polymer=False, molq=False, prop=True):
+def preamble(outstream, maxiter=500, do_relax=True, relax_type='',
+              polymer=False, molq=False, prop=True, add_constraints=False):
     '''Writes overall simulation parameters (relaxation algorithm, maximum 
     number of iterations, etc.) to <outstream>.
     
@@ -393,7 +419,7 @@ def preamble(outstream, maxiter=500, do_relax=True, relax_type='conv',
     if molq:
         outstream.write(' molq')
         
-    if polymer:
+    if polymer and not add_constraints:
         outstream.write(' eregion\n') # DO NOT TRY TO CALCULATE PROPERTIES
     elif prop:
         outstream.write(' prop\n')
@@ -445,23 +471,25 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
             
         # polymer cell -> write cell height
         preamble(outstream, do_relax=do_relax, polymer=True, relax_type=relax_type,
-                                                                   maxiter=maxiter)
+                               maxiter=maxiter, add_constraints=add_constraints)
         height = struc.getHeight()
         outstream.write('pcell\n')
         outstream.write('{:.6f} 0\n'.format(height))
         cell_lattice = struc.getBaseCell().getLattice()
 
         # write atoms to output
-        if pfractional:
+        if pfractional:                
             writeRegion(struc.getRegionIAtoms(), cell_lattice, outstream, 1, 
-                                           defected, coordType='pfractional')
+                                          defected, coordType='pfractional', 
+                                             add_constraints=add_constraints)
             writeRegion(struc.getRegionIIAtoms(), cell_lattice, outstream, 2, 
-                                            defected, coordType='pfractional')
-        else: # cartesian
+                                            efected, coordType='pfractional', 
+                                             add_constraints=add_constraints)
+        else: # cartesian                
             writeRegion(struc.getRegionIAtoms(), cell_lattice, outstream, 1, 
-                                                                    defected)
+                                      defected, add_constraints=add_constraints)
             writeRegion(struc.getRegionIIAtoms(), cell_lattice, outstream, 2,
-                                                                     defected)
+                                      defected, add_constraints=add_constraints)
     else:
         # write lattice vectors
         preamble(outstream, do_relax=do_relax, relax_type=relax_type, prop=prop,
@@ -661,7 +689,7 @@ def cellToCart(parameters):
     return cry.Lattice(x1, x2, x3)
 
 def writeRegion(region_basis, lattice, outstream, regionNumber, disloc,
-                                  use_cart=True, coordType='cartesian'):
+                   use_cart=True, coordType='cartesian', add_constraints=False):
     '''Outputs all atoms in <regionBasis> to <outstream>, preceded by
     "cart region 1 if <regionNumber> == 1 and with all refinement flags set
     to 1, or cart region 2 rigid and all refinement flags == 0 if
@@ -672,14 +700,18 @@ def writeRegion(region_basis, lattice, outstream, regionNumber, disloc,
     # (z,x,y)
     if regionNumber == 1:
         outstream.write("{} region 1\n".format(coordType))
+            
         for atom in region_basis:
             atom.clusterOrder()
-            atom.write(outstream, lattice, defected=disloc, to_cart=use_cart)
+            atom.write(outstream, lattice, defected=disloc, to_cart=use_cart,
+                                                add_constraints=add_constraints)
     elif regionNumber == 2:
         outstream.write("{} region 2 rigid\n".format(coordType))
+            
         for atom in region_basis:
             atom.clusterOrder()
-            atom.write(outstream, lattice, defected=disloc, to_cart=use_cart)
+            atom.write(outstream, lattice, defected=disloc, to_cart=use_cart,
+                                                add_constraints=add_constraints)
     else:
         raise ValueError('{} is not a valid region.'.format(regionNumber))
 
@@ -695,14 +727,14 @@ def writeVectors(cellVectors, outstream):
                              cellVectors[i][1], cellVectors[i][2]))
     return
 
-def extractRegions(cluster_file, rIBasis, rIIBasis):
+def extractRegions(cluster_file, rIBasis, rIIBasis, nocomment=True):
     '''Given a gulp output (for a cluster calculation), extracts a list of
     atoms in region I and region II.
     Precondition: <rIBasis> and <rIIBasis> have been initialised and contain
     no atoms.
     '''
 
-    cluster = util.read_file(cluster_file)
+    cluster = util.read_file(cluster_file, nocomment=nocomment)
 
     dictRI = dict()
     dictRII = dict()

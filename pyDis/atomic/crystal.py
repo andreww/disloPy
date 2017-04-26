@@ -224,11 +224,14 @@ class Atom(object):
         new_atom = Atom(self.getSpecies(), self.getCoordinates())
         # ...then copy the displaced coordinates
         new_atom.setDisplacedCoordinates(self.getDisplacedCoordinates())
+        # check for constraints
+        new_atom.set_constraints(self.get_constraints())
         # check to see if atom is writable to output
         if self.writeToOutput():
             pass
         else:
-            new_atom.switchOutputMode()      
+            new_atom.switchOutputMode()    
+              
         return new_atom
         
     def write(self, write_function, defected=True, add_constraints=False):
@@ -254,8 +257,8 @@ class Atom(object):
                                                             
         # add constraints, if necessary
         if add_constraints:
-            write_function(' {} {} {}\n'.format(self._constraints[0], self._constraints[1],
-                                                                 self._constraints[2]))
+            write_function(' {:d} {:d} {:d}\n'.format(int(self._constraints[0]), 
+                            int(self._constraints[1]), int(self._constraints[2])))
         else:
             write_function('\n')
                                                                      

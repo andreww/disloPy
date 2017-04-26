@@ -49,7 +49,9 @@ def read_file(filename, path='./', return_str=False, nocomment=True):
             line = line.rstrip()
 
             # remove trailing comments
-            line = ignore_comments(line)
+            if nocomment:
+                line = ignore_comments(line)
+
             if line:
                 lines.append(line)
 

@@ -215,7 +215,16 @@ class TwoRegionCluster(PeriodicCluster):
                 # origin (which the constructor should guarantee).
                 self._r1Atoms.addAtom(atom)
             elif Rxy < self._RII:
-                self._r2Atoms.addAtom(atom)
+                # set appropriate constraints
+                newatom = atom.copy()
+                newatom.set_constraints(np.zeros(3))
+                try:
+                    if newatom.hasShell():
+                        newatom.shell_fix()
+                except AttributeError:
+                    pass
+                    
+                self._r2Atoms.addAtom(newatom)
                 
     def getRegionIAtoms(self):
         '''Returns a list of atoms in region I.

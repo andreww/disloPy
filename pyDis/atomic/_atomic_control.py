@@ -432,7 +432,7 @@ class AtomisticSim(object):
         
         if self.control('program') != 'gulp': # or LAMMPS...when I implement it.
             raise Warning("Only perform cluster-based calculation with" +
-                      "interatomic potentials if you know what's good for you")
+                      "interatomic potentials, if you know what's good for you")
         
         print("Constructing cluster...", end='')
             
@@ -454,7 +454,7 @@ class AtomisticSim(object):
                                            r1,
                                            r2,
                                            self.cluster('thickness')
-                                         )
+                                          )
                                          
             # apply displacement field
             if self.elast('disl_type') == 'screw':
@@ -712,7 +712,8 @@ def main(filename):
     new_simulation = AtomisticSim(filename)
     
 if __name__ == "__main__":
-    try:
-        main(sys.argv[1])
-    except IndexError:
-        main(raw_input('Enter name of control file: '))
+    main(sys.argv[1])
+    #try:
+    #    main(sys.argv[1])
+    #except IndexError:
+    #    main(raw_input('Enter name of control file: '))
