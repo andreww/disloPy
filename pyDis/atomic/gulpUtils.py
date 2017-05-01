@@ -192,6 +192,10 @@ class GulpAtom(cry.Atom):
             u_coords = self.getDisplacedCoordinates()
             u_coords = np.array([u_coords[2], u_coords[0], u_coords[1]])
             self.setDisplacedCoordinates(u_coords)
+            
+            # constraints
+            cons = self.get_constraints()
+            self.set_constraints(np.array([cons[-1], cons[0], cons[1]]))
 
             # shell coordinates
             if self.hasShell():
@@ -421,7 +425,7 @@ def preamble(outstream, maxiter=500, do_relax=True, relax_type='',
         
     if polymer and not add_constraints:
         outstream.write(' eregion\n') # DO NOT TRY TO CALCULATE PROPERTIES
-    elif prop:
+    elif prop and not polymer:
         outstream.write(' prop\n')
     else:
         outstream.write('\n')
@@ -466,8 +470,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
 
     # write simulation cell geometry to file
     if struc_type in rod_classes:
-        if not (impurities is None):
-            struc.specifyRegions(rI_centre=rI_centre)
+        struc.specifyRegions(rI_centre=rI_centre)
             
         # polymer cell -> write cell height
         preamble(outstream, do_relax=do_relax, polymer=True, relax_type=relax_type,
@@ -587,7 +590,7 @@ def parse_gulp(filename, crystalStruc, path='./'):
                 crystalStruc.setVector(cellVectors[j], j)
         elif line.strip() in 'pcell':
             # reading in a 1D-periodic cluster -> record the cell height
-            cell_height = float(gulp_lines[i+1].strip())
+            cell_height = float(gulp_lines[i+1].strip().split()[0])
             crystalStruc.setC(np.array([0., 0., cell_height]))
         else:
             foundAtoms = atomLine.match(line)
@@ -952,7 +955,8 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             rI_centre = np.zeros(2)
             
         write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False, 
-                                            impurities=defect, rI_centre=rI_centre)
+                            impurities=defect, rI_centre=rI_centre, relax_type='', 
+                                                             add_constraints=True)
                                                                  
         # run calculation, if requested by user
         if do_calc:

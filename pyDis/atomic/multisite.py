@@ -375,7 +375,8 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             rI_centre = np.zeros(2)           
             
         gulp.write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False,
-                                            impurities=full_defect, rI_centre=rI_centre)
+                            impurities=full_defect, rI_centre=rI_centre, relax_type='',
+                                                                  add_constraints=True)
                                                                  
         # run calculation, if requested by user
         if do_calc:

@@ -22,6 +22,7 @@ from pyDis.atomic import multisite as ms
 from pyDis.atomic import rodSetup as rs
 from pyDis.atomic import transmutation as mut
 from pyDis.atomic import segregation as seg
+from pyDis.atomic import migration_cluster as mig
 
 def control_file_seg(filename):
     '''Opens the control file <filename> for a segregation calculation and makes
@@ -116,7 +117,9 @@ def handle_segregation_control(param_dict):
                      ('oh_str', {'default': 'Oh', 'type': str}),
                      ('n', {'default': 1, 'type': int}),
                      ('analyse', {'default': False, 'type': to_bool}),
-                     ('no_setup', {'default': False, 'type': to_bool})
+                     ('no_setup', {'default': False, 'type': to_bool}),
+                     ('migration', {'default': False, 'type': to_bool}),
+                     ('npoints', {'default': 3, 'type': int})
                     )
                     
     # cards for the <&constraints> namelist
@@ -212,9 +215,13 @@ class SegregationSim(object):
             # parse the results
             pass 
         
-        # if the user wishes the output to be analysed, do so now
-        if self.control('analyse'):
-            self.analyse_results()   
+        # if the user wishes the output to be analysed, do so now -> check that
+        # the calculation has been run
+        if self.control('analyse') and self.control('executable'):
+            self.analyse_results()  
+            
+        if self.control('migration'):
+            self.migration_barriers() 
         
     def make_cluster(self):
         '''Constructs the base cluster that will be used in all subsequent
@@ -224,11 +231,11 @@ class SegregationSim(object):
         # extract region I and II radii from the .grs filename
         rmatch = re.search(r'.+.(?P<r1>\d+)\.(?P<r2>\d+).(?:grs|gin)',
                                     self.control('dislocation_file'))
-        r1 = int(rmatch.group('r1'))
-        r2 = int(rmatch.group('r2'))
+        self.r1 = int(rmatch.group('r1'))
+        self.r2 = int(rmatch.group('r2'))
         
         base_clus, self.sysinfo = gulp.cluster_from_grs(self.control('dislocation_file'),
-                                                  r1, r2, new_rI=self.control('new_r1'))
+                                          self.r1, self.r2, new_rI=self.control('new_r1'))
                                                        
         self.cluster = rs.extend_cluster(base_clus, self.control('n'))
         
@@ -270,7 +277,7 @@ class SegregationSim(object):
         # create height constraint. The supplied values of <height_min> and
         # <height_max> are in fractional units.
         if self.constraints('height_min') is not np.nan:
-            hmin = self.constraints('height_min')
+            hmin = self.constraints('height_min')*H
             if self.constraints('height_max') is not np.nan:
                 hmax = float(self.constraints('height_max'))*H
             else:
@@ -283,7 +290,7 @@ class SegregationSim(object):
         elif self.constraints('height_max') is not np.nan:
             # note that height_min is NaN -> assume base of cell
             hmin = 0.
-            hmax = float(self.contraints('height_max'))*H
+            hmax = self.constraints('height_max')*H
             self.cons_funcs.append(lambda atom: mut.heightConstraint(hmin, hmax, 
                                                                 atom, period=H))
             
@@ -358,6 +365,15 @@ class SegregationSim(object):
                                         figformat=self.analysis('figformat'),
                                         fit=self.analysis('do_fit')
                                        )
+                                       
+    def migration_barriers(self):
+        '''Calculates migration barriers for pipe diffusion at each defect site.
+        '''
+        
+        mig.migrate_sites('{}.{}'.format(self.control('label'), self.control('site')),
+                          self.control('n'), self.control('new_rI'), self.r2, 
+                          self.control('site'), self.control('npoints'), 
+                          self.control('executable'))
         
 def main(filename):
     new_simulation = SegregationSim(filename)

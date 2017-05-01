@@ -94,12 +94,15 @@ class LammpsAtom(cry.Atom):
 
         new_atom = LammpsAtom(self.getSpecies(), self.getCoordinates(),
                                       index=self._index, q=self._charge)
+                                      
+        new_atom.set_constraints(self.get_constraints())
         
         # make sure new atom is writable to output
         if self.writeToOutput():
             pass
         else:
             new_atom.switchOutputMode()
+            
 
         return new_atom
 
