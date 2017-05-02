@@ -246,11 +246,12 @@ def adaptive_construct(index, cluster, sysinfo, dx, nlevels, basename,
             imax += 1
             
     # shift energy so that undisplaced vacancy is as 0 eV
-    energies = array(energies)
-    energies -= energies.min()
+    energies = np.array(energies)
+    energies -= energies[0]
     Emax = energies.max()
+    barrier_height = energies.max()-energies.min()
             
-    return [[z, E] for z, E in zip(grid, energies)], Emax
+    return [[z, E] for z, E in zip(grid, energies)], Emax, barrier_height
         
 def construct_disp_files(index, cluster, sysinfo, dx, npoints, basename, 
                                  rI_centre=np.zeros(2), executable=None, 
@@ -315,7 +316,7 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
                            sitename, rI_centre=site[1:3], executable=executable,
                                              plane_shift=plane_shift, node=node)
         else:
-            gridded_energies, Emax = adaptive_construct(translate_index, cluster, 
+            gridded_energies, Emax, Eh = adaptive_construct(translate_index, cluster, 
                              sysinfo, dx, npoints, sitename, rI_centre=site[1:3],
                        executable=executable, plane_shift=plane_shift, node=node)
                                         
@@ -325,7 +326,7 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
                 outstream.write('{} {:.6f}\n'.format(j, E))
             outstream.close()
             
-            heights.append([int(site[0]), site[1], site[2], Emax])
+            heights.append([int(site[0]), site[1], site[2], Emax, Eh])
         
         if noisy:
             print("done.")
@@ -344,7 +345,7 @@ def read_migration_barrier(sitename, npoints, program='gulp'):
                                                                           
     # shift energies so that the undisplaced defect is at 0 eV
     energies = np.array(energies)
-    energies -= energies.min() 
+    energies -= energies[0] 
     
     return energies
     
@@ -367,7 +368,10 @@ def extract_barriers_even(basename, npoints, program='gulp'):
             outstream.write('{} {:.6f}\n'.format(j, E))
         outstream.close()
         
-        # calculate the barrier height
-        height.append([int(site[0]), site[1], site[2], energy.max()])
+        # calculate the difference between the minimum and maximum energies along
+        # the path. Note: NOT the same as the difference between the maximum 
+        # energy and the energy of the undisplaced defect (because of site hopping)
+        heights.append([int(site[0]), site[1], site[2], energy.max(), 
+                                          energy.max()-energy.min()])
             
     return heights            

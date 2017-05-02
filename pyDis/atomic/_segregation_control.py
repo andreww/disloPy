@@ -108,7 +108,7 @@ def handle_segregation_control(param_dict):
     # cards for the <&control> namelist
     control_cards = (('dislocation_file', {'default': '', 'type': str}),
                      ('program', {'default': 'gulp', 'type': str}),
-                     ('do_calc', {'default': False, 'type': to_bool}),
+                     ('do_calc', {'default': True, 'type': to_bool}),
                      ('executable', {'default': '', 'type': str}),
                      ('region_r', {'default': 10, 'type': int}),
                      ('new_r1', {'default': 10, 'type': int}),
@@ -128,8 +128,8 @@ def handle_segregation_control(param_dict):
     migration_cards = (('do_calc', {'default': True, 'type': to_bool}),
                        ('npoints', {'default': 3, 'type': int}),
                        ('nlevels', {'default': 1, 'type': int}),
-                       ('adaptive', {'default': False, 'type': to_bool})
-                       ('node', {'default': 0.5, 'type': to_bool}),
+                       ('adaptive', {'default': False, 'type': to_bool}),
+                       ('node', {'default': 0.5, 'type': float}),
                        ('plane_shift', {'default': np.zeros(2), 'type': vector})
                       )
                     
@@ -208,13 +208,14 @@ class SegregationSim(object):
         else:
             raise ValueError('{} is not a supported atomistic simulation code.'.format(self.control('program')) +
                                                      'Supported codes are: GULP.')
+        
+        # make cluster
+        self.make_cluster()
+        
         if not self.control('no_setup'):
             # check that the user has supplied a .grs file containing a dislocation
             if not self.control('dislocation_file'):
                 raise ValueError('Must supply a dislocation.')
-                
-            # make cluster
-            self.make_cluster()
             
             # create constraint functions
             self.form_constraints()
@@ -294,8 +295,8 @@ class SegregationSim(object):
             if self.constraints('height_max') is not np.nan:
                 hmax = float(self.constraints('height_max'))*H
             else:
-                # assume max height is the top of the cell
-                hmax = H
+                # assume max height is the top of the unitcell
+                hmax = hmin+H/float(self.control('n'))
                 
             # create constraint function
             self.cons_funcs.append(lambda atom: mut.heightConstraint(hmin, hmax, 
@@ -317,7 +318,7 @@ class SegregationSim(object):
                 # values
                 fmax = np.pi
             self.cons_funcs.append(lambda atom: mut.azimuthConstraint(fmin, fmax, atom))
-        elif self.constraint('phi_max') is not np.nan:
+        elif self.constraints('phi_max') is not np.nan:
             # phi_min guaranteed to be NaN, set to lower bound of range of 
             # possible values
             fmin = -np.pi
@@ -393,31 +394,36 @@ class SegregationSim(object):
             npar = self.migration('npoints')
         
         if self.migration('do_calc'):                            
-            heights = mig.migrate_sites(basename, 
-                                        self.control('n'), 
-                                        self.control('new_rI'),  
-                                        self.r2, 
-                                        self.control('site'), 
-                                        npar, 
-                                        executable=self.control('executable'), 
-                                        node=self.migration('node'),
-                                        plane_shift=self.migration('plane_shift'),
-                                        adaptive=self.migration('adaptive')
-                                       )
+            executable = self.control('executable')
         else:
             # user may want just to read in results
-            pass
-
+            executable = None
+            
+        heights = mig.migrate_sites(basename, 
+                                    self.control('n'), 
+                                    self.control('new_r1'),  
+                                    self.r2, 
+                                    self.control('site'), 
+                                    npar, 
+                                    executable=executable, 
+                                    node=self.migration('node'),
+                                    plane_shift=self.migration('plane_shift'),
+                                    adaptive=self.migration('adaptive')
+                                   )
+                                   
         # read in energies output by non-adaptive calculations
-        if not self.migration('adaptive'):
-            heights = mig.extract_barriers_even(basename, npar)  
+        try:
+            if not self.migration('adaptive'):
+                heights = mig.extract_barriers_even(basename, npar)  
+        except IOError:
+            return
             
         # write barier heights to file
         outstream = open('barrier_heights.{}.dat'.format(basename), 'w')
-        outstream.write('# site-index x y barrier-energy\n')
+        outstream.write('# site-index x y path-maximum barrier-height\n')
         for site in heights:
-            outstream.write('{} {:.6f} {:.6f} {:.6f}\n'.format(site[0], site[1],
-                                                               site[2], site[3]))
+            outstream.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(site[0],
+                                            site[1], site[2], site[3], site[4]))
         outstream.close()                                                      
         
 def main(filename):
