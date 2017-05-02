@@ -324,7 +324,7 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
             # write energies to file
             outstream = open('disp.{}.barrier.dat'.format(basename), 'w')
             for z, E in gridded_energies:
-                outstream.write('{} {:.6f}\n'.format(j, E))
+                outstream.write('{} {:.6f}\n'.format(z, E))
             outstream.close()
             
             heights.append([int(site[0]), site[1], site[2], Emax, Eh])
