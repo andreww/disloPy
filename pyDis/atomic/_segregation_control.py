@@ -24,6 +24,8 @@ from pyDis.atomic import transmutation as mut
 from pyDis.atomic import segregation as seg
 from pyDis.atomic import migration_cluster as mig
 
+from pyDis.atomic._atomic_control import vector
+
 def control_file_seg(filename):
     '''Opens the control file <filename> for a segregation calculation and makes
     the dictionary containing the (unformatted) values for all necessary 
@@ -106,6 +108,7 @@ def handle_segregation_control(param_dict):
     # cards for the <&control> namelist
     control_cards = (('dislocation_file', {'default': '', 'type': str}),
                      ('program', {'default': 'gulp', 'type': str}),
+                     ('do_calc', {'default': False, 'type': to_bool}),
                      ('executable', {'default': '', 'type': str}),
                      ('region_r', {'default': 10, 'type': int}),
                      ('new_r1', {'default': 10, 'type': int}),
@@ -118,9 +121,17 @@ def handle_segregation_control(param_dict):
                      ('n', {'default': 1, 'type': int}),
                      ('analyse', {'default': False, 'type': to_bool}),
                      ('no_setup', {'default': False, 'type': to_bool}),
-                     ('migration', {'default': False, 'type': to_bool}),
-                     ('npoints', {'default': 3, 'type': int})
+                     ('migration', {'default': False, 'type': to_bool})
                     )
+                     
+    # cards for the <&migration> namelist
+    migration_cards = (('do_calc', {'default': True, 'type': to_bool}),
+                       ('npoints', {'default': 3, 'type': int}),
+                       ('nlevels', {'default': 1, 'type': int}),
+                       ('adaptive', {'default': False, 'type': to_bool})
+                       ('node', {'default': 0.5, 'type': to_bool}),
+                       ('plane_shift', {'default': np.zeros(2), 'type': vector})
+                      )
                     
     # cards for the <&constraints> namelist
     constraints_cards = (('height_min', {'default':np.nan, 'type':float}),
@@ -143,7 +154,7 @@ def handle_segregation_control(param_dict):
                      )
                         
     # read in specific namelists
-    namelists = ['control', 'constraints', 'analysis']
+    namelists = ['control', 'migration', 'constraints', 'analysis']
     
     # initialise namelists
     for name in namelists:
@@ -151,7 +162,8 @@ def handle_segregation_control(param_dict):
             param_dict[name] = dict()
                 
     # populate namelists 
-    for i, cards in enumerate([control_cards, constraints_cards, analysis_cards]):
+    for i, cards in enumerate([control_cards, migration_cards, constraints_cards, 
+                                                                analysis_cards]):
         # read in cards specifying sim. parameters
         for var in cards:
             try:
@@ -189,6 +201,7 @@ class SegregationSim(object):
         self.control = lambda card: self.sim['control'][card]
         self.constraints = lambda card: self.sim['constraints'][card]
         self.analysis = lambda card: self.sim['analysis'][card]
+        self.migration = lambda card: self.sim['migration'][card]
         
         if self.control('program') in supported_codes:
             pass
@@ -317,7 +330,7 @@ class SegregationSim(object):
         
         # if no executable has been provided, assume that the user wishes only
         # to create the input files, not run them
-        if self.control('executable'):
+        if self.control('executable') and self.control('do_calc'):
             do_calc = True
         else:
             do_calc = False
@@ -370,10 +383,42 @@ class SegregationSim(object):
         '''Calculates migration barriers for pipe diffusion at each defect site.
         '''
         
-        mig.migrate_sites('{}.{}'.format(self.control('label'), self.control('site')),
-                          self.control('n'), self.control('new_rI'), self.r2, 
-                          self.control('site'), self.control('npoints'), 
-                          self.control('executable'))
+        # basename to use
+        basename = '{}.{}'.format(self.control('label'), self.control('site'))
+        
+        if self.migration('adaptive'):
+            npar = self.migration('nlevels')
+            
+        else:
+            npar = self.migration('npoints')
+        
+        if self.migration('do_calc'):                            
+            heights = mig.migrate_sites(basename, 
+                                        self.control('n'), 
+                                        self.control('new_rI'),  
+                                        self.r2, 
+                                        self.control('site'), 
+                                        npar, 
+                                        executable=self.control('executable'), 
+                                        node=self.migration('node'),
+                                        plane_shift=self.migration('plane_shift'),
+                                        adaptive=self.migration('adaptive')
+                                       )
+        else:
+            # user may want just to read in results
+            pass
+
+        # read in energies output by non-adaptive calculations
+        if not self.migration('adaptive'):
+            heights = mig.extract_barriers_even(basename, npar)  
+            
+        # write barier heights to file
+        outstream = open('barrier_heights.{}.dat'.format(basename), 'w')
+        outstream.write('# site-index x y barrier-energy\n')
+        for site in heights:
+            outstream.write('{} {:.6f} {:.6f} {:.6f}\n'.format(site[0], site[1],
+                                                               site[2], site[3]))
+        outstream.close()                                                      
         
 def main(filename):
     new_simulation = SegregationSim(filename)
