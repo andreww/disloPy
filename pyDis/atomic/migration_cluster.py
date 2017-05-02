@@ -279,7 +279,8 @@ def construct_disp_files(index, cluster, sysinfo, dx, npoints, basename,
             gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename)) 
 
 def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None, 
-                 noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False):
+                 noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
+                                                            threshold=5e-1):
     '''Constructs and, if specified by user, runs input files for migration
     of vacancies along a dislocation line. <plane_shift> allows the user to 
     migrate the atom around intervening atoms (eg. oxygen ions). <adaptive> tells
@@ -298,7 +299,7 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
                                                 str(int(site[0]))), r1, r2)
                                                 
         # find atom to translate                                       
-        possible_sites = adjacent_sites(site, cluster, atom_type)
+        possible_sites = adjacent_sites(site, cluster, atom_type, threshold=threshold)
         translate_index = atom_to_translate(site, possible_sites, cluster)
         
         # calculate translation distance

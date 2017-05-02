@@ -130,7 +130,8 @@ def handle_segregation_control(param_dict):
                        ('nlevels', {'default': 1, 'type': int}),
                        ('adaptive', {'default': False, 'type': to_bool}),
                        ('node', {'default': 0.5, 'type': float}),
-                       ('plane_shift', {'default': np.zeros(2), 'type': vector})
+                       ('plane_shift', {'default': np.zeros(2), 'type': vector}),
+                       ('threshold', {'default': 0.5, 'type': float})
                       )
                     
     # cards for the <&constraints> namelist
@@ -408,7 +409,8 @@ class SegregationSim(object):
                                     executable=executable, 
                                     node=self.migration('node'),
                                     plane_shift=self.migration('plane_shift'),
-                                    adaptive=self.migration('adaptive')
+                                    adaptive=self.migration('adaptive'),
+                                    threshold=self.migration('threshold')
                                    )
                                    
         # read in energies output by non-adaptive calculations
