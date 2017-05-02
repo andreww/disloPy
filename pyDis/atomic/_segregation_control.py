@@ -424,7 +424,7 @@ class SegregationSim(object):
         for site in heights:
             outstream.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(site[0],
                                             site[1], site[2], site[3], site[4]))
-        outstream.close()                                                      
+        outstream.close()                                                    
         
 def main(filename):
     new_simulation = SegregationSim(filename)
