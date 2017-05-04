@@ -109,6 +109,7 @@ def handle_segregation_control(param_dict):
     control_cards = (('dislocation_file', {'default': '', 'type': str}),
                      ('program', {'default': 'gulp', 'type': str}),
                      ('do_calc', {'default': True, 'type': to_bool}),
+                     ('noisy', {'default': False, 'type': to_bool}),
                      ('executable', {'default': '', 'type': str}),
                      ('region_r', {'default': 10, 'type': int}),
                      ('new_r1', {'default': 10, 'type': int}),
@@ -126,12 +127,15 @@ def handle_segregation_control(param_dict):
                      
     # cards for the <&migration> namelist
     migration_cards = (('do_calc', {'default': True, 'type': to_bool}),
+                       ('no_setup', {'default': False, 'type': to_bool}),
                        ('npoints', {'default': 3, 'type': int}),
                        ('nlevels', {'default': 1, 'type': int}),
                        ('adaptive', {'default': False, 'type': to_bool}),
                        ('node', {'default': 0.5, 'type': float}),
                        ('plane_shift', {'default': np.zeros(2), 'type': vector}),
-                       ('threshold', {'default': 0.5, 'type': float})
+                       ('threshold', {'default': 0.5, 'type': float}),
+                       ('plot_migration', {'default': False, 'type': to_bool}),
+                       ('new_species', {'default': '', 'type': str})
                       )
                     
     # cards for the <&constraints> namelist
@@ -347,7 +351,8 @@ class SegregationSim(object):
                                   centre_on_impurity=self.control('centre_on_impurity'),
                                   constraints=self.cons_funcs,
                                   o_str=self.control('o_str'),
-                                  oh_str=self.control('oh_str')
+                                  oh_str=self.control('oh_str'),
+                                  noisy=self.control('noisy')
                                  )
         else:
             # no need to test for hydroxyl-bonded oxygen ions
@@ -358,7 +363,8 @@ class SegregationSim(object):
                                    do_calc=do_calc, 
                                    gulpexec=self.control('executable'),
                                    centre_on_impurity=self.control('centre_on_impurity'),
-                                   constraints=self.cons_funcs
+                                   constraints=self.cons_funcs,
+                                   noisy=self.control('noisy')
                                   )
                                   
     def analyse_results(self):
@@ -400,18 +406,27 @@ class SegregationSim(object):
             # user may want just to read in results
             executable = None
             
-        heights = mig.migrate_sites(basename, 
-                                    self.control('n'), 
-                                    self.control('new_r1'),  
-                                    self.r2, 
-                                    self.control('site'), 
-                                    npar, 
-                                    executable=executable, 
-                                    node=self.migration('node'),
-                                    plane_shift=self.migration('plane_shift'),
-                                    adaptive=self.migration('adaptive'),
-                                    threshold=self.migration('threshold')
-                                   )
+        # check to see if the user wants to migrate an impurity
+        if self.migration('new_species'):
+            newspecies = self.migration('new_species')
+        else:
+            newspecies = None
+        
+        if not self.migration('no_setup'):    
+            heights = mig.migrate_sites(basename, 
+                                        self.control('n'), 
+                                        self.control('new_r1'),  
+                                        self.r2, 
+                                        self.control('site'), 
+                                        npar, 
+                                        executable=executable, 
+                                        node=self.migration('node'),
+                                        plane_shift=self.migration('plane_shift'),
+                                        adaptive=self.migration('adaptive'),
+                                        threshold=self.migration('threshold'),
+                                        newspecies=newspecies,
+                                        noisy=self.control('noisy')
+                                       )
                                    
         # read in energies output by non-adaptive calculations
         try:
@@ -421,12 +436,13 @@ class SegregationSim(object):
             return
             
         # write barier heights to file
-        outstream = open('barrier_heights.{}.dat'.format(basename), 'w')
-        outstream.write('# site-index x y path-maximum barrier-height\n')
-        for site in heights:
-            outstream.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(site[0],
-                                            site[1], site[2], site[3], site[4]))
-        outstream.close()                                                    
+        mig.write_heights(basename, heights)  
+        
+        if self.migration('plot_migration'):  
+            heights = np.array(heights)      
+            seg.plot_energies_contour(heights[:, :3], heights[:, -1],
+                      'barrier.{}'.format(self.analysis('plot_name')))
+                                                                                              
         
 def main(filename):
     new_simulation = SegregationSim(filename)

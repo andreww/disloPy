@@ -276,7 +276,7 @@ def locate_bonded(site, siteindex, bondatom, supercell, nbonds):
             pass
 
 def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
-                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
+                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, 
                               oh_str='Oh', o_str='O', centre_on_impurity=False,
                                                        do_calc=False, tol=1e-1):
     '''Similar to the function <calculateImpurity> in <gulpUtils>, but with 

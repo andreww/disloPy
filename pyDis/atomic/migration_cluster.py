@@ -280,7 +280,7 @@ def construct_disp_files(index, cluster, sysinfo, dx, npoints, basename,
 
 def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None, 
                  noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
-                                                            threshold=5e-1):
+                                               threshold=5e-1, newspecies=None):
     '''Constructs and, if specified by user, runs input files for migration
     of vacancies along a dislocation line. <plane_shift> allows the user to 
     migrate the atom around intervening atoms (eg. oxygen ions). <adaptive> tells
@@ -292,11 +292,11 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
     heights = []
     
     for site in site_info:
+        sitename = '{}.{}'.format(basename, int(site[0]))
         if noisy:
             print("Calculating migration barrier at site {}...".format(int(site[0])), end='')
             
-        cluster, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, 
-                                                str(int(site[0]))), r1, r2)
+        cluster, sysinfo = gulp.cluster_from_grs('{}.grs'.format(sitename), r1, r2)
                                                 
         # find atom to translate                                       
         possible_sites = adjacent_sites(site, cluster, atom_type, threshold=threshold)
@@ -310,8 +310,11 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
         # change constraints for atom -> can only relax in plane normal to dislocation line
         cluster[translate_index].set_constraints([1, 1, 0])
         
+        # change the species of the migrating atom, if <newspecies> specified
+        if newspecies is not None:
+            cluster[translate_index].setSpecies(newspecies)
+        
         # construct input files and run calculation (if specified)
-        sitename = '{}.{}'.format(basename, int(site[0]))
         if not adaptive:
             construct_disp_files(translate_index, cluster, sysinfo, dx, npoints,
                            sitename, rI_centre=site[1:3], executable=executable,
@@ -322,7 +325,7 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
                        executable=executable, plane_shift=plane_shift, node=node)
                                         
             # write energies to file
-            outstream = open('disp.{}.barrier.dat'.format(basename), 'w')
+            outstream = open('disp.{}.barrier.dat'.format(sitename), 'w')
             for z, E in gridded_energies:
                 outstream.write('{} {:.6f}\n'.format(z, E))
             outstream.close()
@@ -375,4 +378,34 @@ def extract_barriers_even(basename, npoints, program='gulp'):
         heights.append([int(site[0]), site[1], site[2], energy.max(), 
                                           energy.max()-energy.min()])
             
-    return heights            
+    return heights     
+    
+def write_heights(basename, heights):
+    '''Writes migration barrier heights to file, including both the difference
+    between the initial and maximum energy, and between the lowest and highest
+    energy.
+    '''
+    
+    outstream = open('{}.barrier.dat'.format(basename), 'w')
+    outstream.write('# site-index x y path-maximum barrier-height\n')
+    for site in heights:
+        outstream.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(site[0], site[1],
+                                                        site[2], site[3], site[4]))   
+    outstream.close() 
+                                                        
+def read_heights(basename, heights):
+    '''Reads migration barrier heights.
+    '''
+
+    barrier_info = []
+    with open('{}.barrier.dat'.format(basename)) as f: 
+        for line in f:
+            if line.startswith('#'):
+                continue
+            elif not line.rstrip():
+                continue
+            # else
+            site_line = line.rstrip().split()
+            site_info.append([float(x) for x in site_line])
+            
+    return np.array(site_info)   

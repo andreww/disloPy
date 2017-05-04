@@ -849,7 +849,7 @@ def cluster_from_grs(filename, rI, rII, new_rI=None, r=None):
     return new_cluster, sysinfo
 
 def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
-                   constraints=None, minimizer='bfgs', maxcyc=100, noisy=True, 
+                   constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, 
                             do_calc=False, centre_on_impurity=True, tol=1e-1):
     '''Iterates through all atoms in <relaxedCluster> within distance <radius>
     of the dislocation line, and sequentially replaces one atom of type 
