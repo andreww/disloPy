@@ -155,7 +155,7 @@ def scale_plane_shift(plane_shift, x, xmax, node=0.5):
         
     return scale*plane_shift
     
-def adaptive_construct(index, cluster, sysinfo, dx, nlevels, basename, 
+def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename, 
                                     executable, rI_centre=np.zeros(2),
                                     plane_shift=np.zeros(2), node=0.5):
     '''Constructs input files for points along the atom migration path, with
@@ -176,12 +176,13 @@ def adaptive_construct(index, cluster, sysinfo, dx, nlevels, basename,
     
     # do first level
     for i in range(3):
-        new_z = i/2.*dx
+        new_z = i/2.*dz
+        pln_x = i/2.*dx
         # calculate displacement of atom in the plane at this point
-        shift = scale_plane_shift(plane_shift, new_z, dx, node)
+        shift = scale_plane_shift(plane_shift, new_z, dz, node)
         
         # update dislocation structure
-        new_x = x + np.array([shift[0], shift[1], new_z])
+        new_x = x + np.array([shift[0]+pln_x[0], shift[1]+pln_x[1], new_z])
         cluster[index].setCoordinates(new_x)
         outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
         gulp.write_gulp(outstream, cluster, sysinfo, defected=False, to_cart=False,
@@ -202,18 +203,24 @@ def adaptive_construct(index, cluster, sysinfo, dx, nlevels, basename,
     counter = 3 # keep track of number of structures calculated
     for level in range(nlevels-1):
         # nodes halfway between the current maximum and the adjacent nodes
-        new_z_m1 = grid_max-0.5**(level+2)*dx
-        new_z_p1 = grid_max+0.5**(level+2)*dx
+        new_z_m1 = grid_max-0.5**(level+2)*dz
+        new_z_p1 = grid_max+0.5**(level+2)*dz
+        
+        # in-plane change associate with new nodes
+        pln_x_m1 = new_z_m1/dz*dx
+        pln_x_p1 = new_z_p1/dz*dx
         
         grid.insert(imax, new_z_m1)
         grid.insert(imax+2, new_z_p1)
         
-        shift_m1 = scale_plane_shift(plane_shift, new_z_m1, dx, node)
-        shift_p1 = scale_plane_shift(plane_shift, new_z_p1, dx, node)
+        shift_m1 = scale_plane_shift(plane_shift, new_z_m1, dz, node)
+        shift_p1 = scale_plane_shift(plane_shift, new_z_p1, dz, node)
         
         # update dislocation structure
-        new_x_m1 = x + np.array([shift_m1[0], shift_m1[1], new_z_m1])
-        new_x_p1 = x + np.array([shift_p1[0], shift_p1[1], new_z_p1])
+        new_x_m1 = x + np.array([shift_m1[0]+pln_x_m1[0], shift_m1[1]+pln_x_m1[1], 
+                                                                        new_z_m1])
+        new_x_p1 = x + np.array([shift_p1[0]+pln_x_p1[0], shift_p1[1]+pln_x_p1[1],
+                                                                        new_z_p1])
         
         for i in range(2):
             if i == 0:
@@ -253,21 +260,23 @@ def adaptive_construct(index, cluster, sysinfo, dx, nlevels, basename,
             
     return [[z, E] for z, E in zip(grid, energies)], Emax, barrier_height
         
-def construct_disp_files(index, cluster, sysinfo, dx, npoints, basename, 
-                                 rI_centre=np.zeros(2), executable=None, 
-                                      plane_shift=np.zeros(2), node=0.5):
+def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename, 
+                       rI_centre=np.zeros(2), executable=None, node=0.5,
+                               plane_shift=np.zeros(2),  dx=np.zeros(2)):
     '''Constructs input files for points along the atom migration path.
     '''
         
     x = cluster[index].getCoordinates()
     for i in range(npoints):
         # calculate new position of atom
-        new_z = i/(npoints-1)*dx
-        # calculate displacement of atom in the plane at this point
-        shift = scale_plane_shift(plane_shift, new_z, dx, node)
+        new_z = i/(npoints-1)*dz
+        pln_x = i/(npoints-1)*dx
+        # calculate displacement of atom in the plane at this point DUE TO PLANE
+        # SHIFT
+        shift = scale_plane_shift(plane_shift, new_z, dz, node)
         
         # update dislocation structure
-        new_x = x + np.array([shift[0], shift[1], new_z])
+        new_x = x + np.array([shift[0]+pln_x[0], shift[1]+pln_x[1], new_z])
         cluster[index].setCoordinates(new_x)
         outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
         gulp.write_gulp(outstream, cluster, sysinfo, defected=False, to_cart=False,
@@ -305,7 +314,13 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
         # calculate translation distance
         next_index, intersite_dist = next_occupied_site(translate_index, 
                                                 possible_sites, cluster)
-        dx = disp_distance(cluster, n, intersite_dist)
+        dz = disp_distance(cluster, n, intersite_dist)
+        
+        # calculate the required change of in-plane coordinates
+        x0 = cluster[translate_index].getCoordinates()[:-1]
+        x1 = cluster[next_index].getCoordinates()[:-1]
+        
+        dx = x1-x0
         
         # change constraints for atom -> can only relax in plane normal to dislocation line
         cluster[translate_index].set_constraints([1, 1, 0])
@@ -316,13 +331,15 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
         
         # construct input files and run calculation (if specified)
         if not adaptive:
-            construct_disp_files(translate_index, cluster, sysinfo, dx, npoints,
+            construct_disp_files(translate_index, cluster, sysinfo, dz, npoints,
                            sitename, rI_centre=site[1:3], executable=executable,
-                                             plane_shift=plane_shift, node=node)
+                                             plane_shift=plane_shift, node=node,
+                                                                          dx=dx)
         else:
             gridded_energies, Emax, Eh = adaptive_construct(translate_index, cluster, 
-                             sysinfo, dx, npoints, sitename, rI_centre=site[1:3],
-                       executable=executable, plane_shift=plane_shift, node=node)
+                             sysinfo, dz, npoints, sitename, rI_centre=site[1:3],
+                       executable=executable, plane_shift=plane_shift, node=node,
+                                                                           dx=dx)
                                         
             # write energies to file
             outstream = open('disp.{}.barrier.dat'.format(sitename), 'w')
