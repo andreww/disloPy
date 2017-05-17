@@ -392,7 +392,7 @@ class SegregationSim(object):
     def migration_barriers(self):
         '''Calculates migration barriers for pipe diffusion at each defect site.
         '''
-        
+
         # basename to use
         basename = '{}.{}'.format(self.control('label'), self.control('site'))
         

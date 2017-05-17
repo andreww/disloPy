@@ -67,40 +67,55 @@ def atom_to_translate(dfct_site, possible_sites, cluster, tol=5e-1):
     candidates = []
     min_dist = np.inf
     
-    # find atoms closest to vacancy
+    # find distance ALONG dislocation line to next site
+    for atom_index, dist in possible_sites:
+        if dist < min_dist:
+            min_dist = dist
+            
+    # create list of candidate sites to which vacancy might migrate
     for atom_index, dist in possible_sites:
         if dist < min_dist+tol:
             candidates.append(atom_index)
-            if dist < min_dist:
-                # update minimum distance
-                min_dist = dist
                 
-    # make sure that there are not too many candidates
-    if len(candidates) > 3:
-        raise ValueError("Should be fewer than 3 adjacent sites")
-    # if only 1 candidate, we are done
-    elif len(candidates) == 1:
-        return candidates[0]
+    # find site(s) below the vacancy
+    if len(candidates) == 1:
+        # only 1 candidate, we are done
+        return candidates
+    elif len(candidates) == 0:
+        # no candidates, this is a problem
+        raise ValueError("Number of sites should be >= 1.")
     else:
-        # otherwise, determine which site is below the vacancy  
+        H = cluster.getHeight()
         z_site = x0[-1]
-        i0, i1 = candidates
-        z0 = cluster[i0].getCoordinates()[-1]
-        z1 = cluster[i1].getCoordinates()[-1]
-        if z0 < z_site and z0 < z1:
-            return i0
-        elif z1 < z_site and z1 < z0:
-            return i1
-        elif z0 > z_site and z1 > z_site: 
-            if z0 < z1:
-                return i1
-            else: # z0 > z1
-                return i0
-        elif z0 < z_site and z1 < z_site:
-            if z0 < z1:
-                return i1
-            else: # z0 > z1
-                return i0
+        below_site = []
+        for i in candidates:
+            zi = cluster[i].getCoordinates()[-1]
+            
+            # distance to candidate in same cell as vacancy
+            base_dist = abs(zi-z_site)
+            
+            # get distance to image of candidate nearest to vacancy
+            if zi < z_site:
+                # get distance to image above the vacancy
+                image_dist = abs(H+zi-z_site)
+            else:
+                # get distance to image below the vacancy
+                image_dist = abs(z_site+(H-zi))
+            
+            if image_dist > base_dist+toldist:
+                if zi < z_site:
+                    below_site.append(i)
+                 else: 
+                    pass
+            else: # image_dist < base_dist+toldist:
+                # note, includes cases when image_dist == base_dist
+                # ie. when the site is above AND below the vacancy
+                if zi > z_site:
+                    below_site.append(i)
+                else:
+                    pass
+                
+        return below_site
                 
 def z_dist(atom1, atom2, height):
     '''Return distance from <atom2> to <atom1> along the cluster axis.
@@ -311,11 +326,14 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
         possible_sites = adjacent_sites(site, cluster, atom_type, threshold=threshold)
         translate_index = atom_to_translate(site, possible_sites, cluster)
         
+        if len(translate_index) == 1:
+            translate_index = translate_index[0]
+        
         # calculate translation distance
         next_index, intersite_dist = next_occupied_site(translate_index, 
                                                 possible_sites, cluster)
         dz = disp_distance(cluster, n, intersite_dist)
-        
+
         # calculate the required change of in-plane coordinates
         x0 = cluster[translate_index].getCoordinates()[:-1]
         x1 = cluster[next_index].getCoordinates()[:-1]
