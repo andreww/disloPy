@@ -168,8 +168,8 @@ def write_energies(outname, site_info, e_excess, e_seg, pars=None):
     
 ### PLOTTING FUNCTIONS
 
-def plot_energies_contour(sites, e_seg, figname, cmtype='viridis', refine=False,
-                                       units='eV', figformat='tif', levels=25):
+def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=False,
+                                 units='eV', figformat='tif', levels=25, nlabels=5):
     '''Produces a contour plot of the segregation energy at sites around a 
     dislocation. Use <levels> to control the number of contours.
     '''
@@ -196,21 +196,25 @@ def plot_energies_contour(sites, e_seg, figname, cmtype='viridis', refine=False,
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
     
-    cb = plt.colorbar()
+    bound_labels = [float('{:.2f}'.format(n)) for n in np.linspace(min(e_seg),
+                                                         max(e_seg), nlabels)]
+    cb = plt.colorbar(ticks=bound_labels)
     cb.set_label('E ({})'.format(units), size='x-large', family='serif')
 
     # add points to mark the locations of the atomic sites
-    plt.scatter(x, y, c='k', s=40)
+    plt.scatter(x, y, c='w', s=60, linewidth='2')
         
-    plt.xlim(x.min()-2, x.max()+2)
-    plt.ylim(y.min()-2, y.max()+2)
+    plt.xlim(-r-1, r+1)
+    plt.ylim(-r-1, r+1)
+    
+    plt.tight_layout()
     
     plt.savefig('{}.{}'.format(figname, figformat))
     plt.close()    
     
     return
     
-def plot_energies_scatter(sites, e_seg, figname, cmtype='coolwarm', units='eV',
+def plot_energies_scatter(sites, e_seg, figname, r, cmtype='coolwarm', units='eV',
                                                              figformat='tif'):
     '''Produces a scatterplot showing all of the sites for which segregation 
     energies were calculated, with each point coloured according to the 
@@ -223,11 +227,14 @@ def plot_energies_scatter(sites, e_seg, figname, cmtype='coolwarm', units='eV',
     fig = plt.figure()
     plt.gca().set_aspect('equal')
     plt.scatter(x, y, c=e_seg, cmap=plt.get_cmap(cmtype), s=100)
+        
+    plt.xlim(-r-1, r+1)
+    plt.ylim(-r-1, r+1)
     
-    plt.xlim(x.min()-2, x.max()+2)
-    plt.ylim(y.min()-2, y.max()+2)
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
+    
+    plt.tight_layout()
     
     cb = plt.colorbar()
     cb.set_label('E ({})'.format(units), size='x-large', family='serif')
@@ -238,7 +245,7 @@ def plot_energies_scatter(sites, e_seg, figname, cmtype='coolwarm', units='eV',
 
 ### END PLOTTING FUNCTIONS
 
-def analyse_segregation_results(basename, e0, de, n, mirror=False, ax=1, 
+def analyse_segregation_results(basename, e0, de, n, r, mirror=False, ax=1, 
                 mirror_both=False, plot_scatter=True, plot_contour=True, 
                                  plotname='', figformat='tif', fit=True):
     '''Processes the output files from a segregation energy surface calculation.
@@ -276,10 +283,10 @@ def analyse_segregation_results(basename, e0, de, n, mirror=False, ax=1,
         plotname = basename
         
     if plot_scatter:
-        plot_energies_scatter(site_info, e_seg, plotname+'.scatter', 
+        plot_energies_scatter(site_info, e_seg, plotname+'.scatter', r,
                                             figformat=figformat)
     if plot_contour:
-        plot_energies_contour(site_info, e_seg, plotname+'.contour', 
+        plot_energies_contour(site_info, e_seg, plotname+'.contour', r,
                                             figformat=figformat)
     
     return  
@@ -313,6 +320,8 @@ def command_line_options():
     options.add_argument('-f', default='tif', dest='figformat', help='Image format.')
     options.add_argument('-fit', type=to_bool, default='True', dest='fit',
                          help='Fit the form of the calculated segregation energies.')
+    options.add_argument('-r', type=float, default=10., dest='r', help='Radius of' +
+                                         'region within which to calculate energies')
                          
     return options    
     
@@ -321,7 +330,7 @@ def main():
     options = command_line_options()
     args = options.parse_args()
     
-    analyse_segregation_results(args.basename, args.E0, args.dE0, args.n,
+    analyse_segregation_results(args.basename, args.E0, args.dE0, args.n, args.r,
                   mirror=args.mirror, ax=args.axis, mirror_both=args.mirror_both,
                   plot_scatter=args.plot_scatter, plot_contour=args.plot_contour,
                   plotname=args.plotname, figformat=args.figformat, fit=args.fit)

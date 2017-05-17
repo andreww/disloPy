@@ -373,10 +373,12 @@ class SegregationSim(object):
         energy, and plotting the segregation energy surface.
         '''
         
-        seg.analyse_segregation_results('{}.{}'.format(self.control('label'), self.control('site')), 
+        seg.analyse_segregation_results('{}.{}'.format(self.control('label'), 
+                                        self.control('site')), 
                                         self.analysis('E0'), 
                                         self.analysis('dE0'),
                                         self.control('n'), 
+                                        self.control('region_r'),
                                         mirror=self.analysis('mirror'),
                                         ax=self.analysis('axis'),
                                         mirror_both=self.analysis('mirror_both'), 
@@ -441,9 +443,9 @@ class SegregationSim(object):
         if self.migration('plot_migration'):  
             heights = np.array(heights)      
             seg.plot_energies_contour(heights[:, :3], heights[:, -1],
-                      'barrier.{}'.format(self.analysis('plot_name')))
-                                                                                              
-        
+                      'barrier.{}'.format(self.analysis('plot_name')), 
+                                             self.control('region_r'))
+                                                                                                   
 def main(filename):
     new_simulation = SegregationSim(filename)
 
