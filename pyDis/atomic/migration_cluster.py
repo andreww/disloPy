@@ -3,6 +3,9 @@ from __future__ import print_function, division
 
 import numpy as np
 from numpy.linalg import norm
+import glob
+import re
+
 import sys
 import os
 sys.path.append(os.environ['PYDISPATH'])
@@ -56,7 +59,7 @@ def adjacent_sites(dfct_site, cluster, species, threshold=5e-1):
             
     return adjacent_indices
 
-def atom_to_translate(dfct_site, possible_sites, cluster, tol=5e-1):
+def atom_to_translate(dfct_site, possible_sites, cluster, tol=5e-1, toldist=1e-1):
     '''Determines which of the possible adjacent sites to translate. 
     '''
     
@@ -105,11 +108,10 @@ def atom_to_translate(dfct_site, possible_sites, cluster, tol=5e-1):
             if image_dist > base_dist+toldist:
                 if zi < z_site:
                     below_site.append(i)
-                 else: 
+                else: 
                     pass
-            else: # image_dist < base_dist+toldist:
+            else: 
                 # note, includes cases when image_dist == base_dist
-                # ie. when the site is above AND below the vacancy
                 if zi > z_site:
                     below_site.append(i)
                 else:
@@ -271,7 +273,7 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
     energies = np.array(energies)
     energies -= energies[0]
     Emax = energies.max()
-    barrier_height = energies.max()-energies.min()
+    barrier_height = get_barrier(energies)
             
     return [[z, E] for z, E in zip(grid, energies)], Emax, barrier_height
         
@@ -282,6 +284,8 @@ def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename,
     '''
         
     x = cluster[index].getCoordinates()
+    grid = []
+    energies = []
     for i in range(npoints):
         # calculate new position of atom
         new_z = i/(npoints-1)*dz
@@ -300,9 +304,43 @@ def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename,
         
         # if an executable has been provided, run the calculation
         if executable is not None:
-            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename)) 
+            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))         
+            E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
+            grid.append(new_z)
+            energies.append(E)
+            
+    # if energies have been calculated, extract the maximum energy (relative to
+    # the undisplaced atom) and the barrier height
+    if grid:
+        energies = np.array(energies)
+        energies -= energies[0]
+        Emax = energies.max()
+        barrier_height = get_barrier(energies)
+        
+        return [[z, E] for z, E in zip(grid, energies)], Emax, barrier_height
+    else:
+        # energies not calculated, return dummy values
+        return [], np.nan, np.nan    
 
-def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None, 
+def get_barrier(energy_values):
+    '''Calculates the maximum energy barrier that has to be surmounted getting
+    between sites.
+    '''
+    
+    # calculate maximum barrier starting at initial site
+    eb = energy_values.max()-energy_values[0]
+    if energy_values.min() - energy_values[0] < 1e-6:  
+        # if initial energy is lowest energy, this is the barrier height
+        return eb
+    
+    for i, E1 in enumerate(energy_values[1:-1]):
+        dEmax = energy_values[i+1:].max()-E1
+        if dEmax > eb:
+            eb = dEmax
+    
+    return eb    
+
+def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None, 
                  noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
                                                threshold=5e-1, newspecies=None):
     '''Constructs and, if specified by user, runs input files for migration
@@ -315,60 +353,89 @@ def migrate_sites(basename, n, r1, r2, atom_type, npoints, executable=None,
     site_info = read_sites(basename)
     heights = []
     
+    if noisy:
+        print("Preparing to calculate migration barriers.")
+    
     for site in site_info:
         sitename = '{}.{}'.format(basename, int(site[0]))
+        
         if noisy:
             print("Calculating migration barrier at site {}...".format(int(site[0])), end='')
-            
-        cluster, sysinfo = gulp.cluster_from_grs('{}.grs'.format(sitename), r1, r2)
+   
+        cluster, sysinfo = gulp.cluster_from_grs('{}.grs'.format(sitename), rI, rII)
                                                 
         # find atom to translate                                       
         possible_sites = adjacent_sites(site, cluster, atom_type, threshold=threshold)
         translate_index = atom_to_translate(site, possible_sites, cluster)
-        
-        if len(translate_index) == 1:
-            translate_index = translate_index[0]
-        
-        # calculate translation distance
-        next_index, intersite_dist = next_occupied_site(translate_index, 
-                                                possible_sites, cluster)
-        dz = disp_distance(cluster, n, intersite_dist)
 
-        # calculate the required change of in-plane coordinates
-        x0 = cluster[translate_index].getCoordinates()[:-1]
-        x1 = cluster[next_index].getCoordinates()[:-1]
-        
-        dx = x1-x0
-        
-        # change constraints for atom -> can only relax in plane normal to dislocation line
-        cluster[translate_index].set_constraints([1, 1, 0])
-        
-        # change the species of the migrating atom, if <newspecies> specified
-        if newspecies is not None:
-            cluster[translate_index].setSpecies(newspecies)
-        
-        # construct input files and run calculation (if specified)
-        if not adaptive:
-            construct_disp_files(translate_index, cluster, sysinfo, dz, npoints,
-                           sitename, rI_centre=site[1:3], executable=executable,
-                                             plane_shift=plane_shift, node=node,
-                                                                          dx=dx)
-        else:
-            gridded_energies, Emax, Eh = adaptive_construct(translate_index, cluster, 
-                             sysinfo, dz, npoints, sitename, rI_centre=site[1:3],
-                       executable=executable, plane_shift=plane_shift, node=node,
-                                                                           dx=dx)
-                                        
-            # write energies to file
-            outstream = open('disp.{}.barrier.dat'.format(sitename), 'w')
-            for z, E in gridded_energies:
-                outstream.write('{} {:.6f}\n'.format(z, E))
-            outstream.close()
+        for ti in translate_index:       
+            x0 = cluster[ti].getCoordinates()
             
-            heights.append([int(site[0]), site[1], site[2], Emax, Eh])
+            # calculate translation distance
+            z0 = x0[-1]
+            z1 = site[3]
+            dz = z1-z0
+
+            # calculate the required change of axial position, r
+            r0 = x0[:-1]
+            r1 = np.array(site[1:3])
+            
+            dr = r1-r0
+            
+            # change constraints for atom -> can only relax in plane normal to dislocation line
+            cluster[ti].set_constraints([1, 1, 0])
+            
+            # change the species of the migrating atom, if <newspecies> specified
+            if newspecies is not None:
+                oldspecies = cluster[ti].getSpecies()
+                cluster[ti].setSpecies(newspecies)
+            
+            # construct input files and run calculation (if specified), recording
+            # the index of the defect and the atom being translated
+            sitepairname = '{}.{}'.format(sitename, ti)
+            if not adaptive:
+                gridded_energies, Emax, Eh = construct_disp_files(ti, 
+                                                                  cluster, 
+                                                                  sysinfo, 
+                                                                  dz, 
+                                                                  npoints, 
+                                                                  sitepairname,
+                                                                  rI_centre=site[1:3], 
+                                                                  executable=executable,
+                                                                  plane_shift=plane_shift, 
+                                                                  node=node,
+                                                                  dx=dr)
+            else:
+                gridded_energies, Emax, Eh = adaptive_construct(ti, 
+                                                                cluster, 
+                                                                sysinfo, 
+                                                                dz, 
+                                                                npoints, 
+                                                                sitepairname, 
+                                                                rI_centre=site[1:3],
+                                                                executable=executable, 
+                                                                plane_shift=plane_shift, 
+                                                                node=node,
+                                                                dx=dr)
+                                        
+            # write energies to file, if they have been calculated
+            if gridded_energies:
+                outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')
+                for z, E in gridded_energies:
+                    outstream.write('{} {:.6f}\n'.format(z, E))
+                outstream.close()
+                
+                heights.append([int(site[0]), ti, site[1], site[2], Emax, Eh])
+                
+            # undo any changes to atom <ti>
+            cluster[ti].set_constraints([1, 1, 1])
+            cluster[ti].setCoordinates(x0)
+            if new_species is not None:
+                # revert the species of the translated atom
+                cluster[ti].setSpecies(oldspecies)
         
-        if noisy:
-            print("done.")
+            if noisy:
+                print("done.")
             
     return heights
                                                         
@@ -398,20 +465,29 @@ def extract_barriers_even(basename, npoints, program='gulp'):
     
     for site in site_info:
         i = int(site[0])
-        sitename = '{}.{}'.format(basename, i)
-        energy = read_migration_barrier(sitename, npoints, program)
         
-        # record migration energies
-        outstream = open('disp.{}.barrier.dat'.format(sitename), 'w')
-        for j, E in enumerate(energy):
-            outstream.write('{} {:.6f}\n'.format(j, E))
-        outstream.close()
+        # extract a list of all sites whose occupants have been migrated to 
+        # site <i>
+        gout_files = glob.glob('disp.*.{}.{}.*.gout'.format(basename, i))
+        mig_indices = set()
+        for outfl in gout_files:
+            # match the second index
+            ti = int(re.search(r'.+\.(?P<j>\d+)\.gout', outfl).group('j'))
+            mig_indices.add(ti)
         
-        # calculate the difference between the minimum and maximum energies along
-        # the path. Note: NOT the same as the difference between the maximum 
-        # energy and the energy of the undisplaced defect (because of site hopping)
-        heights.append([int(site[0]), site[1], site[2], energy.max(), 
-                                          energy.max()-energy.min()])
+        # extract barrier for each pair of indices
+        for j in mig_indices:    
+            sitename = '{}.{}.{}'.format(basename, i, j)
+            energy = read_migration_barrier(sitename, npoints, program)
+        
+            # record migration energies
+            outstream = open('disp.{}.barrier.dat'.format(sitename), 'w')
+            for k, E in enumerate(energy):
+                outstream.write('{} {:.6f}\n'.format(k, E))
+            outstream.close()
+        
+            # record barrier height and maximum
+            heights.append([i, j, site[1], site[2], energy.max(), get_barrier(energy)])
             
     return heights     
     
@@ -422,10 +498,10 @@ def write_heights(basename, heights):
     '''
     
     outstream = open('{}.barrier.dat'.format(basename), 'w')
-    outstream.write('# site-index x y path-maximum barrier-height\n')
+    outstream.write('# site-index atom-index x y path-maximum barrier-height\n')
     for site in heights:
-        outstream.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(site[0], site[1],
-                                                        site[2], site[3], site[4]))   
+        outstream.write('{} {} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(site[0], site[1], 
+                                                  site[2], site[3], site[4], site[5]))   
     outstream.close() 
                                                         
 def read_heights(basename, heights):
@@ -443,4 +519,36 @@ def read_heights(basename, heights):
             site_line = line.rstrip().split()
             site_info.append([float(x) for x in site_line])
             
-    return np.array(site_info)   
+    return np.array(site_info)  
+    
+def plot_barriers(heights, plotname, r):
+    '''Plots the lowest energy migration path for each site around the 
+    dislocation core. 
+    ''' 
+    
+    heights = np.array(heights)
+    
+    # extract barrier heights for each site
+    siteinfo = dict()
+    for h in heights:
+        i = int(h[0])
+        if i in siteinfo.keys():
+            if h[-1] < siteinfo[i]['E']:
+                siteinfo[i]['E'] = h[-1]
+                siteinfo[i]['x'] = h[2:4]
+        else:
+            siteinfo[i] = dict()
+            siteinfo[i]['E'] = h[-1]
+            siteinfo[i]['x'] = h[2:4]
+
+    # construct positions and energies           
+    sites = []
+    barriers = []
+    for k in siteinfo:
+        sites.append([k, siteinfo[k]['x'][0], siteinfo[k]['x'][1]])
+        barriers.append(siteinfo[k]['E'])
+    sites = np.array(sites)
+    barriers = np.array(barriers)
+    
+    # make plot
+    seg.plot_energies_contour(sites, barriers, plotname, r)

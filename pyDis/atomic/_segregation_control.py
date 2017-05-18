@@ -432,19 +432,21 @@ class SegregationSim(object):
                                    
         # read in energies output by non-adaptive calculations
         try:
-            if not self.migration('adaptive'):
+            if not self.migration('adaptive') and not heights:
                 heights = mig.extract_barriers_even(basename, npar)  
         except IOError:
             return
             
-        # write barier heights to file
+        # write barrier heights to file
         mig.write_heights(basename, heights)  
         
         if self.migration('plot_migration'):  
-            heights = np.array(heights)      
-            seg.plot_energies_contour(heights[:, :3], heights[:, -1],
-                      'barrier.{}'.format(self.analysis('plot_name')), 
-                                             self.control('region_r'))
+            mig.plot_barriers(heights, 'barrier.{}'.format(self.analysis('plot_name')),
+                                                self.control('region_r'))
+            #heights = np.array(heights)      
+            #seg.plot_energies_contour(heights[:, :3], heights[:, -1],
+            #          'barrier.{}'.format(self.analysis('plot_name')), 
+            #                                 self.control('region_r'))
                                                                                                    
 def main(filename):
     new_simulation = SegregationSim(filename)
