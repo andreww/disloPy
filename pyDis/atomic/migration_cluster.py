@@ -287,6 +287,7 @@ def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename,
     x = cluster[index].getCoordinates()
     grid = []
     energies = []
+
     for i in range(npoints):
         # calculate new position of atom
         new_z = i/(npoints-1)*dz
@@ -364,18 +365,24 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             print("Calculating migration barrier at site {}...".format(int(site[0])), end='')
    
         cluster, sysinfo = gulp.cluster_from_grs('{}.grs'.format(sitename), rI, rII)
+        
+        # height of simulation cell
+        H = cluster.getHeight()
                                                 
         # find atom to translate                                       
         possible_sites = adjacent_sites(site, cluster, atom_type, threshold=threshold)
         translate_index = atom_to_translate(site, possible_sites, cluster)
-
+        
         for ti in translate_index:       
             x0 = cluster[ti].getCoordinates()
-            
+
             # calculate translation distance
             z0 = x0[-1]
             z1 = site[3]
-            dz = z1-z0
+            if z1 > z0:
+                dz = z1-z0
+            else:
+                dz = z1+(H-z0)
 
             # calculate the required change of axial position, r
             r0 = x0[:-1]
@@ -431,7 +438,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             # undo any changes to atom <ti>
             cluster[ti].set_constraints([1, 1, 1])
             cluster[ti].setCoordinates(x0)
-            if new_species is not None:
+            if newspecies is not None:
                 # revert the species of the translated atom
                 cluster[ti].setSpecies(oldspecies)
         
