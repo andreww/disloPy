@@ -13,6 +13,7 @@ sys.path.append(os.environ['PYDISPATH'])
 from pyDis.atomic.multisite import periodic_distance
 from pyDis.atomic import gulpUtils as gulp
 from pyDis.atomic import atomistic_utils as util
+from pyDis.atomic import segregation as seg
 
 def read_sites(sitefile):
     '''Reads in a list of vacancy sites.
@@ -521,7 +522,7 @@ def read_heights(basename, heights):
             
     return np.array(site_info)  
     
-def plot_barriers(heights, plotname, r):
+def plot_barriers(heights, plotname, r, mirror_both=False, mirror=False, axis=1):
     '''Plots the lowest energy migration path for each site around the 
     dislocation core. 
     ''' 
@@ -547,6 +548,18 @@ def plot_barriers(heights, plotname, r):
     for k in siteinfo:
         sites.append([k, siteinfo[k]['x'][0], siteinfo[k]['x'][1]])
         barriers.append(siteinfo[k]['E'])
+        
+        # reflect the site, if required
+        if (mirror and axis == 0) or mirror_both:
+            sites.append([k, siteinfo[k]['x'][0], -siteinfo[k]['x'][1]]) 
+            barriers.append(siteinfo[k]['E'])
+        if (mirror and axis == 1) or mirror_both:
+            sites.append([k, -siteinfo[k]['x'][0], siteinfo[k]['x'][1]]) 
+            barriers.append(siteinfo[k]['E'])
+        if mirror_both:
+            sites.append([k, -siteinfo[k]['x'][0], -siteinfo[k]['x'][1]])
+            barriers.append(siteinfo[k]['E'])
+        
     sites = np.array(sites)
     barriers = np.array(barriers)
     

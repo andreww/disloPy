@@ -414,6 +414,7 @@ class SegregationSim(object):
         else:
             newspecies = None
         
+        heights= []
         if not self.migration('no_setup'):    
             heights = mig.migrate_sites(basename, 
                                         self.control('n'), 
@@ -442,11 +443,8 @@ class SegregationSim(object):
         
         if self.migration('plot_migration'):  
             mig.plot_barriers(heights, 'barrier.{}'.format(self.analysis('plot_name')),
-                                                self.control('region_r'))
-            #heights = np.array(heights)      
-            #seg.plot_energies_contour(heights[:, :3], heights[:, -1],
-            #          'barrier.{}'.format(self.analysis('plot_name')), 
-            #                                 self.control('region_r'))
+                    self.control('region_r'), mirror_both=self.analysis('mirror_both'),
+                              mirror=self.analysis('mirror'), axis=self.analysis('axis'))
                                                                                                    
 def main(filename):
     new_simulation = SegregationSim(filename)
