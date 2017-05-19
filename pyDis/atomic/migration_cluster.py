@@ -174,8 +174,8 @@ def scale_plane_shift(plane_shift, x, xmax, node=0.5):
     return scale*plane_shift
     
 def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename, 
-                                    executable, rI_centre=np.zeros(2),
-                                    plane_shift=np.zeros(2), node=0.5):
+                       executable, rI_centre=np.zeros(2), dx=np.zeros(2),
+                                       plane_shift=np.zeros(2), node=0.5):
     '''Constructs input files for points along the atom migration path, with
     the points determined by a binary search algorithm. May fail for complex
     paths (eg. those with multiple local maxima).
@@ -362,7 +362,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
         sitename = '{}.{}'.format(basename, int(site[0]))
         
         if noisy:
-            print("Calculating migration barrier at site {}...".format(int(site[0])), end='')
+            print("Calculating migration barrier for site {}...".format(int(site[0])), end='')
    
         cluster, sysinfo = gulp.cluster_from_grs('{}.grs'.format(sitename), rI, rII)
         
@@ -374,6 +374,9 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
         translate_index = atom_to_translate(site, possible_sites, cluster)
         
         for ti in translate_index:       
+            if noisy:
+                print('...from site {}...'.format(ti), end='')
+                
             x0 = cluster[ti].getCoordinates()
 
             # calculate translation distance
@@ -429,6 +432,13 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             # write energies to file, if they have been calculated
             if gridded_energies:
                 outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')
+                
+                # write header, including full displacement vector and barrier 
+                # height
+                outstream.write('# {:.3f} {:.3f} {:.3f} {:.3f}\n'.format(dr[0],
+                                                                dr[1], dz, Eh))
+                
+                # write energies along path
                 for z, E in gridded_energies:
                     outstream.write('{} {:.6f}\n'.format(z, E))
                 outstream.close()
@@ -444,6 +454,9 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
         
             if noisy:
                 print("done.")
+                
+        if noisy:
+            print('done.')
             
     return heights
                                                         
