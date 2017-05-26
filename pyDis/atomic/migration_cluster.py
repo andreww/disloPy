@@ -415,7 +415,8 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
                                                                   executable=executable,
                                                                   plane_shift=plane_shift, 
                                                                   node=node,
-                                                                  dx=dr)
+                                                                  dx=dr
+                                                                 )
             else:
                 gridded_energies, Emax, Eh = adaptive_construct(ti, 
                                                                 cluster, 
@@ -427,7 +428,8 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
                                                                 executable=executable, 
                                                                 plane_shift=plane_shift, 
                                                                 node=node,
-                                                                dx=dr)
+                                                                dx=dr
+                                                               )
                                         
             # write energies to file, if they have been calculated
             if gridded_energies:
@@ -542,7 +544,8 @@ def read_heights(basename, heights):
             
     return np.array(site_info)  
     
-def plot_barriers(heights, plotname, r, mirror_both=False, mirror=False, axis=1):
+def plot_barriers(heights, plotname, r, mirror_both=False, mirror=False, mirror_axis=1,
+                                                                     inversion=False):
     '''Plots the lowest energy migration path for each site around the 
     dislocation core. 
     ''' 
@@ -570,13 +573,18 @@ def plot_barriers(heights, plotname, r, mirror_both=False, mirror=False, axis=1)
         barriers.append(siteinfo[k]['E'])
         
         # reflect the site, if required
-        if (mirror and axis == 0) or mirror_both:
+        if (mirror and mirror_axis == 0) or mirror_both:
             sites.append([k, siteinfo[k]['x'][0], -siteinfo[k]['x'][1]]) 
             barriers.append(siteinfo[k]['E'])
-        if (mirror and axis == 1) or mirror_both:
+        if (mirror and mirror_axis == 1) or mirror_both:
             sites.append([k, -siteinfo[k]['x'][0], siteinfo[k]['x'][1]]) 
             barriers.append(siteinfo[k]['E'])
         if mirror_both:
+            sites.append([k, -siteinfo[k]['x'][0], -siteinfo[k]['x'][1]])
+            barriers.append(siteinfo[k]['E'])
+            
+        # invert site, if requested
+        if inversion:
             sites.append([k, -siteinfo[k]['x'][0], -siteinfo[k]['x'][1]])
             barriers.append(siteinfo[k]['E'])
         

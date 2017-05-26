@@ -149,6 +149,34 @@ def reflect_atoms(site_info, e_excess, e_seg, axis, tol=1.):
     
     return np.array(sites_full), e_excess_full, e_seg_full
     
+def invert_atoms(site_info, e_excess, e_seg):
+    '''Inverts atoms through the origin.
+    '''
+    
+    # lists to hold infor for full region
+    sites_full = []
+    e_excess_full = []
+    e_seg_full = []
+    
+    for site_i, Ei, dEi in zip(site_info, e_excess, e_seg):
+        # add base atom to full region
+        sites_full.append(site_i)
+        e_excess_full.append(Ei)
+        e_seg_full.append(dEi)
+        
+        # get new coords
+        x = site_i[1:3]
+        new_x = [-x[0], -x[1]]
+        
+        phi_new = np.arctan2(new_x[1], new_x[0])
+        new_site = [site_i[0], new_x[0], new_x[1], site_i[3], phi_new]
+        
+        sites_full.append(new_site)
+        e_excess_full.append(Ei)
+        e_seg_full.append(dEi)
+        
+    return np.array(sites_full), e_excess_full, e_seg_full
+    
 def write_energies(outname, site_info, e_excess, e_seg, pars=None):
     '''Writes the excess and segregation energies for defects at each site to
     the specified output file.
@@ -245,9 +273,9 @@ def plot_energies_scatter(sites, e_seg, figname, r, cmtype='coolwarm', units='eV
 
 ### END PLOTTING FUNCTIONS
 
-def analyse_segregation_results(basename, e0, de, n, r, mirror=False, ax=1, 
-                mirror_both=False, plot_scatter=True, plot_contour=True, 
-                                 plotname='', figformat='tif', fit=True):
+def analyse_segregation_results(basename, e0, de, n, r, mirror=False, mirror_axis=1, 
+                              mirror_both=False, inversion=False, plot_scatter=True,  
+                          plot_contour=True, plotname='', figformat='tif', fit=True):
     '''Processes the output files from a segregation energy surface calculation.
     '''
     
@@ -264,6 +292,10 @@ def analyse_segregation_results(basename, e0, de, n, r, mirror=False, ax=1,
     if (mirror and ax == 1) or mirror_both: 
         site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 1)
         
+    # invert atomic coordinates if the dislocation has inversion symmetry
+    if inversion:
+        site_info, e_excess, e_seg = invert_atoms(site_info, e_excess, e_seg)
+    
     # fit segregation energies to obtain homogeneous and inhomogeneous contributions
     if fit:
         par, perr = fit_seg_energy(e_seg, site_info)
@@ -271,7 +303,7 @@ def analyse_segregation_results(basename, e0, de, n, r, mirror=False, ax=1,
                                                         perr[0], par[1], perr[1])
     else:
         fit_str = None 
-    
+
     # write to output file
     outname = '{}.energies.dat'.format(basename)
     write_energies(outname, site_info, e_excess, e_seg, pars=fit_str)

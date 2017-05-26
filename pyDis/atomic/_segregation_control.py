@@ -151,6 +151,7 @@ def handle_segregation_control(param_dict):
                       ('mirror', {'default': False, 'type': to_bool}),
                       ('axis', {'default': 1, 'type': int}),
                       ('mirror_both', {'default': False, 'type': to_bool}),
+                      ('inversion', {'default': False, 'type': to_bool}),
                       ('plot_scatter', {'default': True, 'type': to_bool}),
                       ('plot_contour', {'default': True, 'type': to_bool}),
                       ('plot_name', {'default': '', 'type': int}),
@@ -213,6 +214,11 @@ class SegregationSim(object):
         else:
             raise ValueError('{} is not a supported atomistic simulation code.'.format(self.control('program')) +
                                                      'Supported codes are: GULP.')
+                                                     
+        # check that the user does not wish to simultaneously invert and mirror
+        # the sites
+        if self.analysis('mirror') and self.analysis('inversion'):
+            raise ValueError('Mirror and inversion symmetry cannot both be True.')
         
         # make cluster
         self.make_cluster()
@@ -380,8 +386,9 @@ class SegregationSim(object):
                                         self.control('n'), 
                                         self.control('region_r'),
                                         mirror=self.analysis('mirror'),
-                                        ax=self.analysis('axis'),
+                                        mirror_axis=self.analysis('axis'),
                                         mirror_both=self.analysis('mirror_both'), 
+                                        inversion=self.analysis('inversion'),
                                         plot_scatter=self.analysis('plot_scatter'),
                                         plot_contour=self.analysis('plot_contour'),
                                         plotname=self.analysis('plot_name'),
@@ -442,9 +449,14 @@ class SegregationSim(object):
         mig.write_heights(basename, heights)  
         
         if self.migration('plot_migration'):  
-            mig.plot_barriers(heights, 'barrier.{}'.format(self.analysis('plot_name')),
-                    self.control('region_r'), mirror_both=self.analysis('mirror_both'),
-                              mirror=self.analysis('mirror'), axis=self.analysis('axis'))
+            mig.plot_barriers(heights, 
+                              'barrier.{}'.format(self.analysis('plot_name')),
+                              self.control('region_r'), 
+                              mirror_both=self.analysis('mirror_both'),
+                              mirror=self.analysis('mirror'), 
+                              mirror_axis=self.analysis('axis'),
+                              inversion=self.analysis('inversion')
+                             )
                                                                                                    
 def main(filename):
     new_simulation = SegregationSim(filename)
@@ -453,4 +465,5 @@ if __name__ == "__main__":
     try:
         main(sys.argv[1])
     except IndexError:
-        main(raw_input('Enter name of control file: '))
+        pass
+        #main(raw_input('Enter name of control file: '))
