@@ -287,9 +287,9 @@ def analyse_segregation_results(basename, e0, de, n, r, mirror=False, mirror_axi
     
     # reflect atoms about specified axis. Do so twice if atoms are to be reflected
     # about both x and y
-    if (mirror and ax == 0) or mirror_both:
+    if (mirror and mirror_axis == 0) or mirror_both:
         site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 0)
-    if (mirror and ax == 1) or mirror_both: 
+    if (mirror and mirror_axis == 1) or mirror_both: 
         site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 1)
         
     # invert atomic coordinates if the dislocation has inversion symmetry

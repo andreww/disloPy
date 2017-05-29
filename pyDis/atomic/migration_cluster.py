@@ -87,6 +87,8 @@ def atom_to_translate(dfct_site, possible_sites, cluster, tol=5e-1, toldist=1e-1
         return candidates
     elif len(candidates) == 0:
         # no candidates, this is a problem
+        print(dfct_site)
+        print(possible_sites)
         raise ValueError("Number of sites should be >= 1.")
     else:
         H = cluster.getHeight()
