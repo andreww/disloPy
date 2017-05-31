@@ -587,7 +587,7 @@ def parse_gulp(filename, crystalStruc, path='./'):
             # reformat cell vectors
             cellVectors = cry.cellToCart(cellParameters)
             for j in range(3):
-                crystalStruc.setVector(cellVectors[j], j)
+                crystalStruc.setVector(cellVectors.getVector(j), j)
         elif line.strip() in 'pcell':
             # reading in a 1D-periodic cluster -> record the cell height
             cell_height = float(gulp_lines[i+1].strip().split()[0])
@@ -675,21 +675,6 @@ def extractAtom(atomRegex, atomsDict, frac=False, pfrac=False):
             atomsDict[atomicSymbol]['atoms'].append(newAtom)
 
     return
-
-def cellToCart(parameters):
-    '''Converts 6 cell parameters to lattice vectors.
-    For the moment, assume that we are working with a cell
-    whose lattice vectors are orthogonal. ### NEED TO GENERALIZE THIS###.
-    '''
-
-    # extract the unit cell parameters
-    [a, b, c, alp, bet, gam] = parameters
-
-    x1 = a*cry.e(1)
-    x2 = b*cry.e(2)
-    x3 = c*cry.e(3)
-
-    return cry.Lattice(x1, x2, x3)
 
 def writeRegion(region_basis, lattice, outstream, regionNumber, disloc,
                    use_cart=True, coordType='cartesian', add_constraints=False):

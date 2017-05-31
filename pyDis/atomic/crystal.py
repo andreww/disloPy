@@ -28,12 +28,29 @@ def cartToFrac(cartCoords, cellVectors):
     '''Converts cartesian coordinates to atomic coordinates. 
     Generalise later.
     '''
+    
     newCoords = np.zeros(3)
     for i in range(3):
         numer = np.dot(cartCoords, cellVectors[i])
         denom = np.dot(cellVectors[i], cellVectors[i])
         newCoords[i] = numer/denom
-    return newCoords
+        
+    return newCoords 
+
+def cellToCart(parameters):
+    '''Converts 6 cell parameters to lattice vectors.
+    For the moment, assume that we are working with a cell
+    whose lattice vectors are orthogonal. ### NEED TO GENERALIZE THIS###.
+    '''
+
+    # extract the unit cell parameters
+    [a, b, c, alp, bet, gam] = parameters
+
+    x1 = a*ei(1)
+    x2 = b*ei(2)
+    x3 = c*ei(3)
+
+    return Lattice(x1, x2, x3)
     
 def cell2cart(a, b, c, alpha, beta, gamma):
     '''Converts list of six cell parameters (a,b,c,alpha,beta,gamma)

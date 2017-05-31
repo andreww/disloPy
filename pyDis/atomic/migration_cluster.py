@@ -87,8 +87,6 @@ def atom_to_translate(dfct_site, possible_sites, cluster, tol=5e-1, toldist=1e-1
         return candidates
     elif len(candidates) == 0:
         # no candidates, this is a problem
-        print(dfct_site)
-        print(possible_sites)
         raise ValueError("Number of sites should be >= 1.")
     else:
         H = cluster.getHeight()
@@ -595,3 +593,57 @@ def plot_barriers(heights, plotname, r, mirror_both=False, mirror=False, mirror_
     
     # make plot
     seg.plot_energies_contour(sites, barriers, plotname, r)
+    
+### ROUTINES FOR MIGRATION IN THE BULK ###
+
+def adjacent_sites_3d(x0, simcell, species, direction=np.array([1., 0., 0.]),
+                                                                 dottol=1e-3):
+    '''Generates a list of atomic sites in a 3D-periodic lattice
+    that are along <direction>, originating at the <dfct_site>.
+    '''
+
+    x0 = np.array(x0)
+
+    # unit vector along <direction>
+    unit_dir = direction/np.linalg.norm(direction)
+
+    # find sites
+    adjacent_indices = []
+    for j, atom in enumerate(simcell):
+        if not(species.lower() == atom.getSpecies().lower()):
+            continue
+        #else
+        # calculate unit vector in the direction from the defect <site> to 
+        # the <atom>
+        x = atom.getCoordinates() % 1
+        dx = x0-x
+        
+        if np.linalg.norm(dx) < 1e-6:
+            # atom is on site
+            continue
+            
+        dxn = dx/np.linalg.norm(dx)
+        dp = abs(np.dot(dxn, unit_dir))
+        if abs(dp - 1) < dottol:
+            adjacent_indices.append([j, dx])
+            
+    return adjacent_indices
+
+def mindist3d(possible_sites):
+    '''Finds the atom in <possible_sites> closest to <site>.
+    '''
+    
+    # holds info about closest site
+    minindex = np.nan
+    mindist = np.inf
+    mindx = np.zeros(2)
+    
+    for i, dx in possible_sites:
+        # absolute distance from atom to site
+        delta = np.linalg.norm(dx)
+        if delta < mindist:
+            mindist = delta
+            mindx = dx
+            minindex = i
+            
+    return minindex, mindx
