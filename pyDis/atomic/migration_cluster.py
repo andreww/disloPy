@@ -331,7 +331,7 @@ def get_barrier(energy_values):
     
     # calculate maximum barrier starting at initial site
     eb = energy_values.max()-energy_values[0]
-    if energy_values.min() - energy_values[0] < 1e-6:  
+    if energy_values.min() > energy_values[0] - 1e-6:  
         # if initial energy is lowest energy, this is the barrier height
         return eb
     
