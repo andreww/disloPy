@@ -149,7 +149,7 @@ def reflect_atoms(site_info, e_excess, e_seg, axis, tol=1.):
     
     return np.array(sites_full), e_excess_full, e_seg_full
     
-def invert_atoms(site_info, e_excess, e_seg):
+def invert_atoms(site_info, e_excess, e_seg, tolerance=1.0):
     '''Inverts atoms through the origin.
     '''
     
@@ -164,8 +164,12 @@ def invert_atoms(site_info, e_excess, e_seg):
         e_excess_full.append(Ei)
         e_seg_full.append(dEi)
         
-        # get new coords
         x = site_i[1:3]
+        # check that the atom is not at or near the origin
+        if np.sqrt(x[0]**2+x[1]**2) < tolerance:
+            continue        
+        
+        #get new coords
         new_x = [-x[0], -x[1]]
         
         phi_new = np.arctan2(new_x[1], new_x[0])
@@ -275,7 +279,8 @@ def plot_energies_scatter(sites, e_seg, figname, r, cmtype='coolwarm', units='eV
 
 def analyse_segregation_results(basename, e0, de, n, r, mirror=False, mirror_axis=1, 
                               mirror_both=False, inversion=False, plot_scatter=True,  
-                          plot_contour=True, plotname='', figformat='tif', fit=True):
+                          plot_contour=True, plotname='', figformat='tif', fit=True,
+                                                                    tolerance=1.0):
     '''Processes the output files from a segregation energy surface calculation.
     '''
     
@@ -288,13 +293,16 @@ def analyse_segregation_results(basename, e0, de, n, r, mirror=False, mirror_axi
     # reflect atoms about specified axis. Do so twice if atoms are to be reflected
     # about both x and y
     if (mirror and mirror_axis == 0) or mirror_both:
-        site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 0)
+        site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 0,
+                                                            tolerance=tolerance)
     if (mirror and mirror_axis == 1) or mirror_both: 
-        site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 1)
+        site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 1,
+                                                            tolerance=tolerance)
         
     # invert atomic coordinates if the dislocation has inversion symmetry
     if inversion:
-        site_info, e_excess, e_seg = invert_atoms(site_info, e_excess, e_seg)
+        site_info, e_excess, e_seg = invert_atoms(site_info, e_excess, e_seg,
+                                                          tolerance=tolerance)
     
     # fit segregation energies to obtain homogeneous and inhomogeneous contributions
     if fit:

@@ -545,7 +545,7 @@ def read_heights(basename, heights):
     return np.array(site_info)  
     
 def plot_barriers(heights, plotname, r, mirror_both=False, mirror=False, mirror_axis=1,
-                                                                     inversion=False):
+                                                         inversion=False, tolerance=1.):
     '''Plots the lowest energy migration path for each site around the 
     dislocation core. 
     ''' 
@@ -571,6 +571,15 @@ def plot_barriers(heights, plotname, r, mirror_both=False, mirror=False, mirror_
     for k in siteinfo:
         sites.append([k, siteinfo[k]['x'][0], siteinfo[k]['x'][1]])
         barriers.append(siteinfo[k]['E'])
+                
+        if mirror:
+            # check to make sure that the site does not lie on the mirror axis
+            if abs(siteinfo[k]['x'][(mirror_axis+1) % 2]) < tolerance:
+                continue
+        elif inversion:
+            # check that the atom is not at the origin
+            if np.sqrt(siteinfo[k]['x'][0]**2+siteinfo[k]['x'][1]**2) < tolerance:
+                continue
         
         # reflect the site, if required
         if (mirror and mirror_axis == 0) or mirror_both:

@@ -156,7 +156,8 @@ def handle_segregation_control(param_dict):
                       ('plot_contour', {'default': True, 'type': to_bool}),
                       ('plot_name', {'default': '', 'type': int}),
                       ('figformat', {'default': 'tif', 'type': str}),
-                      ('do_fit', {'default': True, 'type': to_bool})
+                      ('do_fit', {'default': True, 'type': to_bool}),
+                      ('tolerance', {'default': 1.0, 'type': float})
                      )
                         
     # read in specific namelists
@@ -393,7 +394,8 @@ class SegregationSim(object):
                                         plot_contour=self.analysis('plot_contour'),
                                         plotname=self.analysis('plot_name'),
                                         figformat=self.analysis('figformat'),
-                                        fit=self.analysis('do_fit')
+                                        fit=self.analysis('do_fit'),
+                                        tolerance=self.analysis('tolerance')
                                        )
                                        
     def migration_barriers(self):
@@ -455,7 +457,8 @@ class SegregationSim(object):
                               mirror_both=self.analysis('mirror_both'),
                               mirror=self.analysis('mirror'), 
                               mirror_axis=self.analysis('axis'),
-                              inversion=self.analysis('inversion')
+                              inversion=self.analysis('inversion'),
+                              tolerance=self.analysis('tolerance')
                              )
                                                                                                    
 def main(filename):

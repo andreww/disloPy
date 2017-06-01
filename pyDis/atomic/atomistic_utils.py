@@ -212,7 +212,7 @@ def extract_energy(cellname, program, relax=True, acceptable_gnorm=0.2):
     E = np.nan
     units = ''
     if not matched_energies:
-        print("Warning: No energy block found.")
+        print("Warning: No energy block found for calculation {}.".format(cellname))
     else:
         # check that structure is, in fact, relaxed
         if program.lower() == 'gulp':
