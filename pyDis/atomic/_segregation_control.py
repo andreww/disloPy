@@ -401,7 +401,7 @@ class SegregationSim(object):
     def migration_barriers(self):
         '''Calculates migration barriers for pipe diffusion at each defect site.
         '''
-
+        
         # basename to use
         basename = '{}.{}'.format(self.control('label'), self.control('site'))
         
@@ -443,10 +443,10 @@ class SegregationSim(object):
         # read in energies output by non-adaptive calculations
         try:
             if not self.migration('adaptive') and not heights:
-                heights = mig.extract_barriers_even(basename, npar)  
+                heights = mig.extract_barriers_even(basename, npar)
         except IOError:
             return
-            
+   
         # write barrier heights to file
         mig.write_heights(basename, heights)  
         

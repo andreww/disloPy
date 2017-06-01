@@ -272,11 +272,10 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
             
     # shift energy so that undisplaced vacancy is as 0 eV
     energies = np.array(energies)
-    energies -= energies[0]
-    Emax = energies.max()
+    energies -= energies.min()
     barrier_height = get_barrier(energies)
             
-    return [[z, E] for z, E in zip(grid, energies)], Emax, barrier_height
+    return [[z, E] for z, E in zip(grid, energies)], barrier_height
         
 def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename, 
                        rI_centre=np.zeros(2), executable=None, node=0.5,
@@ -315,30 +314,20 @@ def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename,
     # the undisplaced atom) and the barrier height
     if grid:
         energies = np.array(energies)
-        energies -= energies[0]
-        Emax = energies.max()
+        energies -= energies.min()
         barrier_height = get_barrier(energies)
         
-        return [[z, E] for z, E in zip(grid, energies)], Emax, barrier_height
+        return [[z, E] for z, E in zip(grid, energies)], barrier_height
     else:
         # energies not calculated, return dummy values
-        return [], np.nan, np.nan    
+        return [], np.nan    
 
 def get_barrier(energy_values):
     '''Calculates the maximum energy barrier that has to be surmounted getting
     between sites.
     '''
     
-    # calculate maximum barrier starting at initial site
-    eb = energy_values.max()-energy_values[0]
-    if energy_values.min() > energy_values[0] - 1e-6:  
-        # if initial energy is lowest energy, this is the barrier height
-        return eb
-    
-    for i, E1 in enumerate(energy_values[1:-1]):
-        dEmax = energy_values[i+1:].max()-E1
-        if dEmax > eb:
-            eb = dEmax
+    eb = energy_values.max()-energy_values.min()
     
     return eb    
 
@@ -405,35 +394,35 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             # the index of the defect and the atom being translated
             sitepairname = '{}.{}'.format(sitename, ti)
             if not adaptive:
-                gridded_energies, Emax, Eh = construct_disp_files(ti, 
-                                                                  cluster, 
-                                                                  sysinfo, 
-                                                                  dz, 
-                                                                  npoints, 
-                                                                  sitepairname,
-                                                                  rI_centre=site[1:3], 
-                                                                  executable=executable,
-                                                                  plane_shift=plane_shift, 
-                                                                  node=node,
-                                                                  dx=dr
-                                                                 )
+                gridded_energies, Eh = construct_disp_files(ti, 
+                                                            cluster, 
+                                                            sysinfo, 
+                                                            dz, 
+                                                            npoints, 
+                                                            sitepairname,
+                                                            rI_centre=site[1:3], 
+                                                            executable=executable,
+                                                            plane_shift=plane_shift, 
+                                                            node=node,
+                                                            dx=dr
+                                                           )
             else:
-                gridded_energies, Emax, Eh = adaptive_construct(ti, 
-                                                                cluster, 
-                                                                sysinfo, 
-                                                                dz, 
-                                                                npoints, 
-                                                                sitepairname, 
-                                                                rI_centre=site[1:3],
-                                                                executable=executable, 
-                                                                plane_shift=plane_shift, 
-                                                                node=node,
-                                                                dx=dr
-                                                               )
+                gridded_energies, Eh = adaptive_construct(ti, 
+                                                          cluster, 
+                                                          sysinfo, 
+                                                          dz, 
+                                                          npoints, 
+                                                          sitepairname, 
+                                                          rI_centre=site[1:3],
+                                                          executable=executable, 
+                                                          plane_shift=plane_shift, 
+                                                          node=node,
+                                                          dx=dr
+                                                         )
                                         
             outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
             # write header, including full displacement vector and barrier height 
-            outstream.write('# {:.3f} {:.3f} {:.3f} {:.3f}\n'.format(dr[0], dr[1], dz, Eh))
+            outstream.write('# {:.3f} {:.3f} {:.3f}\n'.format(dr[0], dr[1], dz))
            
             # write energies to file if they have been calculated
             if gridded_energies:     
@@ -441,7 +430,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
                 for z, E in gridded_energies:
                     outstream.write('{} {:.6f}\n'.format(z, E))
                 
-                heights.append([int(site[0]), ti, site[1], site[2], Emax, Eh])
+                heights.append([int(site[0]), ti, site[1], site[2], Eh])
             
             outstream.close()
                 
@@ -459,6 +448,17 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             print('done.')
             
     return heights
+    
+def reorder_path(energy_path):
+    '''Changes the zero index of <energypath> so that it starts with the lowest
+    energy point.
+    '''
+    
+    # get index of lowest energy point
+    imin = np.where(energy_path == energy_path.min())[0][0]
+    
+    shifted_path = np.array(list(energy_path[imin:])+list(energy_path[:imin]))
+    return shifted_path
                                                         
 def read_migration_barrier(sitename, npoints, program='gulp'):
     '''Extracts the energies for points along the migration path of an individual
@@ -472,8 +472,10 @@ def read_migration_barrier(sitename, npoints, program='gulp'):
                                                                           
     # shift energies so that the undisplaced defect is at 0 eV
     energies = np.array(energies)
-    energies -= energies[0] 
+    energies -= energies.min()
     
+    # reorder barrier so that the index of the minimum energy point is 0
+    #energies = reorder_path(energies)
     return energies
     
 def extract_barriers_even(basename, npoints, program='gulp'):
@@ -495,26 +497,28 @@ def extract_barriers_even(basename, npoints, program='gulp'):
             # match the second index
             ti = int(re.search(r'.+\.(?P<j>\d+)\.gout', outfl).group('j'))
             mig_indices.add(ti)
-        
+
         # extract barrier for each pair of indices
         for j in mig_indices:    
             sitename = '{}.{}.{}'.format(basename, i, j)
             energy = read_migration_barrier(sitename, npoints, program)
-        
+
             # extract migration distance
             barrier_info = open('disp.{}.barrier.dat'.format(sitename), 'r')
-            dx = float(barrier_info.readlines()[0].split()[3]) 
-            barrier_info.close()          
-            
+            header = barrier_info.readlines()[0].rstrip()
+            dx = float(header.split()[3])   
+            barrier_info.close() 
+               
             # record migration energies
             outstream = open('disp.{}.barrier.dat'.format(sitename), 'w')
+            outstream.write(header+'\n')
             npoints = len(energy)
             for k, E in enumerate(energy):
                 outstream.write('{:.3f} {:.6f}\n'.format(k*dx/npoints, E))
             outstream.close()
-        
+            
             # record barrier height and maximum
-            heights.append([i, j, site[1], site[2], energy.max(), get_barrier(energy)])
+            heights.append([i, j, site[1], site[2], get_barrier(energy)])
             
     return heights     
     
@@ -525,10 +529,10 @@ def write_heights(basename, heights):
     '''
     
     outstream = open('{}.barrier.dat'.format(basename), 'w')
-    outstream.write('# site-index atom-index x y path-maximum barrier-height\n')
+    outstream.write('# site-index atom-index x y barrier-height\n')
     for site in heights:
-        outstream.write('{} {} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(site[0], site[1], 
-                                                  site[2], site[3], site[4], site[5]))   
+        outstream.write('{} {} {:.6f} {:.6f} {:.6f}\n'.format(site[0], site[1], 
+                                                     site[2], site[3], site[4]))   
     outstream.close() 
                                                         
 def read_heights(basename, heights):
