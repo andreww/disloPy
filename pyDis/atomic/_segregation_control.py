@@ -469,4 +469,3 @@ if __name__ == "__main__":
         main(sys.argv[1])
     except IndexError:
         pass
-        #main(raw_input('Enter name of control file: '))

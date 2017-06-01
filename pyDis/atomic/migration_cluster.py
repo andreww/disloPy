@@ -431,21 +431,19 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
                                                                 dx=dr
                                                                )
                                         
-            # write energies to file, if they have been calculated
-            if gridded_energies:
-                outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')
-                
-                # write header, including full displacement vector and barrier 
-                # height
-                outstream.write('# {:.3f} {:.3f} {:.3f} {:.3f}\n'.format(dr[0],
-                                                                dr[1], dz, Eh))
-                
+            outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
+            # write header, including full displacement vector and barrier height 
+            outstream.write('# {:.3f} {:.3f} {:.3f} {:.3f}\n'.format(dr[0], dr[1], dz, Eh))
+           
+            # write energies to file if they have been calculated
+            if gridded_energies:     
                 # write energies along path
                 for z, E in gridded_energies:
                     outstream.write('{} {:.6f}\n'.format(z, E))
-                outstream.close()
                 
                 heights.append([int(site[0]), ti, site[1], site[2], Emax, Eh])
+            
+            outstream.close()
                 
             # undo any changes to atom <ti>
             cluster[ti].set_constraints([1, 1, 1])
@@ -503,10 +501,16 @@ def extract_barriers_even(basename, npoints, program='gulp'):
             sitename = '{}.{}.{}'.format(basename, i, j)
             energy = read_migration_barrier(sitename, npoints, program)
         
+            # extract migration distance
+            barrier_info = open('disp.{}.barrier.dat'.format(sitename), 'r')
+            dx = float(barrier_info.readlines()[0].split()[3]) 
+            barrier_info.close()          
+            
             # record migration energies
             outstream = open('disp.{}.barrier.dat'.format(sitename), 'w')
+            npoints = len(energy)
             for k, E in enumerate(energy):
-                outstream.write('{} {:.6f}\n'.format(k, E))
+                outstream.write('{:.3f} {:.6f}\n'.format(k*dx/npoints, E))
             outstream.close()
         
             # record barrier height and maximum
