@@ -465,7 +465,7 @@ def main(filename):
     new_simulation = SegregationSim(filename)
 
 if __name__ == "__main__":
-    try:
+    if len(sys.argv) > 1:
         main(sys.argv[1])
-    except IndexError:
-        pass
+    else:
+        main(raw_input("Enter name of control file: "))

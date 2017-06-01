@@ -201,7 +201,7 @@ def write_energies(outname, site_info, e_excess, e_seg, pars=None):
 ### PLOTTING FUNCTIONS
 
 def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=False,
-                                 units='eV', figformat='tif', levels=25, nlabels=5):
+                                 units='eV', figformat='tif', levels=100, nlabels=5):
     '''Produces a contour plot of the segregation energy at sites around a 
     dislocation. Use <levels> to control the number of contours.
     '''
@@ -246,7 +246,7 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=Fal
     
     return
     
-def plot_energies_scatter(sites, e_seg, figname, r, cmtype='coolwarm', units='eV',
+def plot_energies_scatter(sites, e_seg, figname, r, cmtype='viridis', units='eV',
                                                              figformat='tif'):
     '''Produces a scatterplot showing all of the sites for which segregation 
     energies were calculated, with each point coloured according to the 
@@ -258,7 +258,7 @@ def plot_energies_scatter(sites, e_seg, figname, r, cmtype='coolwarm', units='eV
 
     fig = plt.figure()
     plt.gca().set_aspect('equal')
-    plt.scatter(x, y, c=e_seg, cmap=plt.get_cmap(cmtype), s=100)
+    plt.scatter(x, y, c=e_seg, cmap=plt.get_cmap(cmtype), s=150, linewidth='2')
         
     plt.xlim(-r-1, r+1)
     plt.ylim(-r-1, r+1)
@@ -294,10 +294,10 @@ def analyse_segregation_results(basename, e0, de, n, r, mirror=False, mirror_axi
     # about both x and y
     if (mirror and mirror_axis == 0) or mirror_both:
         site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 0,
-                                                            tolerance=tolerance)
+                                                                   tol=tolerance)
     if (mirror and mirror_axis == 1) or mirror_both: 
         site_info, e_excess, e_seg = reflect_atoms(site_info, e_excess, e_seg, 1,
-                                                            tolerance=tolerance)
+                                                                   tol=tolerance)
         
     # invert atomic coordinates if the dislocation has inversion symmetry
     if inversion:

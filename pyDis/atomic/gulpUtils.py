@@ -823,8 +823,6 @@ def cluster_from_grs(filename, rI, rII, new_rI=None, r=None):
         # check that <new_rI> is not ridiculous
         if new_rI >= rII:
             raise ValueError("New region I radius must be less than total radius.")
-        elif new_rI > rI:
-            print("Warning: region I radius greater than that of original cluster.")
     
     # create the cluster    
     height = norm(grs_struc.getC())        

@@ -485,10 +485,10 @@ def extract_barriers_even(basename, npoints, program='gulp'):
     
     site_info = read_sites(basename)
     heights = []
-    
+
     for site in site_info:
         i = int(site[0])
-        
+
         # extract a list of all sites whose occupants have been migrated to 
         # site <i>
         gout_files = glob.glob('disp.*.{}.{}.*.gout'.format(basename, i))

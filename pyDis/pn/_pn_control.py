@@ -894,4 +894,7 @@ def main(filename):
     new_sim = PNSim(filename)
     
 if __name__ == "__main__":
-    main(sys.argv[1])
+    if len(sys.argv) > 1:
+        main(sys.argv[1])
+    else:
+        main(raw_input("Enter name of control file: "))

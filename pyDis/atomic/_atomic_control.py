@@ -712,8 +712,7 @@ def main(filename):
     new_simulation = AtomisticSim(filename)
     
 if __name__ == "__main__":
-    main(sys.argv[1])
-    #try:
-    #    main(sys.argv[1])
-    #except IndexError:
-    #    main(raw_input('Enter name of control file: '))
+    if len(sys.argv) > 1:
+        main(sys.argv[1])
+    else:
+        main(raw_input("Enter name of control file: "))
