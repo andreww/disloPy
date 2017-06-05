@@ -66,6 +66,9 @@ def atom_to_translate(dfct_site, possible_sites, cluster, tol=5e-1, toldist=1e-1
     
     # location of vacancy
     x0 = dfct_site[1:4]
+    z0 = x0[-1]
+    
+    H = cluster.getHeight()
     
     # to hold list of possible candidates for translation
     candidates = []
@@ -73,7 +76,15 @@ def atom_to_translate(dfct_site, possible_sites, cluster, tol=5e-1, toldist=1e-1
     
     # find distance ALONG dislocation line to next site
     for atom_index, dist in possible_sites:
+        # check that either the <atom> or its image is below the vacancy
+        zi = cluster[atom_index].getCoordinates()[-1]
+        if zi > z0:
+            # calculate ratio of distances to base and image atoms
+            if (abs(z0-(zi-H)) / abs(zi-z0)) > 2.:
+                continue
+        # else
         if dist < min_dist:
+            # see if <atom> is closer to the vacancy than any previously seen
             min_dist = dist
             
     # create list of candidate sites to which vacancy might migrate
@@ -89,31 +100,29 @@ def atom_to_translate(dfct_site, possible_sites, cluster, tol=5e-1, toldist=1e-1
         # no candidates, this is a problem
         raise ValueError("Number of sites should be >= 1.")
     else:
-        H = cluster.getHeight()
-        z_site = x0[-1]
         below_site = []
         for i in candidates:
             zi = cluster[i].getCoordinates()[-1]
             
             # distance to candidate in same cell as vacancy
-            base_dist = abs(zi-z_site)
+            base_dist = abs(z0-zi)
             
             # get distance to image of candidate nearest to vacancy
-            if zi < z_site:
+            if zi < z0:
                 # get distance to image above the vacancy
-                image_dist = abs(H+zi-z_site)
+                image_dist = abs(H+zi-z0)
             else:
                 # get distance to image below the vacancy
-                image_dist = abs(z_site+(H-zi))
+                image_dist = abs(z0+(H-zi))
             
             if image_dist > base_dist+toldist:
-                if zi < z_site:
+                if zi < z0:
                     below_site.append(i)
                 else: 
                     pass
             else: 
                 # note, includes cases when image_dist == base_dist
-                if zi > z_site:
+                if zi > z0:
                     below_site.append(i)
                 else:
                     pass
@@ -361,7 +370,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
         # find atom to translate                                       
         possible_sites = adjacent_sites(site, cluster, atom_type, threshold=threshold)
         translate_index = atom_to_translate(site, possible_sites, cluster)
-        
+
         for ti in translate_index:       
             if noisy:
                 print('...from site {}...'.format(ti), end='')
@@ -371,6 +380,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             # calculate translation distance
             z0 = x0[-1]
             z1 = site[3]
+
             if z1 > z0:
                 dz = z1-z0
             else:
