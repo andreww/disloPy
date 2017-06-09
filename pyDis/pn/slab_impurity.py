@@ -56,6 +56,9 @@ def impure_faults(slab_cell, impurity, write_fn, sys_info, resolution,
     
     # create input files for generalised stacking fault calculations
     if dim == 1:
+        if limits == (1, 1):
+            limits = 1
+            
         gsf.gamma_line(slab_cell, line_vec, resolution, write_fn, sys_info, 
                        limits=limits, vacuum=vacuum, basename=basename, suffix=suffix,
                        mkdir=False, relax=relax)

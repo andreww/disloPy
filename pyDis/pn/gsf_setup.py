@@ -120,6 +120,8 @@ def insert_gsf(slab, disp_vec, vacuum=0., eps=1e-6):
     into the provided <slab>. If <vacuum> == 0., the stacking fault is inserted
     at z = 0.5, otherwise, we insert it at 0.5*(z-vacuum)/z (z := slab height). 
     '''
+    
+    height = norm(slab.getC())
 
     # disp_vec may be entered in 2D, but atomic coordinates are 3D
     if len(disp_vec) == 3:
@@ -132,7 +134,10 @@ def insert_gsf(slab, disp_vec, vacuum=0., eps=1e-6):
         raise ValueError("<disp_vec> has invalid (%d) # of dimensions" % len(disp_vec))
 
     # find the middle of the slab of atoms
-    middle = 0.5*(norm(slab.getC()) - vacuum)/norm(slab.getC())
+    middle = 0.5*(height - vacuum)/norm(height)
+    
+    # record whether or not a small perturbation has been applied
+    perturbed = False
 
     for atom in slab.getAtoms():
         if 0. <= atom.getCoordinates()[-1] < middle-eps:
@@ -141,6 +146,10 @@ def insert_gsf(slab, disp_vec, vacuum=0., eps=1e-6):
         else:
             # displace atom
             x0 = atom.getCoordinates()
+            if not perturbed:
+                new_x = (x0+disp_vec+cry.ei(3)*0.01) % 1
+            else:
+                new_x = (x0+disp_vec) % 1
             atom.setDisplacedCoordinates((x0 + disp_vec) % 1)
     
     return 
