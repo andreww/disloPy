@@ -215,23 +215,25 @@ def max_rho(rho, spacing):
     
 ### PLOTTING FUNCTIONS ###
     
-def plot_rho(ax, rho, x, colour='b', width=1., a_val=0.40):
+def plot_rho(ax, rho, x, colour='b', shape='D', width=1., a_val=0.40):
     '''Width should usually be equal to the spacing between atomic planes.
     '''
     
-    rho_disc = ax.plot(x[:-1], rho, '{}D'.format(colour), label=r'$\rho(r)$')
     ax.plot(x[:-1], rho, '{}{}'.format(colour, '-.'))
+    rho_disc = ax.plot(x[:-1], rho, '{}{}'.format(colour, shape), label=r'$\rho(r)$', markersize=7)
+    
     return rho_disc
     
 def plot_u(ax, u, x, colour='r', shape='s', linestyle='-.'):
     '''Plots the disregistry field along x.
     '''
     
-    u_disc = ax.plot(x, u, '{}{}'.format(colour, shape), label='$u(r)$')
     ax.plot(x, u, '{}{}'.format(colour, linestyle))
+    u_disc = ax.plot(x, u, '{}{}'.format(colour, shape), label='$u(r)$', markersize=7)
+    
     return u_disc 
     
-def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True, nplanes=30):
+def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True, nplanes=20):
     '''Plots the disregistry field together with the associated dislocation
     density distribution.
     '''
@@ -254,13 +256,14 @@ def plot_both(u, x, b, spacing, rho_col='b', u_col='r', along_b=True, nplanes=30
     mid_dist = (x[1]-x[0])/2.
     
     rho_disc = plot_rho(ax, rho_vals, x+mid_dist, colour=rho_col, width=spacing)
-    plt.xlim(-1*nplanes*spacing, nplanes*spacing)
+    plt.xlim(-1*nplanes*spacing+mid_dist, nplanes*spacing+mid_dist)
     plt.ylim(0, 1.05)
     plt.tick_params(axis='y', which='both', left='off', right='off',
                                  labelleft='off', labelright='off')
     plt.xlabel('r ($\AA$)', family='serif', size=18)
     plt.tight_layout()
     plt.legend(numpoints=1, loc='upper left', fontsize=18, frameon=False)
+    
     return fig, ax
     
 ### ENERGY TERMS ###

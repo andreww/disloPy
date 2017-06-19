@@ -170,7 +170,7 @@ def handle_pn_control(param_dict):
                      ('plot_both', {'default':False, 'type':to_bool}),
                      ('visualize', {'default':False, 'type':to_bool}),
                      ('record', {'default':True, 'type':to_bool}),
-                     ('nplanes', {'default':30, 'type':int}),
+                     ('nplanes', {'default':20, 'type':int}),
                      ('noisy', {'default': False, 'type': to_bool}),
                    )
 
