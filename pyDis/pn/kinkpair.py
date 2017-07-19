@@ -9,20 +9,31 @@ import scipy.optimize as opt
 from scipy.integrate import quad
 from scipy.interpolate import RectBivariateSpline as rbs
 
-def DPeierls(Vp, h, w):
+def x0(a, b, tau, taup):
+    '''Equilibrium position of a dislocation with Peierls stress <taup>, spacing
+    <a>, and Burgers vector <b>, under an applied stress of <tau>.
+    '''
+    
+    return a/(2*np.pi)*np.arcsin(a/float(b)*tau/taup)
+
+
+def DPeierls(Vp, h, w, a, b, tau, taup):
     '''Calculates the variation in Peierls energy induced by the nucleation of
     a kink-pair of height <h> and width <w>.
     
     <Vp>: a function mapping kink height to Peierls energy
     <h>: kink height (float)
     <w>: kink width (float)
+    <a>: spacing between adjacent Peierls valleys (float)
     '''
     
-    # calculate Peierls energy of the kink segments themselves
-    Ek = 2*quad(Vp, 0, h)[0]
+    # calculate Peierls energy of the kink segments themselves, limiting the 
+    # height of the kink to a, the spacing between adjacent Peierls valleys
+    x0i = x0(a, b, tau, taup)
+    Ek = 2*quad(Vp, x0i, x0i+h)[0]
     
     # calculate energy of dislocation segment
-    Eseg = w*(Vp(h)-Vp(0))
+    Eseg = w*(Vp(x0i+h)-Vp(x0i))
 
     return Ek+Eseg
     
@@ -84,25 +95,25 @@ def work(stress, b, h, w, in_GPa=True):
     
     return stress*b*h*w
     
-def DH_kink_pair(h, w, disl_type, Ke, Ks, b, stress, rho, Vp, in_GPa=True):
+def DH_kink_pair(h, w, disl_type, Ke, Ks, b, a, stress, rho, Vp, taup, in_GPa=True):
     '''Calculates the total enthalpy variation caused by nucleation of a 
     kink-pair, with parameters defined in <DPeierls>, <work>, and <DElastic>.
     '''
     
     DE = DElastic(Ke, Ks, h, w, b, rho, disl_type, in_GPa=in_GPa)
-    DP = DPeierls(Vp, h, w)
+    DP = DPeierls(Vp, h, w, a,b, stress, taup)
     W = work(stress, b, h, w, in_GPa=in_GPa)
 
-    #print(DE, DP, W)
     return DE+DP-W
     
-def DH_kink_pair_mappable(disl_type, Ke, Ks, b, rho, Vp, in_GPa=True):
+def DH_kink_pair_mappable(disl_type, Ke, Ks, b, a, rho, Vp, taup, in_GPa=True):
     '''Produces a function that converts the function <DH_kink_pair> into a 
     function mapping kink-pair height and width to the kink-pair energy for 
     a given applied stress.
     '''
     
-    return lambda h, w, s: DH_kink_pair(h, w, disl_type, Ke, Ks, b, s, rho, Vp, in_GPa=in_GPa)
+    return lambda h, w, s: DH_kink_pair(h, w, disl_type, Ke, Ks, b, a, s, rho, 
+                                                            Vp, taup, in_GPa=in_GPa)
     
 def kocks_form(tau, dh0, p, q, taup): 
     '''Kocks classical formalism for the stress dependence of kink nucleation enthalpies.
@@ -129,9 +140,9 @@ def kocks_fit(stress, enthalpy, taup):
     
     return parameters, error 
 
-def metastable_config(b, xsi, Ke, Ks, taup, disl_type, wpfunc=None, in_GPa=True,
-                 wmin=5, wmax=1000, a=None, tau_frac_min=0.05, tau_frac_max=0.3, 
-                                       ntau=20, nh=100, nw=200, fit_kocks=True):
+def metastable_config(b, a, xsi, Ke, Ks, taup, disl_type, wpfunc=None, wmin=5,
+                      wmax=1000, tau_frac_min=0.05, tau_frac_max=0.3, ntau=20, 
+                                 in_GPa=True,  nh=100, nw=200, fit_kocks=True):
                                                         
     '''Finds the kink-pair geometry (h, w) at which the kink-pair energy is
     at a critical point, ie dH/dw = dH/dh = 0
@@ -145,9 +156,6 @@ def metastable_config(b, xsi, Ke, Ks, taup, disl_type, wpfunc=None, in_GPa=True,
     <tau_frac_max>: largest stress, as fraction of <taup>
     <ntau>; <nh>; <nw>: number of stress, height, and width increments to use
     '''
-        
-    if a is None:
-        a = b
     
     if wpfunc is None:
         # construct a simple sine potential using the Peierls stress and
@@ -160,7 +168,7 @@ def metastable_config(b, xsi, Ke, Ks, taup, disl_type, wpfunc=None, in_GPa=True,
         
     # create kink-pair energy function
     rho = 0.05*xsi # core size
-    kp_func = DH_kink_pair_mappable(disl_type, Ke, Ks, b, rho, wpfunc)
+    kp_func = DH_kink_pair_mappable(disl_type, Ke, Ks, b, a, rho, wpfunc, taup)
     
     # calculate critical shape in specified range of stresses    
     critical_values = []
@@ -186,7 +194,7 @@ def metastable_config(b, xsi, Ke, Ks, taup, disl_type, wpfunc=None, in_GPa=True,
         fci = lambda x: fhi(x)+fwi(x)
         optvals = opt.brute(fci, [[2*wmin, wmax], [0.2*a, a]])
         
-        critical_values.append([s]+list(optvals)+[kp(optvals[1], optvals[0], s)])
+        critical_values.append([s]+list(optvals)+[kp_func(optvals[1], optvals[0], s)])
         
     critical_values = np.array(critical_values)
     
