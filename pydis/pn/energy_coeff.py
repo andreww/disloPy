@@ -10,7 +10,6 @@ from numpy.linalg import norm
 import numpy as np
 import sys
 import os
-sys.path.append(os.environ['PYDISPATH'])
 
 from pydis.atomic import aniso
 from pydis.atomic import crystal as cry
