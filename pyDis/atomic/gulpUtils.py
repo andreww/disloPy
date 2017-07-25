@@ -16,7 +16,7 @@ import subprocess
 from numpy.linalg import norm
 
 from pyDis.atomic import crystal as cry
-from pyDis.atomic import atomistic_utils as util
+from pyDis.utilities import atomistic_utils as util
 from pyDis.atomic import transmutation as mutate
 from pyDis.atomic import rodSetup as rs
 

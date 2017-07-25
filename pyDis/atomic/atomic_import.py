@@ -11,7 +11,7 @@ from pyDis.atomic import crystal as cry
 from pyDis.atomic import rodSetup as rod
 from pyDis.atomic import fields
 from pyDis.atomic import aniso
-from pyDis.atomic import atomistic_utils as atm
+from pyDis.utilities import atomistic_utils as atm
 from pyDis.atomic import cluster_energy as ce
 from pyDis.atomic import multipoles as mp
 from pyDis.pn import energy_coeff as coeff 

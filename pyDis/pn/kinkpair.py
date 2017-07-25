@@ -136,7 +136,8 @@ def kocks_fit(stress, enthalpy, taup):
     
     # give Kocks equation and fit
     kocks = lambda tau, DH0, p, q: kocks_form(tau, DH0, p, q, taup)
-    parameters, error = opt.curve_fit(kocks, stress, enthalpy)
+    initial_guess = [enthalpy[0], 1., 2.]
+    parameters, error = opt.curve_fit(kocks, stress, enthalpy, p0=initial_guess)
     
     return parameters, error 
 
@@ -225,3 +226,28 @@ def strain_rate(rho, b, v):
     '''
     
     return rho*b*v
+    
+def make_rational(exponent):
+    '''Converts the fitted value of <exponent> (either <p> or <q>) to a rational
+    number. This is done because both exponents are assumed to be rational, and
+    there is relatively little sensitivity of the fit to their exact value.
+    '''
+    
+    # construct a table of reasonable values for the exponent
+    e3 = np.arange(0., 16.)/3
+    e4 = np.arange(0., 21.)/4
+    e5 = np.arange(0., 26.)/5
+    
+    e3_unique = np.setdiff1d(e3, e4)
+    e34 = np.append(e3_unique, e4)
+    e5_unique = np.setdiff1d(e5, e34)
+    rationals = np.append(e34, e5_unique)
+    
+    # calculate distance from <exponent> to each rational, and return closest
+    dx = abs(exponent - rationals)
+    best_exponent = rationals[(dx == dx.min())]
+    if type(best_exponent) == float:   
+        return best_exponent
+    else:
+        # take smaller value
+        return best_exponent[0]

@@ -9,7 +9,7 @@ import numpy as np
 import re
 import argparse
 
-from pyDis.atomic import atomistic_utils as atm
+from pyDis.utilities import atomistic_utils as atm
 from pyDis.pn.fit_gsf import gamma_line, gamma_surface3d
                
 def command_line_options():

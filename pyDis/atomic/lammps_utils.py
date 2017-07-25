@@ -14,7 +14,7 @@ sys.path.append(os.environ['PYDISPATH'])
 from numpy.linalg import norm
 
 from pyDis.atomic import crystal as cry
-from pyDis.atomic import atomistic_utils as atm
+from pyDis.utilities import atomistic_utils as atm
 from pyDis.atomic import transmutation as mutate
 
 class LammpsAtom(cry.Atom):

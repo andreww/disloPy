@@ -19,7 +19,7 @@ try:
 except ImportError:
     print("Module <matplotlib> not found. Do not use plotting functions.")
 
-from pyDis.atomic.atomistic_utils import extract_energy, to_bool
+from pyDis.utilities import atomistic_utils as atm
 
 def parse_control(basename):
     '''Parses the control file to extract a list of sites together with their
@@ -59,7 +59,7 @@ def get_energies(basename, site_info, program='gulp', suffix='gout'):
     energies = []    
     for site in site_info:
         simname = '{}.{}.{}'.format(basename, int(site[0]), suffix)
-        E, units = extract_energy(simname, program)
+        E, units = atm.extract_energy(simname, program)
         energies.append(E)
         
     return energies
@@ -345,20 +345,20 @@ def command_line_options():
                          'in the bulk crystal.')
     options.add_argument('-n', type=int, dest='n', help='Height of point-defect ' +
                          'bearing cells, in units of the dislocation line vector length.')
-    options.add_argument('-m', type=to_bool, default='False', dest='mirror',
+    options.add_argument('-m', type=atm.to_bool, default='False', dest='mirror',
                          help='Tells the program to reflect the atoms about an axis')
-    options.add_argument('-mboth', type=to_bool, default='False', dest='mirror_both',
+    options.add_argument('-mboth', type=atm.to_bool, default='False', dest='mirror_both',
                          help='Reflect atoms about the x and y axes.')
     options.add_argument('-ax', type=int, default=1, dest='axis', 
                          help='Axis about which to reflect atoms')
-    options.add_argument('-ps', type=to_bool, default='True', dest='plot_scatter',
+    options.add_argument('-ps', type=atm.to_bool, default='True', dest='plot_scatter',
                          help='Create scatter plot of segregation energies.')
-    options.add_argument('-pc', type=to_bool, default='True', dest='plot_contour', 
+    options.add_argument('-pc', type=atm.to_bool, default='True', dest='plot_contour', 
                          help='Create contour plot of segregation energies')
     options.add_argument('-pn', default='segregation', dest='plotname', help='Name to be '+
                          'used for all figures produced.')
     options.add_argument('-f', default='tif', dest='figformat', help='Image format.')
-    options.add_argument('-fit', type=to_bool, default='True', dest='fit',
+    options.add_argument('-fit', type=atm.to_bool, default='True', dest='fit',
                          help='Fit the form of the calculated segregation energies.')
     options.add_argument('-r', type=float, default=10., dest='r', help='Radius of' +
                                          'region within which to calculate energies')

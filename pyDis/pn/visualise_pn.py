@@ -10,7 +10,7 @@ sys.path.append(os.environ['PYDISPATH'])
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import rodSetup as rs
 from pyDis.atomic import aniso 
-from pyDis.atomic import atomistic_utils as util
+from pyDis.utilities import atomistic_utils as util
 from pyDis.atomic import permute
 from pyDis.atomic.qe_utils import parse_qe
 from pyDis.atomic.castep_utils import parse_castep

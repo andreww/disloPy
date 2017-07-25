@@ -12,7 +12,7 @@ sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic.multisite import periodic_distance
 from pyDis.atomic import gulpUtils as gulp
-from pyDis.atomic import atomistic_utils as util
+from pyDis.utilities import atomistic_utils as util
 from pyDis.atomic import segregation as seg
 
 def read_sites(sitefile):

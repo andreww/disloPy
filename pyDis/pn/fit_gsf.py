@@ -20,7 +20,7 @@ try:
 except ImportError:
     print("Module <matplotlib> not found. Do not use plotting functions.")
 
-from pyDis.atomic import atomistic_utils as atm
+from pyDis.utilities import atomistic_utils as atm
 from pyDis.pn import fourier
 
 def read_numerical_gsf(filename):

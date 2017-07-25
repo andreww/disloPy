@@ -13,7 +13,7 @@ from scipy.optimize import curve_fit
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import gulpUtils as gulp
-from pyDis.atomic import atomistic_utils as atm
+from pyDis.utilities import atomistic_utils as atm
 
 # convert elastic modulus in eV/ang**3 to GPa
 CONV_EV_TO_GPA = 160.2176487 

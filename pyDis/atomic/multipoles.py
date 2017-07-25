@@ -53,7 +53,7 @@ import re
 from scipy.optimize import curve_fit
 from numpy.linalg import norm
 
-from pyDis.atomic import atomistic_utils as atm
+from pyDis.utilities import atomistic_utils as atm
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import gulpUtils as gulp
 from pyDis.atomic import castep_utils as castep

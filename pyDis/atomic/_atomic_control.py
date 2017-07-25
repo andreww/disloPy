@@ -12,8 +12,8 @@ from numpy.linalg import norm
 supported_codes = ('qe', 'gulp', 'castep')
 
 #!!! need to shift the relevant functions to a simulation method-agnostic module  
-from pyDis.pn._pn_control import control_file, from_mapping, change_type, to_bool, \
-                                            change_or_map, print_control   
+from pyDis.utilities.control_functions import control_file, from_mapping, change_type,  \
+                                            to_bool, change_or_map, print_control   
                             
 # import modules required to set up and run a dislocation simulation
 from pyDis.atomic.atomic_import import *

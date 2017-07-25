@@ -11,7 +11,7 @@ import os
 sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
-from pyDis.atomic import atomistic_utils as util
+from pyDis.utilities import atomistic_utils as util
 from pyDis.atomic import transmutation as mutate
 
 namelists= ['&control','&system','&electrons','&ions','&cell']

@@ -14,7 +14,7 @@ from pyDis.atomic import gulpUtils as gulp
 from pyDis.atomic import qe_utils as qe
 from pyDis.atomic import castep_utils as castep
 from pyDis.atomic import crystal as cry
-from pyDis.atomic import atomistic_utils as atm
+from pyDis.utilities import atomistic_utils as atm
 
 ### END IMPORT SECTION
 
