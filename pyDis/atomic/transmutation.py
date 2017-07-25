@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 '''Contains functions required to introduce defects into simulation cells.
 '''
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import numpy as np
 import re
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 from  numpy.linalg import norm
 

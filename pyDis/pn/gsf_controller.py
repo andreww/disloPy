@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 import argparse

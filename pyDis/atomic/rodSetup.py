@@ -1,10 +1,11 @@
 #!/usr/bin/env python
+'''Functions to construct 1D periodic cylinders, possibly with multiple regions.
+'''
+from __future__ import absolute_import
 
 import numpy as np
 import numpy.linalg as L
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import circleConstruct as grid

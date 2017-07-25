@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 '''Routines to permute the order of a specified crystal's lattice vectors.
 '''
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import numpy as np
 import argparse
 import warnings
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import gulpUtils as gulp

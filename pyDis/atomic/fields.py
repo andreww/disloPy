@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-from __future__ import print_function 
+'''Displacement fields due to an isolated straight dislocation.
+'''
+from __future__ import print_function , absolute_import
 
 import numpy as np
 import numpy.linalg as L

@@ -9,11 +9,8 @@ their own modules. If you want to implement a minor helper function, this is the
 module to do it in.
 '''
 
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import 
 
-import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 from numpy.linalg import norm
 import numpy as np
 import re

@@ -3,13 +3,12 @@
 for a dislocation along z (which must be a high symmetry direction) using
 anisotropic elasticity.
 '''
+from __future__ import absolute_import 
 
 import numpy as np
 import cmath
 import numpy.linalg as lin
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 
@@ -61,8 +60,7 @@ def voightIndices(i, j):
         # (12, 21) -> 6
         return 5
     else:
-        print 'Error: Index out of bounds. Exiting...'
-        sys.exit(1)
+        return ValueError('Index {:.0f} is invalid.'.format(i))
     return        
 
 def Cijkl(i, j, k, l, Cij):

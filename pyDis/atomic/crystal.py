@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-from __future__ import print_function
+'''Defines classes for objects import in crystallography, including Atoms and
+Crystals.
+'''
+from __future__ import print_function, absolute_import
 
 import numpy as np
 import numpy.linalg as L

@@ -1,9 +1,13 @@
 #!/usr/bin/env python
+'''Provides modules to calculate the Peierls barrier and Peierls stress for a
+dislocation.
+'''
+from __future__ import absolute_import
 
 import numpy as np
 
-import pn_1D as pn1
-import pn_2D as pn2
+from pyDis.pn import pn_1D as pn1
+from pyDis.pn import pn_2D as pn2
 
 from scipy.optimize import fmin_slsqp
 import matplotlib.pyplot as plt

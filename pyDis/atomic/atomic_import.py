@@ -1,8 +1,7 @@
 #!/usr/bin/env python
+from __future__ import print_function, absolute_import
 
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import gulpUtils as gulp
 from pyDis.atomic import qe_utils as qe

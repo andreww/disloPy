@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+'''Functions to construct a grid that covers a circle of specified size.
+'''
+from __future__ import print_function, absolute_import
 
 import numpy as np
 import numpy.linalg as L

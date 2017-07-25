@@ -1,11 +1,8 @@
 #!/usr/bin/env python
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import numpy as np
 import re
-import os
-import sys
-sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.atomic import rodSetup as rs

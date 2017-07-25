@@ -41,11 +41,9 @@ Atoms on either side of the cut regions are then displaced according to some
 (as yet undetermined) algorithm. Relax using eg. BFGS, possibly at finite
 temperature
 '''
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 import re

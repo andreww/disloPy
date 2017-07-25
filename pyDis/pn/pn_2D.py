@@ -1,8 +1,10 @@
 #!/usr/bin/env python
+'''Provides routines to calculate static dislocation properties using the two
+dimensional Peierls-Nabarro model.
+'''
+from __future__ import print_function, absolute_import
 
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 

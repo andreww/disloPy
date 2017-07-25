@@ -1,11 +1,9 @@
 #!/usr/bin/env python
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import re
 import numpy as np
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic import crystal as cry
 from pyDis.utilities import atomistic_utils as util

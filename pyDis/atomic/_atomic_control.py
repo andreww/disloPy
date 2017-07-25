@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-from __future__ import print_function,division
+from __future__ import print_function, division, absolute_import
 
 import numpy as np
 import re
+import argparse
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 from numpy.linalg import norm
 
 # list of atomic simulation codes currently supported by pyDis
@@ -708,11 +707,24 @@ class AtomisticSim(object):
             
         return
         
-def main(filename):
-    new_simulation = AtomisticSim(filename)
+def main():
+    '''Runs an Atomistic simulation.
+    '''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', type=str, nargs='?', dest='filename', default='0')
+    
+    args = parser.parse_args()
+    
+    if args.filename != '0':
+        new_simulation = AtomisticSim(args.filename)
+    else:
+        # read in filename from the command line
+        if sys.version_info.major == 2:
+            filename = raw_input('Enter name of input file: ')
+        elif sys.version_info.major == 3:
+            filename = input('Enter name of input file: ')
+            
+        new_simulation = AtomisticSim(filename)
     
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        main(sys.argv[1])
-    else:
-        main(raw_input("Enter name of control file: "))
+    main()

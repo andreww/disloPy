@@ -1,8 +1,7 @@
 #!/usr/bin/env python
+from __future__ import absolute_import, print_function
 
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 import re
@@ -768,10 +767,13 @@ class PNSim(object):
                                                         thickness=self.vis('thickness'))
         
 def main(filename):
+    '''Runs an Peierls-Nabarro simulation.
+    '''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', type=str, nargs='?', dest='filename', default='0')
+    
+    args = parser.parse_args()
     new_sim = PNSim(filename)
     
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        main(sys.argv[1])
-    else:
-        main(raw_input("Enter name of control file: "))
+    main()

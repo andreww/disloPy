@@ -1,13 +1,16 @@
 #!/usr/bin/env python
-from __future__ import print_function
+'''Functions to help optimize the value of the cutoff and damping parameters in
+the Wolf formulation of the Coulomb energy.
+'''
+from __future__ import print_function, absolute_import
 
 import numpy as np
 import re
 import subprocess
 
-import gulpUtils as gulp
-from circleConstruct import ceiling
-import atomistic_utils as util
+from pyDis.atomic import gulpUtils as gulp
+from pyDis.atomic.circleConstruct import ceiling
+from pyDis.utilities import atomistic_utils as util
     
 def findProp(filename):
     '''Finds the total lattice energy of a GULP simulation (in eV). Returns

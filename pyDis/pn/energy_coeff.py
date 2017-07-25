@@ -3,6 +3,7 @@
 calculation, using either isotropic elasticity or the anisotropic Stroh 
 sextic eigenvalue formulation.
 '''
+from __future__ import absolute_import
 
 from numpy.linalg import norm
 

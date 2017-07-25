@@ -12,9 +12,6 @@ try:
 except ImportError:
     print("Module <matplotlib> not found. Do not use plotting functions.")
 
-import sys
-import os
-
 # suppress divide by zero Runtime warnings
 import warnings
 warnings.simplefilter("ignore", RuntimeWarning)

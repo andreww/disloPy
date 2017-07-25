@@ -4,14 +4,13 @@ statics), performs a Fourier series decomposition to provide a continuous,
 low cost, gsf energy function for use esp. in Peierls-Nabarro modelling
 of dislocation misfit profiles.
 '''
+from __future__ import print_function, absolute_import
 
 import numpy as np
 import scipy
 import re
 import matplotlib.pyplot as plt
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 from scipy.interpolate import RectBivariateSpline, interp1d, interp2d
 try:

@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 
 import re
 import os
 import sys
-sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 
@@ -13,7 +12,8 @@ supported_codes = ('gulp')
 # note that this uses a slightly modified version of <control_file>, to allow
 # the user to supply multiple impurity atoms of the same species, as is the case,
 # for instance, in protonated vacancies in NAMs.
-from pyDis.pn._pn_control import from_mapping, change_type, to_bool, change_or_map, print_control   
+from pyDis.utilities.control_functions import from_mapping, change_type, to_bool, \
+                                                    change_or_map, print_control   
 
 # pyDis specific stuff
 from pyDis.atomic import crystal as cry

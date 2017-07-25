@@ -3,11 +3,9 @@
 that is required to run a simulation, including cell parameters, atomic
 coordinates, species, potentials, etc.
 '''
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 import re

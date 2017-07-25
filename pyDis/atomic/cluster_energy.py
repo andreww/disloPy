@@ -1,13 +1,15 @@
 #!/usr/bin/env python
-from __future__ import print_function
+'''Routines to calculate the core energy of a dislocation embedded in a 1D 
+periodic simulation cell.
+'''
+from __future__ import print_function, absolute_import
 
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 import numpy.linalg as L
 import re
+import os
 import argparse
 from scipy.optimize import curve_fit
 

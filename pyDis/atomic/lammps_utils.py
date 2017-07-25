@@ -2,14 +2,12 @@
 '''Contains utilities required for interfacing with the molecular-mechanics
 massively parallel MD code LAMMPS.
 '''
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import re
 import numpy as np
 import subprocess
-import sys
 import os
-sys.path.append(os.environ['PYDISPATH'])
 
 from numpy.linalg import norm
 

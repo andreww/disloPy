@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-from __future__ import print_function
+'''Routines required to insert a defect containing multiple atoms (or vacancies)
+at atomic sites in a crystal.
+'''
+from __future__ import print_function, absolute_import
 
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 import re

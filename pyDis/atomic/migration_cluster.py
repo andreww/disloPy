@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+'''Module to calculate migration barriers for atoms diffusing along a dislocation
+line.
+'''
+from __future__ import print_function, division, absolute_import
 
 import numpy as np
 from numpy.linalg import norm
@@ -7,8 +10,6 @@ import glob
 import re
 
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 from pyDis.atomic.multisite import periodic_distance
 from pyDis.atomic import gulpUtils as gulp

@@ -3,13 +3,11 @@
 calculations. At present, only the lattice statics program GULP is supported,
 but support for LAMMPS is planned as a future development.
 '''
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import re
 import argparse
 import sys
-import os
-sys.path.append(os.environ['PYDISPATH'])
 
 import numpy as np
 from scipy.optimize import curve_fit

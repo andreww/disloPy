@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+'''Routines to calculate various properties relevant to the critical resolved
+shear stress of a dislocation migrating via kink-pair nucleation. 
+'''
+from __future__ import print_function, division, absolute_import
 
 import numpy as np
-import sys, os
-sys.path.append(os.environ['PYDISPATH'])
 from pyDis.pn import kinkpair as kp
 
 def parse_material_file(filename):

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
 '''Functions to determine the critical shape and energy of a kink-pair in a
 general material.
 '''
+from __future__ import print_function, division, absolute_import
 
 import numpy as np
 import scipy.optimize as opt
