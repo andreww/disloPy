@@ -1,0 +1,7 @@
+If you use PyDis in a scientific publication, please consider adding the 
+following line in the body of the text somewhere:
+    Dislocation calculations were performed using PyDis, a free and open-source
+    dislocation simulation package written in Python (citation).
+    
+The citation is:
+
