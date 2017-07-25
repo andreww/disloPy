@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-setup(name='pydis',
+setup(name='pyDis',
       version=0.98,
       description='Python-based dislocation modelling utilities',
       author='Richard Skelton, Andrew Walker',
