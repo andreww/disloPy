@@ -10,7 +10,11 @@ from pydis.pn import pn_1D as pn1
 from pydis.pn import pn_2D as pn2
 
 from scipy.optimize import fmin_slsqp
-import matplotlib.pyplot as plt
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    print("Matplotlib not installed; do not use plotting functions.")
 
 atomic_to_GPa =  160.2176487 # convert from eV/Ang**3 to GPa
 

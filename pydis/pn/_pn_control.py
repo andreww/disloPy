@@ -5,8 +5,12 @@ import sys
 
 import numpy as np
 import re
-import matplotlib.pyplot as plt
 from numpy.linalg import norm
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    print("Matplotlib not installed; do not use plotting functions.")
 
 # PN modules from pydis package
 from pydis.pn import pn_1D as pn1

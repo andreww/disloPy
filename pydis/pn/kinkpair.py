@@ -101,7 +101,7 @@ def DH_kink_pair(h, w, disl_type, Ke, Ks, b, a, stress, rho, Vp, taup, in_GPa=Tr
     '''
     
     DE = DElastic(Ke, Ks, h, w, b, rho, disl_type, in_GPa=in_GPa)
-    DP = DPeierls(Vp, h, w, a,b, stress, taup)
+    DP = DPeierls(Vp, h, w, a, b, stress, taup)
     W = work(stress, b, h, w, in_GPa=in_GPa)
 
     return DE+DP-W
@@ -168,7 +168,7 @@ def metastable_config(b, a, xsi, Ke, Ks, taup, disl_type, wpfunc=None, wmin=5,
         wpfunc = simple_wp(wpmax, a)
         
     # create kink-pair energy function
-    rho = 0.05*xsi # core size
+    rho = 0.01*xsi # core size
     kp_func = DH_kink_pair_mappable(disl_type, Ke, Ks, b, a, rho, wpfunc, taup)
     
     # calculate critical shape in specified range of stresses    
