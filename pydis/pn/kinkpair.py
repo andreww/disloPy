@@ -167,8 +167,14 @@ def metastable_config(b, a, xsi, Ke, Ks, taup, disl_type, wpfunc=None, wmin=5,
 
         wpfunc = simple_wp(wpmax, a)
         
-    # create kink-pair energy function
-    rho = 0.01*xsi # core size
+    
+    # calculate the core size parameter
+    if disl_type == 'edge':
+        rho = self_consistent_rho(Ke, Ks, b, a, taup)
+    elif disl_type == 'screw':
+        rho = self_consistent_rho(Ks, Ke, b, a, taup)
+
+    # create kink-pair energy function    
     kp_func = DH_kink_pair_mappable(disl_type, Ke, Ks, b, a, rho, wpfunc, taup)
     
     # calculate critical shape in specified range of stresses    
@@ -205,6 +211,17 @@ def metastable_config(b, a, xsi, Ke, Ks, taup, disl_type, wpfunc=None, wmin=5,
         return critical_values, par, err
     else:
         return critical_values, None, None
+        
+def self_consistent_rho(K1, K2, b, a, taup):
+    '''Uses the zero applied structure critical kink-pair nucleation energy
+    from elasticity and the approximate dependence of this nucleation energy
+    on the Peierls stress found by Kraych et al. (2016) to calculate a self
+    consistent value for the core size parameter <rho>.
+    '''
+    
+    rho = a/np.e*np.exp(-(2*np.pi*K1*np.sqrt(taup/K1)*b/(K2*a)+K1/K2))
+    
+    return rho
 
 def velocity(tau, taup, b, dH0, p, q, wc, T, vD):
     '''Returns a value proportional to the velocity of a dislocation, with the 
