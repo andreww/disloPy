@@ -5,6 +5,7 @@ shear stress of a dislocation migrating via kink-pair nucleation.
 from __future__ import print_function, division, absolute_import
 
 import numpy as np
+import re
 from pydis.pn import kinkpair as kp
 
 def parse_material_file(filename):
@@ -192,3 +193,19 @@ def write_crss(crss, T, slipsys):
         ostream.write('{:.1f} {:.6f}\n'.format(Ti, si))
         
     return
+    
+def read_kocks_parameters(kocks_fit_file):
+    '''Parses a file containing fitted critical enthalpies for
+    kink-pair nucleation to extract the Kocks parameters <dH0>,
+    <p>, and <q>.
+    '''
+    
+    # get comment line containing the Kocks fit parameters and read them in
+    infile = open(kocks_fit_file, 'r')
+    parline = infile.readline()
+    infile.close()
+    
+    dH0 = re.search('dH0.+?(?P<val>-?\d+\.\d+)', parline).group('val')
+    q = re.search('q.+?(?P<val>-?\d+\.\d+)', parline).group('val')
+    p = re.search('p.+?(?P<val>-?\d+\.\d+)', parline).group('val')
+    return float(dH0), float(p), float(q)
