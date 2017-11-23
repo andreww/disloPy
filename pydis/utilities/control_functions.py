@@ -5,6 +5,7 @@
 from __future__ import absolute_import, print_function
 
 import re
+import numpy as np
 
 def control_file(filename):
     '''Opens the control file <filename> for a PN simulation and constructs a 

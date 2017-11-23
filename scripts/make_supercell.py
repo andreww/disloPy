@@ -3,15 +3,14 @@ from __future__ import print_function
 
 import sys
 import os
-sys.path.append(os.environ['PYDISPATH'])
 import numpy as np
 import argparse
 
-from pyDis.atomic import qe_utils as qe
-from pyDis.atomic import gulpUtils as gulp
-from pyDis.atomic import castep_utils as castep
-from pyDis.atomic import atomistic_utils as atm
-from pyDis.atomic import crystal as cry
+from pydis.atomic import qe_utils as qe
+from pydis.atomic import gulpUtils as gulp
+from pydis.atomic import castep_utils as castep
+from pydis.utilities import atomistic_utils as atm
+from pydis.atomic import crystal as cry
 
 def to_bool(in_str):
     '''Routine to convert <in_str>, which may take the values "True" or "False", 
