@@ -114,7 +114,7 @@ def bond_candidates(dis_cell, atom_type, max_bond_length, R, RI, RII,
         
     return Qpot
 
-def associate_bonds(Qpot, P, phimax=0.5, scale=1.5:
+def associate_bonds(Qpot, P, phimax=0.5, scale=1.5):
     '''Rearranges the list of potentials atomic bonds <Qpot> so that they 
     correspond to the bonds in <P> for the specified site in an undeformed
     crystal. <phimax> is the maximum tolerable angular distance between a 
