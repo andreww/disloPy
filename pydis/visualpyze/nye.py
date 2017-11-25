@@ -324,7 +324,7 @@ def unravel_nye(a):
         
     return x, ajk
 
-def scatter_nye(x, ajk):
+def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi):
     '''Create scatter plot showing specified component of the Nye tensor <ajk>
     '''
     
@@ -337,5 +337,6 @@ def scatter_nye(x, ajk):
     plt.ylim(x[:, 1].min()-1, x[:, 1].max()+1)
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
-    plt.colorbar(format='%.2e')
+    plt.colorbar(format='%.1e')
     plt.tight_layout()
+    plt.save_fig('{}.{}'.format(figname, figtype), dpi=dpi)
