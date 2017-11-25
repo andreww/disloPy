@@ -321,7 +321,7 @@ def unravel_nye(a):
     for c in nye_components:
         ajk[c] = np.array(ajk[c])
         
-    return ajk
+    return x, ajk
 
 def scatter_nye(x, ajk):
     '''Create scatter plot showing specified component of the Nye tensor <ajk>
