@@ -337,5 +337,5 @@ def scatter_nye(x, ajk):
     plt.ylim(x[:, 1].min()-1, x[:, 1].max()+1)
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
-    plt.colorbar(format='%.2f')
+    plt.colorbar(format='%.2e')
     plt.tight_layout()
