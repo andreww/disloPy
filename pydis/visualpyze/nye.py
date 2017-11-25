@@ -330,10 +330,11 @@ def scatter_nye(x, ajk):
     
     fig = plt.figure() 
     plt.gca().set_aspect('equal')
-    plt.scatter(x[:, 0], y[:, 1], c=ajk, cmap=plt.get_cmap('viridis'), s=150,
+    plt.scatter(x[:, 0], x[:, 1], c=ajk, cmap=plt.get_cmap('viridis'), s=150,
                      linewidth='2')
-    plt.xlim(-25, 25)
-    plt.ylim(-25, 25)
+                     
+    plt.xlim(x[:, 0].min()-1, x[:, 0].max()+1)
+    plt.ylim(x[:, 1].min()-1, x[:, 1].min()+1)
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
     plt.colorbar(format='%.2f')
