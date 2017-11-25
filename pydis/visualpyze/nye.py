@@ -53,7 +53,7 @@ def perfect_bonds(cellname, atom_index, max_bond_length, bonded_type=None):
                     # calculate and store the bond vector from <atom_index> to
                     # this site 
                     y = y0+j*lattice[0]+k*lattice[1]+l*lattice[2]
-                    if np.linalg.norm(x0-y) < max_bond_length:
+                    if norm(x0-y) < max_bond_length:
                         P.append(x0-y)
                         
     return P
@@ -103,11 +103,11 @@ def bond_candidates(dis_cell, atom_type, max_bond_length, R, RI, RII,
             
             # calculate distance to atom i and check to see if bond length is 
             # below given maximum value
-            if i != j and np.linalg.norm(x-y0) < max_bond_length:
+            if i != j and norm(x-y0) < max_bond_length:
                 Qpoti.append([j, x-y0])
-            if np.linalg.norm(x-yup) < max_bond_length:
+            if norm(x-yup) < max_bond_length:
                 Qpoti.append([j, x-yup])
-            if np.linalg.norm(x-ydown) < max_bond_length:
+            if norm(x-ydown) < max_bond_length:
                 Qpoti.append([j, x-ydown])
                 
         Qpot[i] = [x, Qpoti]
@@ -159,7 +159,7 @@ def moore_penrose(M):
     '''Calculates the Moore-Penrose (ie. Generalized) inverse of the matric <M>
     '''
     
-    return np.dot(np.linalg.inv(np.dot(M.T, M)), M.T)
+    return np.dot(inv(np.dot(M.T, M)), M.T)
 
 def lattice_correspondence_G(Qordered):
     '''From the bond vectors in the dislocated (Q) and undislocated (P) crystal,
