@@ -317,7 +317,7 @@ def unravel_nye(a):
         for c in nye_components:
             ajk[c].append(a[site]['a'][int(c[1]), int(c[2])])
         
-    # convert components to array
+    # convert coordinates and Nye tensor components to array
     for c in nye_components:
         ajk[c] = np.array(ajk[c])
         
