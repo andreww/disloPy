@@ -309,6 +309,10 @@ def unravel_nye(a):
         ajk[c] = [] 
         
     for site in a.keys():
+        # extract x and y coordinates of the site
+        x.append([a[site]['x'][0], a[site]['x'][1]])
+        
+        # extract Nye tensor components
         for c in nye_components:
             ajk[c].append(a[site]['a'][int(c[1]), int(c[2])])
         
@@ -318,13 +322,13 @@ def unravel_nye(a):
         
     return ajk
 
-def scatter_nye(x, y, ajk):
+def scatter_nye(x, ajk):
     '''Create scatter plot showing specified component of the Nye tensor <ajk>
     '''
     
     fig = plt.figure() 
     plt.gca().set_aspect('equal')
-    plt.scatter(xs, ys, c=ajk, cmap=plt.get_cmap('viridis'), s=150,
+    plt.scatter(x[:, 0], y[:, 1], c=ajk, cmap=plt.get_cmap('viridis'), s=150,
                      linewidth='2')
     plt.xlim(-25, 25)
     plt.ylim(-25, 25)
