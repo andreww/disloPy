@@ -159,7 +159,7 @@ def moore_penrose(M):
     '''Calculates the Moore-Penrose (ie. Generalized) inverse of the matric <M>
     '''
     
-    return np.dot(inv(np.dot(M.T, M)), M.T)
+    return np.dot(np.linalg.inv(np.dot(M.T, M)), M.T)
 
 def lattice_correspondence_G(Qordered):
     '''From the bond vectors in the dislocated (Q) and undislocated (P) crystal,
