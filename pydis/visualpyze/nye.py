@@ -298,7 +298,8 @@ def permute_eps(i, j, k):
         return -1.
     
 def unravel_nye(a):
-    '''Unravels the Nye tensor for plotting.
+    '''Unravels the Nye tensor <a>, casting it in a form that is suitable for 
+    plotting.
     '''
 
     # holds the values of the Nye Tensor components at all studied sites
@@ -307,9 +308,9 @@ def unravel_nye(a):
     for c in nye_components:
         ajk[c] = [] 
         
-    for site in nye_a.keys():
+    for site in a.keys():
         for c in nye_components:
-            ajk[c].append(nye_a[site]['a'][int(c[1]), int(c[2])])
+            ajk[c].append(a[site]['a'][int(c[1]), int(c[2])])
         
     # convert components to array
     for c in nye_components:
