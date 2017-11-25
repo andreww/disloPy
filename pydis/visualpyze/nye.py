@@ -189,7 +189,6 @@ def lattice_correspondence_G(Qordered):
 
     return G
 
-
 def DGIM(G, site, I, M):
     '''Calculates the difference of the component <IM> of the lattice 
     correspondence tensor <G> between the specified <site> and all <sites> to 
@@ -269,6 +268,34 @@ def calculate_nye(T, Q):
         nye_a[site]['x'] = Q[site][0]
         
     return nye_a
+    
+def permute_eps(i, j, k):
+    '''The standard permutation tensor \eps_{ijk}, which is 1 if i, j, k are an
+    even permutation of 123 (or 012 in python indexing) and -1 if they are an 
+    even permutation. If any index is repeated, \eps_{ijk} is 0.
+    '''
+    
+    # check that there are no invalid indices
+    valid = [0, 1, 2]
+    if i not in valid or j not in valid or k not in valid:
+        raise ValueError("Indices must be in [0, 1, 2]")
+    # check that there are no repeated indices
+    if i == j or i == k or j == k:
+        return 0.
+    elif i == 0:
+        if j == 1:
+            return 1.
+        else:
+            return -1.
+    elif j == 0:
+        if i == 2:
+            return 1.
+        else:
+            return -1.
+    elif i == 1:
+        return 1.
+    else:
+        return -1.
     
 def unravel_nye(a):
     '''Unravels the Nye tensor for plotting.
