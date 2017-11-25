@@ -308,6 +308,7 @@ def unravel_nye(a):
     for c in nye_components:
         ajk[c] = [] 
         
+    x = []    
     for site in a.keys():
         # extract x and y coordinates of the site
         x.append([a[site]['x'][0], a[site]['x'][1]])
