@@ -339,4 +339,4 @@ def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi=300):
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
     plt.colorbar(format='%.1e')
     plt.tight_layout()
-    plt.save_fig('{}.{}'.format(figname, figtype), dpi=dpi)
+    plt.savefig('{}.{}'.format(figname, figtype), dpi=dpi)
