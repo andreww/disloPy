@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.tri as tri
 
 from numpy.linalg import norm, inv
 
@@ -153,7 +154,6 @@ def associate_bonds(Qpot, P, phimax=0.5, scale=1.5):
         Qordered[site] = [x, mapping]
         
     return Qordered
-
 
 def moore_penrose(M):
     '''Calculates the Moore-Penrose (ie. Generalized) inverse of the matric <M>
@@ -323,20 +323,98 @@ def unravel_nye(a):
         ajk[c] = np.array(ajk[c])
         
     return x, ajk
+    
+def auto_nye(unit_cell, dis_cell, index, bondr, atomtype, R, RI, RII,
+                                                  bonded_type=None):
+    '''Given a perfect crystal and a cylindrical cluster containing a single 
+    dislocation, calculates the Nye tensor for every atom of the specified type
+    <atomtype>.
+    '''
+    
+    # get bonds in the perfect crystal
+    P = perfect_bonds(unit_cell, index, bondr, bonded_type=bonded_type)
+    
+    # create list of bonds for all sites in the dislocated cell and associate
+    # them with bonds Pi in the perfect crystal
+    Qpot = bond_candidates(dis_cell, atomtype, bondr, R, RI, RII, bonded_type)
+    Qord = associate_bonds(Qpot, P)
+    
+    # calculate the lattice correspondence tensor and its derivatives
+    G = lattice_correspondence_G(Qord)
+    T = derivatives_G(G)
+    
+    # calculate and unravel Nye tensor
+    a = calculate_nye(T, Qord)
+    x, ajk = unravel_nye(a)
+    return x, ajk
 
-def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi=300):
+
+def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi=300, psize=200,
+                                            cmap_type='bwr'):
     '''Create scatter plot showing specified component of the Nye tensor <ajk>
     '''
     
+    # create range limit for color map 
+    vmax = abs(ajk).max()
+    
     fig = plt.figure() 
     plt.gca().set_aspect('equal')
-    plt.scatter(x[:, 0], x[:, 1], c=ajk, cmap=plt.get_cmap('viridis'), s=150,
-                     linewidth='2')
+    plt.scatter(x[:, 0], x[:, 1], c=ajk, cmap=plt.get_cmap(cmap_type), s=psize,
+                                linewidth='2', vmin=-vmax, vmax=vmax)
                      
     plt.xlim(x[:, 0].min()-1, x[:, 0].max()+1)
     plt.ylim(x[:, 1].min()-1, x[:, 1].max()+1)
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
-    plt.colorbar(format='%.1e')
+    plt.colorbar(format='%.2f')
     plt.tight_layout()
     plt.savefig('{}.{}'.format(figname, figtype), dpi=dpi)
+    plt.close()
+
+def contour_nye(x, ajk, figname='nye_contour', figtype='tif', dpi=300, 
+                                            cmap_type='bwr')
+    '''Creates a contour plot of the specified component of the Nye tensor.
+    '''
+                                                
+    xi = x[:, 0]; yi = x[:, 1]
+    vmax = abs(ajk).max()
+    triang = tri.Triangulation(xi, yi)
+    plt.tricontourf(triang, ajk, 100, cmap=cmap_type, vmin=-vmax, vmax=vmax)
+    plt.colorbar(format='%.1e')
+    plt.scatter(x[:, 0], x[:, 1], facecolors='none', edgecolors='k', linewidth=2, s=50)
+    plt.xlim(xi.min()-1, xi.max()+1)
+    plt.ylim(yi.min()-1, yi.max()+1)
+    plt.gca().set_aspect('equal')
+    plt.tight_layout()
+    plt.savefig('{}.{}'.format(figname, figtype), dpi=dpi)
+    plt.close()
+
+def save_nye(x, ajk, nye_file):
+    '''Saves the components of the Nye tensor <ajk> at each of the 
+    positions <x> to the file <nye_file>.
+    '''
+    #
+    outstream = open(nye_file, 'w')
+    n = len(x)
+    nye_components = ['a00', 'a01', 'a02', 'a10', 'a11', 'a12', 'a20',
+                                                          'a21', 'a22']
+        
+    # write header
+    outstream.write('# x y')
+    for c in nye_components:
+        outstream.write(' {}'.format(c))
+    outstream.write('\n')
+    
+    # write out calculated values of the Nye tensor at each site    
+    for site in range(n):
+        # write coordinates of site
+        outstream.write('{:.3f} {:.3f}'.format(x[site][0], x[site][1]))
+        # write values of Nye components
+        for c in nye_components:
+            outstream.write(' {:.4e}'.format(ajk[c][site]))
+        outstream.write('\n')
+    #
+    outstream.close()
+    
+
+
