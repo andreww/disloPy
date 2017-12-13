@@ -231,9 +231,7 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='bwr', refine=False,
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
     
-    bound_labels = [float('{:.2f}'.format(n)) for n in np.linspace(-vmax,
-                                                         vmax, nlabels)]
-    cb = plt.colorbar(ticks=bound_labels)
+    cb = plt.colorbar(format='%.2f')
     cb.set_label('E ({})'.format(units), size='x-large', family='serif')
 
     # add points to mark the locations of the atomic sites
