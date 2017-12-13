@@ -237,7 +237,7 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='bwr', refine=False,
     cb.set_label('E ({})'.format(units), size='x-large', family='serif')
 
     # add points to mark the locations of the atomic sites
-    plt.scatter(x, y, c='w', s=60, linewidth='2', facecolors='none', edgecolors='k')
+    plt.scatter(x, y, s=60, linewidth='2', facecolors='none', edgecolors='k')
         
     plt.xlim(-r-1, r+1)
     plt.ylim(-r-1, r+1)

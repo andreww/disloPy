@@ -366,7 +366,7 @@ def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi=300, psize=200,
     plt.ylim(x[:, 1].min()-1, x[:, 1].max()+1)
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
-    plt.colorbar(format='%.2f')
+    plt.colorbar(format='%.1e')
     plt.tight_layout()
     plt.savefig('{}.{}'.format(figname, figtype), dpi=dpi)
     plt.close()
