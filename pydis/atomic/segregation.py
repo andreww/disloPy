@@ -264,7 +264,8 @@ def plot_energies_scatter(sites, e_seg, figname, r, cmtype='bwr', units='eV',
 
     fig = plt.figure()
     plt.gca().set_aspect('equal')
-    plt.scatter(x, y, c=e_seg, cmap=plt.get_cmap(cmtype), s=150, linewidth='2')
+    plt.scatter(x, y, c=e_seg, cmap=plt.get_cmap(cmtype), s=150, linewidth='2',
+                                                    vmin=-vmax, vmax=vmax)
         
     plt.xlim(-r-1, r+1)
     plt.ylim(-r-1, r+1)
