@@ -350,14 +350,17 @@ def auto_nye(unit_cell, dis_cell, index, bondr, atomtype, R, RI, RII,
 
 
 def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi=300, psize=200,
-                                            cmap_type='viridis'):
+                                            cmap_type='bwr'):
     '''Create scatter plot showing specified component of the Nye tensor <ajk>
     '''
+    
+    # create range limit for color map 
+    vmax = abs(ajk).max()
     
     fig = plt.figure() 
     plt.gca().set_aspect('equal')
     plt.scatter(x[:, 0], x[:, 1], c=ajk, cmap=plt.get_cmap(cmap_type), s=psize,
-                                                              linewidth='2')
+                                linewidth='2', vmin=-vmax, vmax=vmax)
                      
     plt.xlim(x[:, 0].min()-1, x[:, 0].max()+1)
     plt.ylim(x[:, 1].min()-1, x[:, 1].max()+1)
@@ -369,17 +372,16 @@ def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi=300, psize=200,
     plt.close()
 
 def contour_nye(x, ajk, figname='nye_contour', figtype='tif', dpi=300, 
-                                            cmap_type='viridis'):
+                                            cmap_type='bwr'):
     '''Creates a contour plot of the specified component of the Nye tensor.
     '''
                                                 
-    xi = x[:, 0]
-    yi = x[:, 1]
-    
+    xi = x[:, 0]; yi = x[:, 1]
+    vmax = abs(ajk).max()
     triang = tri.Triangulation(xi, yi)
-    plt.tricontourf(triang, ajk, 100, cmap=cmap_type)
+    plt.tricontourf(triang, ajk, 100, cmap=cmap_type, vmin=-vmax, vmax=vmax)
     plt.colorbar(format='%.1e')
-    plt.scatter(x[:, 0], x[:, 1], facecolors='none', edgecolors='k', linewidth=2, s=60)
+    plt.scatter(x[:, 0], x[:, 1], facecolors='none', edgecolors='k', linewidth=2, s=50)
     plt.xlim(xi.min()-1, xi.max()+1)
     plt.ylim(yi.min()-1, yi.max()+1)
     plt.gca().set_aspect('equal')
