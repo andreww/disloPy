@@ -198,7 +198,7 @@ def write_energies(outname, site_info, e_excess, e_seg, pars=None):
     
 ### PLOTTING FUNCTIONS
 
-def plot_energies_contour(sites, e_seg, figname, r, cmtype='bwr', refine=False,
+def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=False,
                                  units='eV', figformat='tif', levels=100, nlabels=5):
     '''Produces a contour plot of the segregation energy at sites around a 
     dislocation. Use <levels> to control the number of contours.
@@ -210,9 +210,6 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='bwr', refine=False,
     y = sites[:, 2]
     triang = tri.Triangulation(x, y)
     
-    # find absolute maximum of the segregation energies
-    vmax = abs(np.array(e_seg)).max()
-    
     fig = plt.figure()
     plt.gca().set_aspect('equal')
     
@@ -221,12 +218,10 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='bwr', refine=False,
         # refine data for improved high-res plot
         refiner = tri.UniformTriRefiner(triang)
         tri_refi, es_refi = refiner.refine_field(e_seg, subdiv=3)
-        plt.tricontourf(tri_refi, es_refi, levels, cmap=plt.get_cmap(cmtype),
-                                            vmin=-vmax, vmax=vmax)
+        plt.tricontourf(tri_refi, es_refi, levels, cmap=plt.get_cmap(cmtype))
     else:
         # use raw data to produce contours
-        plt.tricontourf(triang, e_seg, levels, cmap=plt.get_cmap(cmtype), 
-                                            vmin=-vmax, vmax=vmax)
+        plt.tricontourf(triang, e_seg, levels, cmap=plt.get_cmap(cmtype))
         
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
@@ -247,7 +242,7 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='bwr', refine=False,
     
     return
     
-def plot_energies_scatter(sites, e_seg, figname, r, cmtype='bwr', units='eV',
+def plot_energies_scatter(sites, e_seg, figname, r, cmtype='viridis', units='eV',
                                                              figformat='tif'):
     '''Produces a scatterplot showing all of the sites for which segregation 
     energies were calculated, with each point coloured according to the 
@@ -256,14 +251,10 @@ def plot_energies_scatter(sites, e_seg, figname, r, cmtype='bwr', units='eV',
 
     x = sites[:, 1]
     y = sites[:, 2]
-    
-    # find absolute maximum of the segregation energies
-    vmax = abs(np.array(e_seg)).max()
 
     fig = plt.figure()
     plt.gca().set_aspect('equal')
-    plt.scatter(x, y, c=e_seg, cmap=plt.get_cmap(cmtype), s=150, linewidth='2',
-                                                    vmin=-vmax, vmax=vmax)
+    plt.scatter(x, y, c=e_seg, cmap=plt.get_cmap(cmtype), s=150, linewidth='2')
         
     plt.xlim(-r-1, r+1)
     plt.ylim(-r-1, r+1)
