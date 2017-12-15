@@ -191,9 +191,9 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
     paths (eg. those with multiple local maxima).
     '''
     
-    # user MUST provide an executable
-    if executable is None:
-        raise ValueError("A valid executable must be provided.")
+    ## user MUST provide an executable
+    #if executable is None:
+    #    raise ValueError("A valid executable must be provided.")
     
     # starting coordinates
     x = cluster[index].getCoordinates()
@@ -204,21 +204,25 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
     
     # do first level
     for i in range(3):
-        new_z = i/2.*dz
-        pln_x = i/2.*dx
-        # calculate displacement of atom in the plane at this point
-        shift = scale_plane_shift(plane_shift, new_z, dz, node)
+        if executable is not None:
+            # calculate the energy directly
+            new_z = i/2.*dz
+            pln_x = i/2.*dx
+            # calculate displacement of atom in the plane at this point
+            shift = scale_plane_shift(plane_shift, new_z, dz, node)
+            
+            # update dislocation structure
+            new_x = x + np.array([shift[0]+pln_x[0], shift[1]+pln_x[1], new_z])
+            cluster[index].setCoordinates(new_x)
+            outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
+            gulp.write_gulp(outstream, cluster, sysinfo, defected=False,
+                      to_cart=False, rI_centre=rI_centre, relax_type='',
+                                                    add_constraints=True)
+            outstream.close()
         
-        # update dislocation structure
-        new_x = x + np.array([shift[0]+pln_x[0], shift[1]+pln_x[1], new_z])
-        cluster[index].setCoordinates(new_x)
-        outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
-        gulp.write_gulp(outstream, cluster, sysinfo, defected=False, to_cart=False,
-                         rI_centre=rI_centre, relax_type='', add_constraints=True)
-        outstream.close()
-        
-        # calculate energy and extract energy
-        gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))        
+            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))
+      
+        # extract energy from GULP output file            
         E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]
         
         grid.append(new_z)
