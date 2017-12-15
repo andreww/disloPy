@@ -204,9 +204,10 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
     
     # do first level
     for i in range(3):
+        new_z = i/2.*dz
         if executable is not None:
             # calculate the energy directly
-            new_z = i/2.*dz
+            
             pln_x = i/2.*dx
             # calculate displacement of atom in the plane at this point
             shift = scale_plane_shift(plane_shift, new_z, dz, node)
