@@ -284,8 +284,9 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
     energies = np.array(energies)
     energies -= energies.min()
     barrier_height = get_barrier(energies)
+    site_energy_diff = energies[-1]-energies[0]
             
-    return [[z, E] for z, E in zip(grid, energies)], barrier_height
+    return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
         
 def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename, 
                        rI_centre=np.zeros(2), executable=None, node=0.5,
@@ -321,13 +322,15 @@ def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename,
             energies.append(E)
             
     # if energies have been calculated, extract the maximum energy (relative to
-    # the undisplaced atom) and the barrier height
+    # the undisplaced atom), the barrier height, and the energy difference 
+    # between the initial and final sites
     if grid:
         energies = np.array(energies)
         energies -= energies.min()
         barrier_height = get_barrier(energies)
+        site_energy_diff = energies[-1]-energies[0]
         
-        return [[z, E] for z, E in zip(grid, energies)], barrier_height
+        return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
     else:
         # energies not calculated, return dummy values
         return [], np.nan    
@@ -405,31 +408,31 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             # the index of the defect and the atom being translated
             sitepairname = '{}.{}'.format(sitename, ti)
             if not adaptive:
-                gridded_energies, Eh = construct_disp_files(ti, 
-                                                            cluster, 
-                                                            sysinfo, 
-                                                            dz, 
-                                                            npoints, 
-                                                            sitepairname,
-                                                            rI_centre=site[1:3], 
-                                                            executable=executable,
-                                                            plane_shift=plane_shift, 
-                                                            node=node,
-                                                            dx=dr
-                                                           )
+                gridded_energies, Eh, Ed = construct_disp_files(ti, 
+                                                                cluster, 
+                                                                sysinfo, 
+                                                                dz, 
+                                                                npoints, 
+                                                                sitepairname,
+                                                                rI_centre=site[1:3], 
+                                                                executable=executable,
+                                                                plane_shift=plane_shift, 
+                                                                node=node,
+                                                                dx=dr
+                                                               )
             else:
-                gridded_energies, Eh = adaptive_construct(ti, 
-                                                          cluster, 
-                                                          sysinfo, 
-                                                          dz, 
-                                                          npoints, 
-                                                          sitepairname, 
-                                                          rI_centre=site[1:3],
-                                                          executable=executable, 
-                                                          plane_shift=plane_shift, 
-                                                          node=node,
-                                                          dx=dr
-                                                         )
+                gridded_energies, Eh, Ed = adaptive_construct(ti, 
+                                                              cluster, 
+                                                              sysinfo, 
+                                                              dz, 
+                                                              npoints, 
+                                                              sitepairname, 
+                                                              rI_centre=site[1:3],
+                                                              executable=executable, 
+                                                              plane_shift=plane_shift, 
+                                                              node=node,
+                                                              dx=dr
+                                                             )
                                         
             outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
             # write header, including full displacement vector and barrier height 
