@@ -238,38 +238,39 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
         # nodes halfway between the current maximum and the adjacent nodes
         new_z_m1 = grid_max-0.5**(level+2)*dz
         new_z_p1 = grid_max+0.5**(level+2)*dz
-        
-        # in-plane change associate with new nodes
-        pln_x_m1 = new_z_m1/dz*dx
-        pln_x_p1 = new_z_p1/dz*dx
-        
         grid.insert(imax, new_z_m1)
         grid.insert(imax+2, new_z_p1)
         
-        shift_m1 = scale_plane_shift(plane_shift, new_z_m1, dz, node)
-        shift_p1 = scale_plane_shift(plane_shift, new_z_p1, dz, node)
-        
-        # update dislocation structure
-        new_x_m1 = x + np.array([shift_m1[0]+pln_x_m1[0], shift_m1[1]+pln_x_m1[1], 
-                                                                        new_z_m1])
-        new_x_p1 = x + np.array([shift_p1[0]+pln_x_p1[0], shift_p1[1]+pln_x_p1[1],
-                                                                        new_z_p1])
-        
-        for i in range(2):
-            if i == 0:
-                # do lower point
-                cluster[index].setCoordinates(new_x_m1)
-            else:
-                # do upper point
-                cluster[index].setCoordinates(new_x_p1)
-                
-            outstream = open('disp.{}.{}.gin'.format(counter, basename), 'w')           
-            gulp.write_gulp(outstream, cluster, sysinfo, defected=False, to_cart=False,
-                             rI_centre=rI_centre, relax_type='', add_constraints=True)
-            outstream.close()
+        if executable is not None:
+            # in-plane change associate with new nodes
+            pln_x_m1 = new_z_m1/dz*dx
+            pln_x_p1 = new_z_p1/dz*dx
+                       
+            shift_m1 = scale_plane_shift(plane_shift, new_z_m1, dz, node)
+            shift_p1 = scale_plane_shift(plane_shift, new_z_p1, dz, node)
             
-            # calculate energies
-            gulp.run_gulp(executable, 'disp.{}.{}'.format(counter, basename))        
+            # update dislocation structure
+            new_x_m1 = x + np.array([shift_m1[0]+pln_x_m1[0], shift_m1[1]+pln_x_m1[1], 
+                                                                            new_z_m1])
+            new_x_p1 = x + np.array([shift_p1[0]+pln_x_p1[0], shift_p1[1]+pln_x_p1[1],
+                                                                            new_z_p1])
+            
+            for i in range(2):
+                if i == 0:
+                    # do lower point
+                    cluster[index].setCoordinates(new_x_m1)
+                else:
+                    # do upper point
+                    cluster[index].setCoordinates(new_x_p1)
+                    
+                outstream = open('disp.{}.{}.gin'.format(counter, basename), 'w')           
+                gulp.write_gulp(outstream, cluster, sysinfo, defected=False, to_cart=False,
+                                 rI_centre=rI_centre, relax_type='', add_constraints=True)
+                outstream.close()
+                
+                # calculate energies
+                gulp.run_gulp(executable, 'disp.{}.{}'.format(counter, basename))        
+                
             E = util.extract_energy('disp.{}.{}.gout'.format(counter, basename), 'gulp')[0]           
             energies.insert(imax+2*i, E)
             
