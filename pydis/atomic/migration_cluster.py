@@ -271,10 +271,10 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
                 # calculate energies
                 gulp.run_gulp(executable, 'disp.{}.{}'.format(counter, basename))        
                 
-            E = util.extract_energy('disp.{}.{}.gout'.format(counter, basename), 'gulp')[0]           
-            energies.insert(imax+2*i, E)
+        E = util.extract_energy('disp.{}.{}.gout'.format(counter, basename), 'gulp')[0]           
+        energies.insert(imax+2*i, E)
             
-            counter += 1    
+        counter += 1    
             
         # determine new maximum energy
         if energies[imax] > energies[imax+1] and energies[imax] > energies[imax+1]:
@@ -450,7 +450,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
                 for z, E in gridded_energies:
                     outstream.write('{} {:.6f}\n'.format(z, E))
                 
-                heights.append([int(site[0]), ti, site[1], site[2], Eh])
+                heights.append([int(site[0]), ti, site[1], site[2], Eh, Ed])
             
             outstream.close()
                 
@@ -549,10 +549,10 @@ def write_heights(basename, heights):
     '''
     
     outstream = open('{}.barrier.dat'.format(basename), 'w')
-    outstream.write('# site-index atom-index x y barrier-height\n')
+    outstream.write('# site-index atom-index x y barrier-height net-energy-diff\n')
     for site in heights:
-        outstream.write('{} {} {:.6f} {:.6f} {:.6f}\n'.format(site[0], site[1], 
-                                                     site[2], site[3], site[4]))   
+        outstream.write('{} {} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(site[0],  
+                                  site[1], site[2], site[3], site[4], site[5]))   
     outstream.close() 
                                                         
 def read_heights(basename, heights):
