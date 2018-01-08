@@ -24,12 +24,15 @@ def replace_at_plane(slab_cell, impurity, plane=0.5, vacuum=0.,
     midpoint = plane*((norm(slab_cell.getC())-vacuum)/
                                 norm(slab_cell.getC()))
     to_substitute = []
+    best_index = -1
+    mindist = np.inf
     for i, atom in enumerate(slab_cell):
         use_atom = False
         if atom.getSpecies() == impurity.getSite():
             # work out if the atom is on the <plane> and satisfies the 
-            # <constraints>
-            if -eps < atom.getCoordinates()[-1]-midpoint < eps+height:
+            # <constraints>. <distance> is measured from teh plane
+            distance = atom.getCoordinates()[-1]-midpoint
+            if -eps < distance < eps+height:
                 use_atom = True 
                 if not constraints:
                     pass
@@ -37,9 +40,12 @@ def replace_at_plane(slab_cell, impurity, plane=0.5, vacuum=0.,
                     for constraint in constraints:
                         if not constraint(atom):
                             use_atom = False
-            if use_atom:
-                to_substitute.append(i)
+            if use_atom and distance < mindist:
+                best_index = i
+                mindist = distance
 
+    to_substitute.append(i)
+    
     return to_substitute
 
 def impure_faults(slab_cell, impurity, write_fn, sys_info, resolution, 
