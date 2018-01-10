@@ -31,7 +31,7 @@ def replace_at_plane(slab_cell, impurity, plane=0.5, vacuum=0.,
         if atom.getSpecies() == impurity.getSite():
             # work out if the atom is on the <plane> and satisfies the 
             # <constraints>. <distance> is measured from teh plane
-            distance = atom.getCoordinates()[-1]-midpoint
+            distance = abs(atom.getCoordinates()[-1]-midpoint)
             if -eps < distance < eps+height:
                 use_atom = True 
                 if not constraints:
