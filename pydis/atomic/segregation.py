@@ -367,7 +367,7 @@ def main():
     args = options.parse_args()
     
     analyse_segregation_results(args.basename, args.E0, args.dE0, args.n, args.r,
-                  mirror=args.mirror, mirror_x=args.axis, mirror_both=args.mirror_both,
+                  mirror=args.mirror, mirror_axis=args.axis, mirror_both=args.mirror_both,
                   plot_scatter=args.plot_scatter, plot_contour=args.plot_contour,
                   plotname=args.plotname, figformat=args.figformat, fit=args.fit)
                   
