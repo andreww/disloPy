@@ -44,7 +44,7 @@ def replace_at_plane(slab_cell, impurity, plane=0.5, vacuum=0.,
                 best_index = i
                 mindist = distance
 
-    to_substitute.append(i)
+    to_substitute.append(best_index)
     
     return to_substitute
 
