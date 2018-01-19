@@ -276,7 +276,7 @@ def plot_energies_scatter(sites, e_seg, figname, r, cmtype='viridis', units='eV'
 def analyse_segregation_results(basename, e0, de, n, r, mirror=False, mirror_axis=1, 
                               mirror_both=False, inversion=False, plot_scatter=True,  
                           plot_contour=True, plotname='', figformat='tif', fit=True,
-                                                                    tolerance=1.0):
+                                                           fit_r=2.0, tolerance=1.0):
     '''Processes the output files from a segregation energy surface calculation.
     '''
     
@@ -302,7 +302,7 @@ def analyse_segregation_results(basename, e0, de, n, r, mirror=False, mirror_axi
     
     # fit segregation energies to obtain homogeneous and inhomogeneous contributions
     if fit:
-        par, perr = fit_seg_energy(e_seg, site_info)
+        par, perr = fit_seg_energy(e_seg, site_info, min_r=fit_r)
         fit_str = '# A0 = {:.4f} +/- {:.4f}; A1 = {:.4f} +/- {:.4f}\n'.format(par[0],
                                                         perr[0], par[1], perr[1])
     else:

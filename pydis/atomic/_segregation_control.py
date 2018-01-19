@@ -157,6 +157,7 @@ def handle_segregation_control(param_dict):
                       ('plot_name', {'default': '', 'type': int}),
                       ('figformat', {'default': 'tif', 'type': str}),
                       ('do_fit', {'default': True, 'type': to_bool}),
+                      ('fit_r', {'default': 2.0, 'type': float}),
                       ('tolerance', {'default': 1.0, 'type': float})
                      )
                         
@@ -395,6 +396,7 @@ class SegregationSim(object):
                                         plotname=self.analysis('plot_name'),
                                         figformat=self.analysis('figformat'),
                                         fit=self.analysis('do_fit'),
+                                        fit_r=self.analysis('fit_r'),
                                         tolerance=self.analysis('tolerance')
                                        )
                                        
