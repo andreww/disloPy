@@ -10,7 +10,8 @@ from numpy.linalg import norm, inv
 from pydis.atomic import crystal as cry
 from pydis.atomic import gulpUtils as gulp
 
-def perfect_bonds(cellname, atom_index, max_bond_length, bonded_type=None):
+def perfect_bonds(cellname, atom_index, max_bond_length, use_species=False,
+                                                        bonded_type=None):
     '''Extracts all bonds between atom <atom_index> and adjacent atoms of type 
     <atom_type> out to the given 
     distance in the undeformed crystal <cellname>.
@@ -35,8 +36,9 @@ def perfect_bonds(cellname, atom_index, max_bond_length, bonded_type=None):
     P = []
     for i in range(len(unit_cell)): 
         # check that atom i is of the correct species   
-        if unit_cell[i].getSpecies() != bonded_type:
-            continue
+        if use_species:
+            if unit_cell[i].getSpecies() != bonded_type:
+                continue
         
         # convert coordinates of atom <i> to angstroms
         y0 = unit_cell[i].getCoordinates()
@@ -56,11 +58,11 @@ def perfect_bonds(cellname, atom_index, max_bond_length, bonded_type=None):
                     y = y0+j*lattice[0]+k*lattice[1]+l*lattice[2]
                     if norm(x0-y) < max_bond_length:
                         P.append(x0-y)
-                        
+                   
     return P
 
 def bond_candidates(dis_cell, atom_type, max_bond_length, R, RI, RII, 
-                                                    bonded_type=None):
+                                          use_species=False, bonded_type=None):
     '''Extracts candidate bonds for all sites of the specified type with radius
     R.
     '''
@@ -82,20 +84,22 @@ def bond_candidates(dis_cell, atom_type, max_bond_length, R, RI, RII,
     for i in range(n):      
         # check that atom i belongs to the sublattice of interest (usually not
         # oxygen)
-        atomspecies = relaxed[i].getSpecies()
-        if atomspecies != atom_type:
-            continue
+        if use_species:
+            atomspecies = relaxed[i].getSpecies()
+            if atomspecies != atom_type:
+                continue
             
         # ensure that atom i is within the specified region
         x = relaxed[i].getCoordinates()
         if (np.sqrt(x[0]**2+x[1]**2)) > R:
             continue
-        
+
         Qpoti = []
         for j in range(n):
             # check that atom j is one whose bonds with atom i we care about
-            if relaxed[j].getSpecies() != bonded_type:
-                continue
+            if use_species:
+                if relaxed[j].getSpecies() != bonded_type:
+                    continue
             
             # extract coordinates of atom j and its periodic images
             y0 = relaxed[j].getCoordinates()
@@ -112,7 +116,7 @@ def bond_candidates(dis_cell, atom_type, max_bond_length, R, RI, RII,
                 Qpoti.append([j, x-ydown])
                 
         Qpot[i] = [x, Qpoti]
-        
+ 
     return Qpot
 
 def associate_bonds(Qpot, P, phimax=0.5, scale=1.5):
@@ -325,20 +329,22 @@ def unravel_nye(a):
     return x, ajk
     
 def auto_nye(unit_cell, dis_cell, index, bondr, atomtype, R, RI, RII,
-                                                  bonded_type=None):
+                                        use_species=False, bonded_type=None):
     '''Given a perfect crystal and a cylindrical cluster containing a single 
     dislocation, calculates the Nye tensor for every atom of the specified type
     <atomtype>.
     '''
     
     # get bonds in the perfect crystal
-    P = perfect_bonds(unit_cell, index, bondr, bonded_type=bonded_type)
+    P = perfect_bonds(unit_cell, index, bondr, bonded_type=bonded_type,
+                                                        use_species=use_species)
     
     # create list of bonds for all sites in the dislocated cell and associate
     # them with bonds Pi in the perfect crystal
-    Qpot = bond_candidates(dis_cell, atomtype, bondr, R, RI, RII, bonded_type)
+    Qpot = bond_candidates(dis_cell, atomtype, bondr, R, RI, RII, bonded_type,
+                                                        use_species=use_species)
     Qord = associate_bonds(Qpot, P)
-    
+
     # calculate the lattice correspondence tensor and its derivatives
     G = lattice_correspondence_G(Qord)
     T = derivatives_G(G)
@@ -360,7 +366,7 @@ def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi=300, psize=200,
     fig = plt.figure() 
     plt.gca().set_aspect('equal')
     plt.scatter(x[:, 0], x[:, 1], c=ajk, cmap=plt.get_cmap(cmap_type), s=psize,
-                                linewidth='2', vmin=-vmax, vmax=vmax)
+                                linewidth='2')
                      
     plt.xlim(x[:, 0].min()-1, x[:, 0].max()+1)
     plt.ylim(x[:, 1].min()-1, x[:, 1].max()+1)
