@@ -336,13 +336,13 @@ def auto_nye(unit_cell, dis_cell, index, bondr, atomtype, R, RI, RII,
     '''
     
     # get bonds in the perfect crystal
-    P = perfect_bonds(unit_cell, index, bondr, bonded_type=bonded_type,
-                                                        use_species=use_species)
+    P = perfect_bonds(unit_cell, index, bondr, use_species=use_species,
+                                                     bonded_type=bonded_type)
     
     # create list of bonds for all sites in the dislocated cell and associate
     # them with bonds Pi in the perfect crystal
-    Qpot = bond_candidates(dis_cell, atomtype, bondr, R, RI, RII, bonded_type,
-                                                        use_species=use_species)
+    Qpot = bond_candidates(dis_cell, atomtype, bondr, R, RI, RII, 
+                              use_species=use_species, bonded_type=bonded_type)
     Qord = associate_bonds(Qpot, P)
 
     # calculate the lattice correspondence tensor and its derivatives
