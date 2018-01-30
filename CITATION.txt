@@ -1,7 +1,13 @@
-If you use PyDis in a scientific publication, please consider adding the 
+If you use disloPy in a scientific publication, please consider adding the 
 following line in the body of the text somewhere:
-    Dislocation calculations were performed using PyDis, a free and open-source
-    dislocation simulation package written in Python (citation).
-    
-The citation is:
 
+    Dislocation calculations were performed using disloPy, a free and open-source
+    dislocation simulation package written in Python (Skelton and Walker, 2017).
+    
+A paper describing the software is in preparation, until this is available please cite:
+
+    Skelton R; Walker AM (2017) Peierls-Nabarro modeling of dislocations in UO2, Journal
+    of Nuclear Materials, 495, pp.202-210. doi: 10.1016/j.jnucmat.2017.08.024
+
+which is the first published work making use of disloPy. This file will be updated
+as further publications making use of disloPy emerge.
