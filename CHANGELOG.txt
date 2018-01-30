@@ -1,0 +1,5 @@
+master:
+
+0.9.8:
+  - This is the version corresponding to the code used in Richard Skelton's thesis work
+  
