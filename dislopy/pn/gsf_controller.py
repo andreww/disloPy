@@ -7,16 +7,16 @@ import numpy as np
 import argparse
 import subprocess
 
-from pydis.pn import gsf_setup as gsf
-from pydis.atomic import gulpUtils as gulp
-from pydis.atomic import qe_utils as qe
-from pydis.atomic import castep_utils as castep
-from pydis.atomic import crystal as cry
-from pydis.utilities import atomistic_utils as atm
+from dislopy.pn import gsf_setup as gsf
+from dislopy.atomic import gulpUtils as gulp
+from dislopy.atomic import qe_utils as qe
+from dislopy.atomic import castep_utils as castep
+from dislopy.atomic import crystal as cry
+from dislopy.utilities import atomistic_utils as atm
 
 ### END IMPORT SECTION
 
-# list of atomic simulation codes currently supported by pydis
+# list of atomic simulation codes currently supported by dislopy
 supported_codes = ('qe', 'gulp', 'castep')
 
 def command_line_options():

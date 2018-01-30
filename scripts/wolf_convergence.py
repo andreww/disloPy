@@ -2,10 +2,10 @@
 
 import sys
 import os
-sys.path.append(os.environ['PYDISPATH'])
+sys.path.append(os.environ['DISLOPYPATH'])
 
-from pyDis.atomic import atomistic_utils as util
-from pyDis.atomic import wolf
+from dislopy.atomic import atomistic_utils as util
+from dislopy.atomic import wolf
 
 def main(argv):
 

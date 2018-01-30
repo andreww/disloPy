@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 '''
-PyDis
-=====
+disloPy
+=======
 GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
  Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
  Everyone is permitted to copy and distribute verbatim copies
 of this license document, but changing it is not allowed.
-=====
+=======
 
-PyDis is a suite of modules designed to facilitate the atomic-scale simulation
+disloPy is a suite of modules designed to facilitate the atomic-scale simulation
 of dislocations in crystalline materials. Three distinct methods are available:
 
 1. Cluster-based simulations

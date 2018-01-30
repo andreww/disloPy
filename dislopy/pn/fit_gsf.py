@@ -20,8 +20,8 @@ try:
 except ImportError:
     print("Module <matplotlib> not found. Do not use plotting functions.")
 
-from pydis.utilities import atomistic_utils as atm
-from pydis.pn import fourier
+from dislopy.utilities import atomistic_utils as atm
+from dislopy.pn import fourier
 
 def read_numerical_gsf(filename):
     '''Reads in a grid of energy values for a gamma line or gamma surface,

@@ -6,8 +6,8 @@ from __future__ import absolute_import
 
 import numpy as np
 
-from pydis.pn import pn_1D as pn1
-from pydis.pn import pn_2D as pn2
+from dislopy.pn import pn_1D as pn1
+from dislopy.pn import pn_2D as pn2
 
 from scipy.optimize import fmin_slsqp
 

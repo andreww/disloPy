@@ -17,7 +17,7 @@ try:
 except ImportError:
     print("Module <matplotlib> not found. Do not use plotting functions.")
 
-from pydis.utilities import atomistic_utils as atm
+from dislopy.utilities import atomistic_utils as atm
 
 def parse_control(basename):
     '''Parses the control file to extract a list of sites together with their

@@ -13,12 +13,12 @@ import subprocess
 
 from numpy.linalg import norm
 
-from pydis.atomic import crystal as cry
-from pydis.utilities import atomistic_utils as util
-from pydis.atomic import transmutation as mutate
-from pydis.atomic import rodSetup as rs
+from dislopy.atomic import crystal as cry
+from dislopy.utilities import atomistic_utils as util
+from dislopy.atomic import transmutation as mutate
+from dislopy.atomic import rodSetup as rs
 
-from pydis.atomic.rodSetup import __dict__ as rod_classes
+from dislopy.atomic.rodSetup import __dict__ as rod_classes
 
 # Functions to write different GULP input files
 

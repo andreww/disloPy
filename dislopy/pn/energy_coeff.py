@@ -11,8 +11,8 @@ import numpy as np
 import sys
 import os
 
-from pydis.atomic import aniso
-from pydis.atomic import crystal as cry
+from dislopy.atomic import aniso
+from dislopy.atomic import crystal as cry
 
 # conversion factor to take elastic properties from GPa to atomic units
 GPa_To_Atomic = 160.2176
@@ -75,7 +75,7 @@ def anisotropic_K_b(Cij, b, n=cry.ei(1), m=cry.ei(2), using_atomic=True):
     
 def predefined(kpara, knorm, using_atomic=False):
     '''Casts <kpara> and <knorm> in the form (and units) required by the P-N
-    routines in pydis.
+    routines in dislopy.
     '''
     
     k1 = kpara/(4*np.pi)

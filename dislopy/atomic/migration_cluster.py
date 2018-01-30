@@ -11,10 +11,10 @@ import re
 
 import sys
 
-from pydis.atomic.multisite import periodic_distance
-from pydis.atomic import gulpUtils as gulp
-from pydis.utilities import atomistic_utils as util
-from pydis.atomic import segregation as seg
+from dislopy.atomic.multisite import periodic_distance
+from dislopy.atomic import gulpUtils as gulp
+from dislopy.utilities import atomistic_utils as util
+from dislopy.atomic import segregation as seg
 
 def read_sites(sitefile):
     '''Reads in a list of vacancy sites.

@@ -11,9 +11,9 @@ import os
 
 from numpy.linalg import norm
 
-from pydis.atomic import crystal as cry
-from pydis.utilities import atomistic_utils as atm
-from pydis.atomic import transmutation as mutate
+from dislopy.atomic import crystal as cry
+from dislopy.utilities import atomistic_utils as atm
+from dislopy.atomic import transmutation as mutate
 
 class LammpsAtom(cry.Atom):
     '''Same as <cry.Atom>, but with charge.

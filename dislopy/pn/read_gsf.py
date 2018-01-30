@@ -7,8 +7,8 @@ import numpy as np
 import re
 import argparse
 
-from pydis.utilities import atomistic_utils as atm
-from pydis.pn.fit_gsf import gamma_line, gamma_surface3d
+from dislopy.utilities import atomistic_utils as atm
+from dislopy.pn.fit_gsf import gamma_line, gamma_surface3d
                
 def command_line_options():
     '''Parse command line options to control extraction of gamma surface.

@@ -7,8 +7,8 @@ import numpy as np
 import numpy.linalg as L
 import sys
 
-from pydis.atomic import crystal as cry
-from pydis.atomic import circleConstruct as grid
+from dislopy.atomic import crystal as cry
+from dislopy.atomic import circleConstruct as grid
 
 class PeriodicCluster(cry.Basis):
     '''A one-dimensionally periodic cluster of atoms.'''

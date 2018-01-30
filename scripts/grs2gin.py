@@ -48,7 +48,7 @@ def cell2cart(a, b, c, alpha, beta, gamma):
                      
 def makegin(outstream, grs_lines, needs_restart=False):
     '''Given the content of a GULP .grs restart file, produces a .gin file (with
-    the lattice given in cartesian coordinates) that can be read by pyDis. If 
+    the lattice given in cartesian coordinates) that can be read by disloPy. If 
     <needs_restart> is True, then the 
     '''
     

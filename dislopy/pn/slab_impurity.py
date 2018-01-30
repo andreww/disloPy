@@ -10,10 +10,10 @@ import numpy as np
 
 from numpy.linalg import norm
 
-from pydis.atomic import crystal as cry
-from pydis.atomic import transmutation as mutate
+from dislopy.atomic import crystal as cry
+from dislopy.atomic import transmutation as mutate
 
-from pydis.pn import gsf_setup as gsf
+from dislopy.pn import gsf_setup as gsf
 
 def replace_at_plane(slab_cell, impurity, plane=0.5, vacuum=0.,
                         constraints=None, eps=1e-12, height=0.):

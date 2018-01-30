@@ -9,7 +9,7 @@ import sys
 
 from  numpy.linalg import norm
 
-from pydis.atomic import crystal as cry
+from dislopy.atomic import crystal as cry
 
 class Impurity(cry.Basis):
     '''An impurity. May be a single defect (eg. a Ca atom in Mg2SiO4

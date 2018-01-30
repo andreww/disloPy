@@ -10,7 +10,7 @@ import cmath
 import numpy.linalg as lin
 import sys
 
-from pydis.atomic import crystal as cry
+from dislopy.atomic import crystal as cry
 
 CONV_EV_TO_GPA = 160.2176487
 

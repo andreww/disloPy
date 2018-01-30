@@ -7,15 +7,15 @@ import argparse
 import sys
 from numpy.linalg import norm
 
-# list of atomic simulation codes currently supported by pydis
+# list of atomic simulation codes currently supported by disloPy 
 supported_codes = ('qe', 'gulp', 'castep')
 
 #!!! need to shift the relevant functions to a simulation method-agnostic module  
-from pydis.utilities.control_functions import control_file, from_mapping, change_type,  \
+from dislopy.utilities.control_functions import control_file, from_mapping, change_type,  \
                                             to_bool, change_or_map, print_control   
                             
 # import modules required to set up and run a dislocation simulation
-from pydis.atomic.atomic_import import *
+from dislopy.atomic.atomic_import import *
 
 def array_or_int(dimension):
     '''Determine whether the user is specifying a single supercell size, or a 
@@ -281,7 +281,7 @@ def poisson(K, G):
     
 class AtomisticSim(object):
     '''handles the control file for multipole-SC and cluster based dislocation 
-    simulations in <pydis>.
+    simulations in <dislopy>.
     '''
     
     def __init__(self,filename):

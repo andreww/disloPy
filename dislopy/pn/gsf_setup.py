@@ -8,8 +8,8 @@ import numpy as np
 
 from numpy.linalg import norm
 
-from pydis.atomic import crystal as cry
-from pydis.atomic import gulpUtils as gulp
+from dislopy.atomic import crystal as cry
+from dislopy.atomic import gulpUtils as gulp
 
 ### END OF IMPORT SECTION ###
 

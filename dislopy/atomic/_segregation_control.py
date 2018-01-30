@@ -12,19 +12,19 @@ supported_codes = ('gulp')
 # note that this uses a slightly modified version of <control_file>, to allow
 # the user to supply multiple impurity atoms of the same species, as is the case,
 # for instance, in protonated vacancies in NAMs.
-from pydis.utilities.control_functions import from_mapping, change_type, to_bool, \
+from dislopy.utilities.control_functions import from_mapping, change_type, to_bool, \
                                                     change_or_map, print_control   
 
-# pydis specific stuff
-from pydis.atomic import crystal as cry
-from pydis.atomic import gulpUtils as gulp
-from pydis.atomic import multisite as ms
-from pydis.atomic import rodSetup as rs
-from pydis.atomic import transmutation as mut
-from pydis.atomic import segregation as seg
-from pydis.atomic import migration_cluster as mig
+# dislopy specific stuff
+from dislopy.atomic import crystal as cry
+from dislopy.atomic import gulpUtils as gulp
+from dislopy.atomic import multisite as ms
+from dislopy.atomic import rodSetup as rs
+from dislopy.atomic import transmutation as mut
+from dislopy.atomic import segregation as seg
+from dislopy.atomic import migration_cluster as mig
 
-from pydis.atomic._atomic_control import vector
+from dislopy.atomic._atomic_control import vector
 
 def control_file_seg(filename):
     '''Opens the control file <filename> for a segregation calculation and makes
@@ -98,7 +98,7 @@ def control_file_seg(filename):
 
 def handle_segregation_control(param_dict):
     '''Handle all possible cards for a segregation energy calculation. As in
-    other control files used in <pydis>, the use of <None> as the default value
+    other control files used in <dislopy>, the use of <None> as the default value
     for a parameter denotes that parameter as mission critical, and the program
     will abort if no specific value has been provided. <program> presently 
     defaults to GULP, but this will likely change as support for other atomistic

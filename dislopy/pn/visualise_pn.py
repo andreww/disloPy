@@ -4,16 +4,16 @@ from __future__ import print_function, absolute_import
 import numpy as np
 import re
 
-from pydis.atomic import crystal as cry
-from pydis.atomic import rodSetup as rs
-from pydis.atomic import aniso 
-from pydis.utilities import atomistic_utils as util
-from pydis.atomic import permute
-from pydis.atomic.qe_utils import parse_qe
-from pydis.atomic.castep_utils import parse_castep
-from pydis.atomic.gulpUtils import parse_gulp
-from pydis.pn import pn_1D as pn1
-from pydis.pn import pn_2D as pn2
+from dislopy.atomic import crystal as cry
+from dislopy.atomic import rodSetup as rs
+from dislopy.atomic import aniso 
+from dislopy.utilities import atomistic_utils as util
+from dislopy.atomic import permute
+from dislopy.atomic.qe_utils import parse_qe
+from dislopy.atomic.castep_utils import parse_castep
+from dislopy.atomic.gulpUtils import parse_gulp
+from dislopy.pn import pn_1D as pn1
+from dislopy.pn import pn_2D as pn2
 
 def read_unit_cell(cellname, program, shift, permutation=[0, 1, 2], path='./'):
     '''Reads in the unit from which the dislocation-bearing cluster will be 

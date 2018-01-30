@@ -8,9 +8,9 @@ import numpy as np
 import re
 import subprocess
 
-from pydis.atomic import gulpUtils as gulp
-from pydis.atomic.circleConstruct import ceiling
-from pydis.utilities import atomistic_utils as util
+from dislopy.atomic import gulpUtils as gulp
+from dislopy.atomic.circleConstruct import ceiling
+from dislopy.utilities import atomistic_utils as util
     
 def findProp(filename):
     '''Finds the total lattice energy of a GULP simulation (in eV). Returns

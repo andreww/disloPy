@@ -8,9 +8,9 @@ import numpy as np
 
 import sys
 
-from pydis.atomic import crystal as cry
-from pydis.utilities import atomistic_utils as util
-from pydis.atomic import transmutation as mutate
+from dislopy.atomic import crystal as cry
+from dislopy.utilities import atomistic_utils as util
+from dislopy.atomic import transmutation as mutate
 
 namelists= ['&control','&system','&electrons','&ions','&cell']
 cards = ['CELL_PARAMETERS','ATOMIC_SPECIES','ATOMIC_POSITIONS','CONSTRAINTS',

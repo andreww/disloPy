@@ -15,7 +15,7 @@ from numpy.linalg import norm
 import numpy as np
 import re
 
-from pydis.atomic import crystal as cry
+from dislopy.atomic import crystal as cry
 
 # currently supported atomistic simulation codes
 supported_codes = ('gulp', 'castep', 'qe')

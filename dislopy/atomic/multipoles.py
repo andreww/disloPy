@@ -51,11 +51,11 @@ import re
 from scipy.optimize import curve_fit
 from numpy.linalg import norm
 
-from pydis.utilities import atomistic_utils as atm
-from pydis.atomic import crystal as cry
-from pydis.atomic import gulpUtils as gulp
-from pydis.atomic import castep_utils as castep
-from pydis.atomic import qe_utils as qe
+from dislopy.utilities import atomistic_utils as atm
+from dislopy.atomic import crystal as cry
+from dislopy.atomic import gulpUtils as gulp
+from dislopy.atomic import castep_utils as castep
+from dislopy.atomic import qe_utils as qe
 
 supported_codes = ('qe', 'gulp', 'castep')
 

@@ -6,7 +6,7 @@ from __future__ import print_function, division, absolute_import
 
 import numpy as np
 import re
-from pydis.pn import kinkpair as kp
+from dislopy.pn import kinkpair as kp
 
 def parse_material_file(filename):
     '''Reads in a file containing a list of slip systems, together with the 

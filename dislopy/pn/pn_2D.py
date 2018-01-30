@@ -8,7 +8,7 @@ import sys
 
 import numpy as np
 
-from pydis.pn import pn_1D as pn1
+from dislopy.pn import pn_1D as pn1
 
 from scipy.optimize import fmin_slsqp
 from numpy.random import uniform

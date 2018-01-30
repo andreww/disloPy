@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''Contains all generic functions used by <pydis> control programs, such as
+'''Contains all generic functions used by <dislopy> control programs, such as
 <_atomic_control> and <_pn_control>.
 '''
 from __future__ import absolute_import, print_function

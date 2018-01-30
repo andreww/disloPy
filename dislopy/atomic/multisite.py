@@ -11,11 +11,11 @@ import re
 
 from numpy.linalg import norm
 
-from pydis.atomic import crystal as cry
-from pydis.atomic import qe_utils as qe
-from pydis.atomic import gulpUtils as gulp
-from pydis.atomic import castep_utils as castep
-from pydis.atomic import transmutation as mutate
+from dislopy.atomic import crystal as cry
+from dislopy.atomic import qe_utils as qe
+from dislopy.atomic import gulpUtils as gulp
+from dislopy.atomic import castep_utils as castep
+from dislopy.atomic import transmutation as mutate
 
 def periodic_distance(atom1, atom2, lattice, use_displaced=True, oned=False,
                                                 to_cart=True):

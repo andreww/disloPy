@@ -12,15 +12,15 @@ try:
 except ImportError:
     print("Matplotlib not installed; do not use plotting functions.")
 
-# PN modules from pydis package
-from pydis.pn import pn_1D as pn1
-from pydis.pn import pn_2D as pn2
-from pydis.pn import fit_gsf as fg
-from pydis.pn import peierls_barrier as pb
-from pydis.pn import energy_coeff as coeff
-from pydis.pn import visualise_pn as vp
-from pydis.atomic import aniso
-from pydis.utilities.control_functions import control_file, from_mapping, change_type,  \
+# PN modules from dislopy package
+from dislopy.pn import pn_1D as pn1
+from dislopy.pn import pn_2D as pn2
+from dislopy.pn import fit_gsf as fg
+from dislopy.pn import peierls_barrier as pb
+from dislopy.pn import energy_coeff as coeff
+from dislopy.pn import visualise_pn as vp
+from dislopy.atomic import aniso
+from dislopy.utilities.control_functions import control_file, from_mapping, change_type,  \
                                             to_bool, change_or_map, print_control  
 
 atomic_to_GPa =  160.2176487
@@ -56,7 +56,7 @@ def handle_pn_control(param_dict):
     # without re-running the simulation
     control_cards = (('run_sim', {'default':True, 'type':to_bool}),
                      ('gsf_file', {'default':None, 'type':str}),
-                     ('output', {'default':'pydisPN.out', 'type':str}),
+                     ('output', {'default':'dislopyPN.out', 'type':str}),
                      ('title_line', {'default':'Peierls-Nabarro model', 'type':str}),
                      ('n_iter', {'default':1, 'type':int}),
                      ('dimensions', {'default':2, 'type':int}),
@@ -202,7 +202,7 @@ def handle_pn_control(param_dict):
     return
     
 class PNSim(object):
-    # handles the control file for a PN simulation in <pydis>
+    # handles the control file for a PN simulation in <dislopy>
     
     def __init__(self, filename):
         self.sim = control_file(filename)
@@ -599,7 +599,7 @@ class PNSim(object):
         outstream = open(self.control('output'), 'w')
         
         # write front matter
-        boiler_plate = 'Peierls-Nabarro calculation with pydis - a Python' + \
+        boiler_plate = 'Peierls-Nabarro calculation with dislopy - a Python' + \
                        ' interface for atomistic modelling of dislocations\n'                       
         outstream.write(boiler_plate)
         outstream.write('{}\n\n'.format(self.control('title_line')))

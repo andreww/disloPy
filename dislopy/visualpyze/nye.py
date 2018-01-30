@@ -7,8 +7,8 @@ import matplotlib.tri as tri
 
 from numpy.linalg import norm, inv
 
-from pydis.atomic import crystal as cry
-from pydis.atomic import gulpUtils as gulp
+from dislopy.atomic import crystal as cry
+from dislopy.atomic import gulpUtils as gulp
 
 def perfect_bonds(cellname, atom_index, max_bond_length, use_species=False,
                                                         bonded_type=None):
