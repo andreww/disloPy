@@ -1,4 +1,4 @@
-### pyDis ###
+### disloPy ###
 
 A Python package for setting up atomistic and multiscale calculations of the structure and properties of dislocations, disclinations, and other topological defects.
 
