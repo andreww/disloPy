@@ -1,0 +1,5 @@
+[console_scripts]
+atomistic = bin.command_line_scripts:main_atomistic
+peierls = bin.command_line_scripts:main_pn
+segregation = bin.command_line_scripts:main_segregation
+
