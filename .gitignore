@@ -1,4 +1,4 @@
 *.pyc
 dist
 build
-pydis.egg-info
+dislop.egg-info
