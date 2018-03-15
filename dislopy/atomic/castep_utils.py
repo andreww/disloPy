@@ -133,9 +133,11 @@ def parse_castep(basename, unit_cell, path='./'):
     # parameters, and pseudopotentials.
     atoms_block = re.compile("%BLOCK\s+positions_[A-Za-z]+\s*\n\s*" +
                            "(?:\s*[A-Z][a-z]?\d*(?:\s+-?\d+\.\d+){3}\s*\n)+"
-                             "\s*%ENDBLOCK\s+positions_[A-Za-z]+",re.IGNORECASE)   
-    lattice_block = re.compile("%BLOCK\s*\w*\s*\n(?:(?:\s*-?\d+\.\d+){3}" +
+                             "\s*%ENDBLOCK\s+positions_[A-Za-z]+",re.IGNORECASE)
+    lattice_cart_block = re.compile("%BLOCK\s*\w*\s*\n(?:(?:\s*-?\d+\.\d+){3}" +
                                           "\s*\n){3}\s*%ENDBLOCK",re.IGNORECASE)
+    lattice_abc_block = re.compile("%BLOCK\s*\w*\s*\n(?:(?:\s*-?\d+\.\d+){3}" +
+                                          "\s*\n){2}\s*%ENDBLOCK",re.IGNORECASE)
     psp_block = re.compile('%BLOCK\s+SPECIES_POT.+%ENDBLOCK\s+SPECIES_POT',
                                                   re.DOTALL | re.IGNORECASE)
     kgrid_key = re.compile('KPOINTS?_MP_GRID(?:\s+\d){3}',re.IGNORECASE)
@@ -143,7 +145,8 @@ def parse_castep(basename, unit_cell, path='./'):
     # import .cell input file and extract atoms and cell vectors
     cas_lines = util.read_file(cell_name, path=path, return_str=True)
     atoms = atoms_block.search(cas_lines)
-    vecs = lattice_block.search(cas_lines)
+    cart = lattice_cart_block.search(cas_lines)
+    abc = lattice_abc_block.search(cas_lines)
 
     # extract import system information (currently just psps and k-point grid).
     # Unlike with GULP, where the system information in simple, independent of
@@ -181,13 +184,33 @@ def parse_castep(basename, unit_cell, path='./'):
 
     # extract cell parameters and atoms in the associated %BLOCKS found earlier
     # to <unit_cell>
-    cell_index = 0
-    for cell_param in vector_line.finditer(vecs.group()):
-        # convert cell_param to vector
-        cell_param = cell_param.group().split()
-        new_vec = np.array([float(x) for x in cell_param])
-        unit_cell.setVector(new_vec,cell_index)
-        cell_index += 1
+    if cart is not None:
+        cell_index = 0
+        for cell_param in vector_line.finditer(cart.group()):
+            # convert cell_param to vector
+            cell_param = cell_param.group().split()
+            new_vec = np.array([float(x) for x in cell_param])
+            unit_cell.setVector(new_vec, cell_index)
+            cell_index += 1
+    elif abc is not None:
+        cell_parameters = []
+        for cell_pars in vector_line.finditer(abc.group()):
+            # extract parameters
+            cell_pars = cell_pars.group().split()
+            for a in cell_pars:
+                cell_parameters.append(float(a))
+                
+        # check that all cell edge lengths and angles have been set
+        if len(cell_parameters) != 6:
+            raise ValueError("All six cell parameters must be set.") 
+        else:
+            # reformat cell vectors
+            cell_vectors = cry.cellToCart(cell_parameters)
+            print(cell_vectors)
+            for j in range(3):
+                unit_cell.setVector(cell_vectors.getVector(j), j)
+    else:
+        raise ValueError("Cell shape and size must be provided.")
 
     for atom in atom_line.finditer(atoms.group()):
         coords = atom.group('coords').split()
