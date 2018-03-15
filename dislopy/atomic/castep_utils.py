@@ -67,21 +67,39 @@ class CastepBasis(cry.Basis):
         # otherwise, write the ionic constraints block to <write_fn>
         write_fn('%BLOCK IONIC_CONSTRAINTS' + end)
         n_constraints = 0
-        for atom in self:
+        
+        # tracks number of species (+1) for which constraints have been written
+        species_j = 1
+
+        # track number of each type of atom for which species have been written
+        species_k = 1
+
+        for i, atom in enumerate(self):
+            if i == 0:
+                current_species = atom.getSpecies()
+            elif atom.getSpecies() == current_species:
+                species_k += 1
+            else:
+                # next species, reset counter for number of atoms of given type
+                # and the identity of the current type of atom considered
+                species_j += 1
+                species_k = 1
+                current_species = atom.getSpecies()
+                
             # test for constraints
-            for i,const in enumerate(atom.get_constraints()):
+            for i, const in enumerate(atom.get_constraints()):
                 if int(const) == 0: # fix atom in place
                     # note that, in castep, 1 implies that motion is constrained
                     fix = cry.ei(i+1)
-                    n_constraints += 1
-                    write_fn('%d %s %d %.2f %.2f %.2f%s' % (n_constraints,
-                         atom.getSpecies(),atom.index,fix[0],fix[1],fix[2],end))
+                    write_fn('{:.0f} {} {:.0f} {:.2f} {:.2f} {:.2f}{}'.format(
+                               species_j, atom.getSpecies(), species_k, fix[0], 
+                                                          fix[1], fix[2], end))
 
         write_fn("%ENDBLOCK IONIC_CONSTRAINTS" + end + end)
    
         return
 
-class CastepCrystal(cry.Lattice,CastepBasis):
+class CastepCrystal(cry.Lattice, CastepBasis):
     '''New <Crystal> class to give access to features in <CastepBasis>. Identical
     to <cry.Crystal> in all other respects.
     '''
@@ -113,10 +131,10 @@ def parse_castep(basename, unit_cell, path='./'):
 
     # regular expressions to find blocks containing (in order) atoms, cell
     # parameters, and pseudopotentials.
-    atoms_block = re.compile("%BLOCK\s+POSITIONS_[A-Za-z]+\s*\n\s*" +
+    atoms_block = re.compile("%BLOCK\s+positions_[A-Za-z]+\s*\n\s*" +
                            "(?:\s*[A-Z][a-z]?\d*(?:\s+-?\d+\.\d+){3}\s*\n)+"
-                             "\s*%ENDBLOCK\s+POSITIONS_[A-Za-z]+",re.IGNORECASE)   
-    lattice_block = re.compile("%BLOCK LATTICE\w+\s*\n(?:(?:\s*-?\d+\.\d+){3}" +
+                             "\s*%ENDBLOCK\s+positions_[A-Za-z]+",re.IGNORECASE)   
+    lattice_block = re.compile("%BLOCK\s*\w*\s*\n(?:(?:\s*-?\d+\.\d+){3}" +
                                           "\s*\n){3}\s*%ENDBLOCK",re.IGNORECASE)
     psp_block = re.compile('%BLOCK\s+SPECIES_POT.+%ENDBLOCK\s+SPECIES_POT',
                                                   re.DOTALL | re.IGNORECASE)
@@ -199,18 +217,18 @@ def write_castep(outstream, cas_struc, sys_info, defected=True, to_cart=False,
             raise TypeError("Supplied defect not of type <Impurity>/<CoupledImpurity>")
 
     # begin by writing the cell block
-    outstream.write('%BLOCK LATTICE_CART\n')
+    outstream.write('%BLOCK lattice\n')
     cas_struc.writeLattice(outstream.write)
-    outstream.write('%ENDBLOCK LATTICE_CART\n')
+    outstream.write('%ENDBLOCK lattice\n\n')
     outstream.write('FIX_ALL_CELL true\n\n')
 
     # write the atom block to file
-    outstream.write('%BLOCK POSITIONS_FRAC\n')
+    outstream.write('%BLOCK positions_frac\n')
     # can this be done using <cas_struc.write(outstream, defected=defected)> ?
     for atom in cas_struc:
         atom.write(outstream.write, defected=defected)
         
-    outstream.write('%ENDBLOCK POSITIONS_FRAC\n\n')
+    outstream.write('%ENDBLOCK positions_frac\n\n')
 
     # write constraints
     if add_constraints:

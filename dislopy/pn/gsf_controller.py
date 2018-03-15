@@ -133,25 +133,30 @@ def main():
     else:
         raise ValueError("{} is not a supported atomistic simulation code." +
                          "Supported codes are: GULP; QE; CASTEP.")
-    
+
     # extract unit cell and GULP run parameters from file <cell_name>
-    ab_initio = False
-    unit_cell = gsf.cry.Crystal()
+    ab_initio = False   
     if 'gulp' == args.prog.lower():
+        unit_cell = cry.Crystal()
         parse_fn = gulp.parse_gulp
     elif 'qe' == args.prog.lower():
+        unit_cell = cry.Crystal()
         parse_fn = qe.parse_qe
         ab_initio = True
     elif 'castep' == args.prog.lower():
+        unit_cell = castep.CastepCrystal()
         parse_fn = castep.parse_castep
         ab_initio = True
         
     sys_info = parse_fn(args.cell_name, unit_cell)
-    
+
     # if the calculation uses an ab initio solver, scale the k-point grid
     if ab_initio:
-        atm.scale_kpoints(sys_info['cards']['K_POINTS'], 
+        if 'qe' == args.prog.lower():
+            atm.scale_kpoints(sys_info['cards']['K_POINTS'], 
                               np.array([1., 1., args.n]))
+        elif 'castep' == args.prog.lower():
+            atm.scale_kpoints(sys_info['mp_kgrid'], np.array([1., 1., args.n]))
     
     # shift origin of cell
     unit_cell.translate_cell(np.array([0., 0., -1*args.shift]), modulo=True)
@@ -203,7 +208,6 @@ def main():
         else:
             pass
     elif args.simulation_type == 'gline':      
-        print(args.line_vec)
         gsf.gamma_line(new_slab, np.array(args.line_vec), args.res, write_fn,  
                            sys_info, suffix=suffix, limits=args.max_x,  
                            basename=args.sim_name, vacuum=args.vac, relax=relax)
