@@ -4,6 +4,7 @@ from __future__ import print_function, division, absolute_import
 import re
 import os
 import sys
+import argparse
 
 import numpy as np
 
@@ -463,11 +464,24 @@ class SegregationSim(object):
                               tolerance=self.analysis('tolerance')
                              )
                                                                                                    
-def main(filename):
-    new_simulation = SegregationSim(filename)
+def main():
+    '''Runs a segregation simulation.
+    '''
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', type=str, nargs='?', dest='filename', default='0')
+    
+    args = parser.parse_args()
+    if args.filename != 0:
+        new_sim = SegregationSim(args.filename)
+    else:
+        # read in filename from the command line
+        if sys.version_info.major == 2:
+            filename = raw_input('Enter name of input file: ')
+        elif sys.version_info.major == 3:
+            filename = input('Enter name of input file: ')
+            
+        new_simulation = SegregationSim(filename)
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        main(sys.argv[1])
-    else:
-        main(raw_input("Enter name of control file: "))
+    main()

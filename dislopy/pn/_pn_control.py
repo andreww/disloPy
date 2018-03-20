@@ -2,6 +2,7 @@
 from __future__ import absolute_import, print_function
 
 import sys
+import argparse
 
 import numpy as np
 import re
@@ -770,14 +771,25 @@ class PNSim(object):
                       sym_thr=self.vis('sym_thresh'), description=self.control('title_line'),
                                                         thickness=self.vis('thickness'))
         
-def main(filename):
+def main():
     '''Runs an Peierls-Nabarro simulation.
     '''
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', type=str, nargs='?', dest='filename', default='0')
     
     args = parser.parse_args()
-    new_sim = PNSim(filename)
+    if args.filename != 0:
+        new_sim = PNSim(args.filename)
+    else:
+        # read in filename from the command line
+        if sys.version_info.major == 2:
+            filename = raw_input('Enter name of input file: ')
+        elif sys.version_info.major == 3:
+            filename = input('Enter name of input file: ')
+            
+        new_simulation = PNSim(filename)
+    
     
 if __name__ == "__main__":
     main()

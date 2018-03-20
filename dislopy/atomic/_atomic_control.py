@@ -710,6 +710,7 @@ class AtomisticSim(object):
 def main():
     '''Runs an Atomistic simulation.
     '''
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', type=str, nargs='?', dest='filename', default='0')
     

@@ -13,6 +13,7 @@ from pydis.pn import _pn_control
 def main_generic(simtype):
     '''Runs a simulation of the specified kind.
     '''
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', type=str, nargs='?', dest='filename', default='0')
     
@@ -40,14 +41,17 @@ def main_generic(simtype):
 def main_atomistic():
     '''Runs an Atomistic simulation.
     '''
+
     main_generic('atomistic')
     
 def main_pn():
     '''Runs a Peierls-Nabarro simulation.
     '''
+
     main_generic('pn')
     
 def main_segregation():
     '''Runs a segregation calculation.
     '''
+
     main_generic('segregation')
