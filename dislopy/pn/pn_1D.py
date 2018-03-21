@@ -342,9 +342,9 @@ def make_limits(n_funcs, max_x):
     non_negative = (0, 20.)
     positive = (1e-2, 20.)
     
-    A_bounds = [positive for i in xrange(n_funcs)]
-    c_bounds = [positive for i in xrange(n_funcs)]
-    x_bounds = [spatial_bounds for i in xrange(n_funcs)]
+    A_bounds = [positive for i in range(n_funcs)]
+    c_bounds = [positive for i in range(n_funcs)]
+    x_bounds = [spatial_bounds for i in range(n_funcs)]
     
     lims = A_bounds + x_bounds + c_bounds
     return lims
@@ -447,7 +447,7 @@ def run_monte1d(n_iter, N, K, max_x=100, energy_function=test_gamma, noopt=False
     x_opt = None
     lims = make_limits(N, max_x)
     
-    for i in xrange(n_iter):
+    for i in range(n_iter):
         if noisy and i % 100 == 0:
             print("Starting iteration {}...".format(i))
 

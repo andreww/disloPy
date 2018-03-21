@@ -192,8 +192,8 @@ def main():
         if not (args.progexec is None):
             # extract increments
             N, M = gsf.gs_sampling(new_slab.getLattice(), args.res, limits)
-            for n in xrange(0, N+1):
-                for m in xrange(0, M+1):
+            for n in range(0, N+1):
+                for m in range(0, M+1):
                     print("Relaxing cell with generalized stacking fault vector" +
                             " ({}, {})...".format(n, m), end="")
                     basename = '{}.{}.{}'.format(args.sim_name, n, m)
@@ -217,7 +217,7 @@ def main():
             N = gsf.gl_sampling(new_slab.getLattice(), resolution=args.res, 
                             vector=np.array(args.line_vec), limits=args.max_x)
             # run calculations
-            for n in xrange(0, N+1):
+            for n in range(0, N+1):
                 print("Relaxing cell {}...".format(n), end="")
                 basename = '{}.{}'.format(args.sim_name, n)
                 if 'gulp' == args.prog.lower():

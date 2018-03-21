@@ -154,7 +154,7 @@ def main():
     if dim == 1:
         energies = np.zeros(args.x_max+1)
         # handle gamma line
-        for i in xrange(args.x_max+1):
+        for i in range(args.x_max+1):
             E, units = get_gsf_energy(args.base_name, args.program, args.suffix, 
                                           i, indir=args.indir, gnorm=args.gnorm)
             energies[i] = E*args.scale
@@ -188,8 +188,8 @@ def main():
     else: # gamma surface
         energies = np.zeros((args.x_max+1, args.y_max+1))
         # handle gamma surface
-        for i in xrange(args.x_max+1):
-            for j in xrange(args.y_max+1):
+        for i in range(args.x_max+1):
+            for j in range(args.y_max+1):
                 E, units = get_gsf_energy(args.base_name, args.program, args.suffix, 
                                            i, j, indir=args.indir, gnorm=args.gnorm)
                 energies[i, j] = E*args.scale
@@ -198,8 +198,8 @@ def main():
         outstream.write("# units {}\n".format(units))
         # get rid of nan values -> Should implement this as a separate function
         E_perfect = energies[0, 0]
-        for i in xrange(args.x_max+1):
-            for j in xrange(args.y_max+1):
+        for i in range(args.x_max+1):
+            for j in range(args.y_max+1):
                 if energies[i, j] != energies[i, j] or (energies[i, j] < E_perfect - 1.):
                     # average neighbouring energies, excluding nan values        
                     approx_energy = 0.
@@ -238,8 +238,8 @@ def main():
         energies -= energies[0, 0]
    
         # write energies to gsf file
-        for i in xrange(len(energies[:, 0])):
-            for j in xrange(len(energies[0, :])):
+        for i in range(len(energies[:, 0])):
+            for j in range(len(energies[0, :])):
                 outstream.write("{} {} {:.6f}\n" .format(i, j, energies[i, j]))
                 
             # include a space between slices of constant x (for gnuplot)

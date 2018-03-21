@@ -148,10 +148,10 @@ def make_limits2d(n_funcs, max_x, disl_type):
     non_negative = (0, np.inf)
     positive = (1e-4, 100.)
     
-    A_1 = [non_negative for i in xrange(n_funcs/2)]
-    A_0 = [unbound for i in xrange(n_funcs/2)]
-    c_bounds = [positive for i in xrange(n_funcs)]
-    x_bounds = [spatial_bounds for i in xrange(n_funcs)]
+    A_1 = [non_negative for i in range(n_funcs/2)]
+    A_0 = [unbound for i in range(n_funcs/2)]
+    c_bounds = [positive for i in range(n_funcs)]
+    x_bounds = [spatial_bounds for i in range(n_funcs)]
     
     if disl_type in 'edge':
         lims = A_1 + A_0 + x_bounds + c_bounds
@@ -333,7 +333,7 @@ def run_monte2d(n_iter, N, disl_type, K, max_x=100, energy_function=None,
     Emin = 1e6
     x_opt = None
     
-    for i in xrange(n_iter):
+    for i in range(n_iter):
         if noisy and i % 100 == 0:
             print("Starting iteration {}...".format(i))
         
