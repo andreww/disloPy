@@ -257,7 +257,7 @@ class SegregationSim(object):
         '''
         
         # extract region I and II radii from the .grs filename
-        rmatch = re.search(r'.+.(?P<r1>\d+)\.(?P<r2>\d+).(?:grs|gin)',
+        rmatch = re.search(r'.+.\.(?P<r1>\d+)\.(?P<r2>\d+).(?:grs|gin)',
                                     self.control('dislocation_file'))
         self.r1 = int(rmatch.group('r1'))
         self.r2 = int(rmatch.group('r2'))

@@ -17,6 +17,7 @@ from dislopy.atomic import crystal as cry
 from dislopy.utilities import atomistic_utils as util
 from dislopy.atomic import transmutation as mutate
 from dislopy.atomic import rodSetup as rs
+from dislopy.multisite import sites_to_replace, sites_to_replace_neb 
 
 from dislopy.atomic.rodSetup import __dict__ as rod_classes
 
@@ -854,12 +855,6 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     otherwise, region I is centred on the axis of the cluster.
     '''
     
-    # file to keep track of defect sites and IDs
-    idfile = open('{}.{}.id.txt'.format(defect.getName(), defect.getSite()), 'w')
-    idfile.write('# site-id x y z\n')
-    # record base name of simulation files
-    idfile.write('# {}.{}\n'.format(defect.getName(), defect.getSite()))
-    
     # dummy variables for lattice and toCart. Due to the way the program
     # is set up, disloc is set equal to false, as the atoms are displaced 
     # and relaxed BEFORE we read them in
@@ -873,47 +868,9 @@ def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         pass
     else:
         raise TypeError('Invalid impurity type.')
-        
-    use_indices = []    
-    for i, atom in enumerate(gulpcluster):
-        # check conditions for substitution:
-        # 1. Is the atom to be replaced of the right kind?
-        if atom.getSpecies() != defect.getSite():
-            continue
-        # 2. Is the atom within <radius> of the dislocation line?
-        if norm(atom.getCoordinates()[:-1]) > (radius+tol):
-            continue  
-              
-        # check <constraints>
-        if constraints is None:
-            pass
-        else:
-            for test in constraints:
-                useAtom = test(atom) 
-                if not useAtom:
-                    print("Skipping atom {}.".format(i))
-                    break
-            if not useAtom:
-                continue       
-        if noisy:        
-            print("Replacing atom {} (index {})...".format(str(atom), i)) 
-        
-        # record that atom <i> is to be replaced      
-        use_indices.append(i)        
     
-    # record all indices in <idfile> for ease of restarting
-    idfile.write('#')
-    for i in use_indices:
-        idfile.write(' {}'.format(i))
-    idfile.write('\n')  
-        
-    # write atomic site coords to <idfile> for later use
-    for i in use_indices:
-        coords = gulpcluster[i].getCoordinates()
-        idfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(i, coords[0], 
-                                       coords[1], coords[2], norm(coords[:-1])))
-            
-    idfile.close()
+    use_indices = sites_to_replace(gulpCluster, defect, radius, tol=tol,
+                                      constraints=constraints, noisy=noisy)
             
     for i in use_indices:        
         # set the coordinates and site index of the impurity

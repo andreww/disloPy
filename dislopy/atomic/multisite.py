@@ -275,38 +275,72 @@ def locate_bonded(site, siteindex, bondatom, supercell, nbonds):
             # check to see if <atom> is closer than any previously
             # seen by the loop
             pass
-
-def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
-                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, 
-                              oh_str='Oh', o_str='O', centre_on_impurity=False,
-                                                       do_calc=False, tol=1e-1):
-    '''Similar to the function <calculateImpurity> in <gulpUtils>, but with 
-    the ability to replace oxygen atoms bonded to H atoms with their hydroxyl
-    counterparts.
+            
+def which_image(x, x0, H):
+    '''Determines which periodic image the of the atom at site x is closest to
+    the site located at x0.
     '''
     
-    # file to keep track of defect sites and IDs
-    idfile = open('{}.{}.id.txt'.format(defect.getName(), defect.getSite()), 'w')
-    idfile.write('# site-id x y z\n')
-    # record base name of simulation files
-    idfile.write('# {}.{}\n'.format(defect.getName(), defect.getSite()))
-    
-    # dummy variables for lattice and toCart. Due to the way the program
-    # is set up, disloc is set equal to false, as the atoms are displaced 
-    # and relaxed BEFORE we read them in
-    lattice = np.identity(3)
-    toCart = False
-    disloc = False
-    coordType = 'pcell'
-    
-    # test to see if <defect> is located at a single site
-    if type(defect) is mutate.Impurity:
-        pass
+    # calculate distances to images
+    dx_base = norm(x-x0)
+    dx_up = norm(x+np.array([0, 0, H])-x0)
+    dx_down = norm(x-np.array([0, 0, H])-x0)
+    if dx_base < dx_up:
+        if dx_base < dx_down:
+            return 0
+        else:
+            return -1
+    elif dx_down < dx_up:
+        return -1
     else:
-        raise TypeError('Invalid impurity type.')
+        return 1   
         
+def associate_bonds(bondlist, bonded_sites, cluster, theta_thresh=0.5, 
+                                                        norm_thresh=0.2):
+    '''Checks to make sure that the bonds listed in <bonded_sites> correspond
+    to valid bonds in the undeformed lattice. 
+    '''
+    
+    site_pairs = dict()
+    for site0 in bonded_sites.keys():
+        x0 = cluster[site0].getCoordinates()
+        sites_to_use = set()
+        
+        # check all connected sites for validity
+        for site in bonded_sites[site0]:
+            # calculate bond vector between site and site0
+            x = cluster[site].getCoordinates()
+            sgn = which_image(x, x0, cluster.getHeight())
+            dx = x+sgn*np.array([0, 0, H])-x0
+            
+            # check for matching bonds in the base lattice
+            nbonds = 0
+            for bond in bondlist:
+                theta = np.arccos(np.dot(dx, bond)/(norm(dx)*norm(bond)))
+                if theta < theta_thresh:
+                    if (norm(dx)-norm(bond))/norm(bond) < norm_thresh:
+                        nbonds += 1
+            
+            # if a unique matching bond found -> add to list
+            if nbonds == 1:            
+                sites_to_use.add(site)
+                
+        # check that <site0> actually has valid bonds
+        if len(sites_to_use) > 0:    
+            site_pairs[site0] = sites_to_use
+        
+    return site_pairs            
+
+def sites_to_replace(cluster, defect, radius, tol=1e-1, constraints=None,
+                                                            noisy=False):
+    '''For a given <cluster> of atoms, determine which sites will be replaced
+    by the provided <defect>. These sites are those within <radius> of the 
+    dislocation line.
+    '''
+    
+    # find site indices           
     use_indices = []    
-    for i, atom in enumerate(gulpcluster):
+    for i, atom in enumerate(cluster):
         # check conditions for substitution:
         # 1. Is the atom to be replaced of the right kind?
         if atom.getSpecies() != defect.getSite():
@@ -322,9 +356,7 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             for test in constraints:
                 useAtom = test(atom) 
                 if not useAtom:
-                    # if atom fails to satisfy ANY constraint, skip over it
-                    if noisy:
-                        print("Skipping atom {}.".format(i))
+                    print("Skipping atom {}.".format(i))
                     break
             if not useAtom:
                 continue       
@@ -332,23 +364,172 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             print("Replacing atom {} (index {})...".format(str(atom), i)) 
         
         # record that atom <i> is to be replaced      
-        use_indices.append(i)    
+        use_indices.append(i)        
+    
+    # record site IDs and coordinates
+    create_id_file(defect, use_indices, cluster)
+    
+    return use_indices
+    
+def sites_to_replace_neb(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=None,
+                                  constraints=None, noisy=False, theta_thresh=0.5, 
+                                                                 norm_thresh=0.2):
+    '''Calculates which sites defect energies need to be calculated for if
+    NEB calculations will be done after defect segregation energies are 
+    calculated.'''
+    
+    # outer loop -> sites within <radius>
+    h = cluster.getHeight()
+    replace_at_site = defect.getSite()
+    idict = dict()
+    for i in range(cluster.numberOfAtoms):
+        atomi = cluster[i]
         
-    # record all indices in <idfile> if not running calculations at the time of
-    # execution. This facilitates later automation of calculations
+        # check that the atom at site i is of the type that <defect> replaces
+        if atomi.getSpecies() != replace_at_site:
+            continue
+        
+        # check that atom is within the region of interest
+        x0 = atomi.getCoordinates()
+        if norm(x0[:-1]) > r:
+            continue
+        
+        # check constraints
+        if constraints is None:
+            pass
+        else:
+            for test in constraints:
+                useAtom = test(atom) 
+                if not useAtom:
+                    print("Skipping atom {}.".format(i))
+                    break
+            if not useAtom:
+                continue  
+                     
+        if noisy:        
+            print("Replacing atom {} (index {})...".format(str(atom), i)) 
+        
+        idict[i] = set()
+        # inner loop -> sites to which atom <i> might diffuse
+        for j in range(cluster.numberOfAtoms):
+            atomj = cluster[j]
+            if atomj.getSpecies() != replace_at_site:
+                continue
+            elif i == j:
+                continue
+                
+            # otherwise, calculate the distance to the closest site
+            x = atomj.getCoordinates()
+            dx = min([norm(x-x0), norm(x+np.array([0, 0, h])-x0), 
+                                  norm(x-np.array([0, 0, h])-x0)])
+            
+            if dx < dx_thresh:
+                # record that site j is within jumping distance of site i
+                idict[i].add(j)
+        
+    if bonds is not None:
+        # use_only atoms from jset which have matching bonds
+        bond_pairs = associate_bonds(bonds, bond_pairs, cluster, theta_thresh=theta_thresh,
+                                                            norm_thresh=norm_thresh)
+        
+    # create list of all sites for which energies must be calculated
+    iset = set(bond_pairs.keys())
+    jset = set()
+    for j in bond_pairs.values():
+        jset |= set(j)
+            
+    use_indices = iset | jset
+    
+    # record site IDs and coordinates
+    create_id_file(defect, use_indices, cluster)
+    
+    # record list of bonds 
+    create_bond_file(defect, bond_pairs, cluster)
+    
+    return use_indices
+
+def create_id_file(defect, indices, cluster):
+    '''Record information about sites for which defect energies should be 
+    calculated.
+    '''
+    
+    # record defect sites and IDs
+    idfile = open('{}.{}.id.txt'.format(defect.getName(), defect.getSite()), 'w')
+    idfile.write('# site-id x y z\n')
+    # record base name of simulation files
+    idfile.write('# {}.{}\n'.format(defect.getName(), defect.getSite())) 
+    
+    # record all indices in <idfile> for ease of restarting
     idfile.write('#')
-    for i in use_indices:
+    for i in indices:
         idfile.write(' {}'.format(i))
-    idfile.write('\n')    
+    idfile.write('\n')  
         
     # write atomic site coords to <idfile> for later use
-    for i in use_indices:
-        coords = gulpcluster[i].getCoordinates()
+    for i in indices:
+        coords = cluster[i].getCoordinates()
         idfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(i, coords[0], 
                                        coords[1], coords[2], norm(coords[:-1])))
             
     idfile.close()
-      
+    
+def create_bond_file(defect, bond_pairs, cluster):
+    '''Record the IDs of each site bonded to a core site to which <defect> 
+    segregates in the cluster.
+    '''
+    
+    bondfile = open('{}.{}.bonds.txt'.format(defect.getName(), defect.getSite()), 'w')
+    bondfile.write('# site-id x y z\n')
+    bondfile.write('# bond-id-1 x y z\n')
+    bondfile.write('# ...\n')
+    bondfile.write('# bond-id-n xn yn zn;\n')
+    # record base name of simulation files
+    idfile.write('# {}.{}\n'.format(defect.getName(), defect.getSite()))
+    
+    # record bonds
+    for i in bond_pairs.keys():
+        # record coordinates of base site
+        coords = cluster[i].getCoordinates()
+        bondfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}'.format(i, coords[0], 
+                                       coords[1], coords[2], norm(coords[:-1])))
+                                       
+        # record coordinates of bonded sites
+        for j in bond_pairs[i]:
+            coords = cluster[j].getCoordinates()
+            bondfile.write('\n{} {:.6f} {:.6f} {:.6f} {:.6f}'.format(j, coords[0], 
+                                       coords[1], coords[2], norm(coords[:-1])))
+        
+        # add semi-colon to denote end of block for a single site
+        bondfile.write(';\n')
+        
+    bondfile.close() 
+    
+def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
+                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, 
+                              oh_str='Oh', o_str='O', centre_on_impurity=False,
+                                                       do_calc=False, tol=1e-1):
+    '''Similar to the function <calculateImpurity> in <gulpUtils>, but with 
+    the ability to replace oxygen atoms bonded to H atoms with their hydroxyl
+    counterparts.
+    '''
+    
+    # dummy variables for lattice and toCart. Due to the way the program
+    # is set up, disloc is set equal to false, as the atoms are displaced 
+    # and relaxed BEFORE we read them in
+    lattice = np.identity(3)
+    toCart = False
+    disloc = False
+    coordType = 'pcell'
+    
+    # test to see if <defect> is located at a single site
+    if type(defect) is mutate.Impurity:
+        pass
+    else:
+        raise TypeError('Invalid impurity type.')
+        
+    use_indices = sites_to_replace(gulpCluster, defect, radius, tol=tol,
+                                     constraints=constraints, noisy=noisy)
+                                     
     # construct input files and, if requested by the user, run calculations    
     for i in use_indices:        
         # set the coordinates and site index of the impurity
