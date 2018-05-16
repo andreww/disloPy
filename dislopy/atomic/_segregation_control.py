@@ -123,7 +123,8 @@ def handle_segregation_control(param_dict):
                      ('n', {'default': 1, 'type': int}),
                      ('analyse', {'default': False, 'type': to_bool}),
                      ('no_setup', {'default': False, 'type': to_bool}),
-                     ('migration', {'default': False, 'type': to_bool})
+                     ('migration', {'default': False, 'type': to_bool}),
+                     ('neb', {'default': False, 'type': to_bool})
                     )
                      
     # cards for the <&migration> namelist
@@ -350,31 +351,22 @@ class SegregationSim(object):
         else:
             do_calc = False
         
-        if self.control('uses_hydroxyl'):
-            ms.calculate_hydroxyl(self.sysinfo, 
+        # calculate impurity energies
+        #! Replace self.control('neb')
+        ms.calculate_impurity(self.sysinfo, 
                                   self.cluster, 
                                   self.control('region_r'),
                                   self.dfct, 
                                   do_calc=do_calc, 
                                   gulpexec=self.control('executable'),
                                   centre_on_impurity=self.control('centre_on_impurity'),
-                                  constraints=self.cons_funcs,
+                                  constraints=self.cons_funcs,              
+                                  noisy=self.control('noisy'),
+                                  neb=self.control('neb'), 
+                                  contains_hydroxyl=self.control('uses_hydroxyl'),
                                   o_str=self.control('o_str'),
-                                  oh_str=self.control('oh_str'),
-                                  noisy=self.control('noisy')
+                                  oh_str=self.control('oh_str')
                                  )
-        else:
-            # no need to test for hydroxyl-bonded oxygen ions
-            gulp.calculateImpurity(self.sysinfo, 
-                                   self.cluster, 
-                                   self.control('region_r'),
-                                   self.dfct, 
-                                   do_calc=do_calc, 
-                                   gulpexec=self.control('executable'),
-                                   centre_on_impurity=self.control('centre_on_impurity'),
-                                   constraints=self.cons_funcs,
-                                   noisy=self.control('noisy')
-                                  )
                                   
     def analyse_results(self):
         '''Analyses the output of the segregation calculation, getting segregation

@@ -504,13 +504,33 @@ def create_bond_file(defect, bond_pairs, cluster):
         
     bondfile.close() 
     
-def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
-                    constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, 
-                              oh_str='Oh', o_str='O', centre_on_impurity=False,
-                                                       do_calc=False, tol=1e-1):
-    '''Similar to the function <calculateImpurity> in <gulpUtils>, but with 
-    the ability to replace oxygen atoms bonded to H atoms with their hydroxyl
-    counterparts.
+def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
+         constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, tol=1e-1,
+          centre_on_impurity=False, do_calc=False, neb=False, dx_thresh=np.nan,
+                               contains_hydroxyl=False, oh_str='Oh', o_str='O'):
+    '''Iterates through all atoms in <relaxedCluster> within distance <radius>
+    of the dislocation line, and sequentially replaces one atom of type 
+    <replaceType> with an impurity <newType>. dRMin is the minimum difference
+    between <RI> and <radius>. Ensures that the impurity is not close to region
+    II, where internal strain would not be relaxed. <constraints> contains any 
+    additional tests we may perform on the atoms, eg. if the thickness is > 1||c||,
+    we may wish to restrict substituted atoms to have z (x0) coordinates in the
+    range [0,0.5) ( % 1). The default algorithm used to relax atomic coordinates
+    is BFGS but, because of the N^2 scaling of the memory required to store the 
+    Hessian, other solvers (eg. CG or numerical BFGS) should be used for large
+    simulation cells.
+    
+    Tests to ensure that radius < (RI - dRMin) to be performed in the calling 
+    routine (ie. <impurityEnergySurface> should only be called if radius < 
+    (RI-dRMin) is True. 
+    
+    The keyword <centre_on_impurity> determines the axis of simulation region I
+    (ie. the cylinder of atoms whose coordinates are to be fully relaxed). If
+    this parameter is <True>, then this region is centred on each impurity in turn; 
+    otherwise, region I is centred on the axis of the cluster.
+    
+    If <contains_hydroxyl> is True, activates functions to replace oxygen atoms 
+    bonded to H atoms with their hydroxyl counterparts.
     '''
     
     # dummy variables for lattice and toCart. Due to the way the program
@@ -520,14 +540,24 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     toCart = False
     disloc = False
     coordType = 'pcell'
-    
+    print('here')
     # test to see if <defect> is located at a single site
     if type(defect) is mutate.Impurity:
         pass
     else:
         raise TypeError('Invalid impurity type.')
-        
-    use_indices = sites_to_replace(gulpCluster, defect, radius, tol=tol,
+    
+    if neb:
+        # find all sites for which energies need to be calculated in order
+        # to determine energy barriers for diffusion using the NEB approach
+        print('here')
+        if dx_thresh != dx_thresh:
+            raise ValueError("Intersite distance must be defined.")
+            
+        use_indices = sites_to_replace_neb(gulpCluster, defect, radius, dx_thresh,
+                            tol=tol, constraints=constraints, noisy=noisy)
+    else:     
+        use_indices = sites_to_replace(gulpCluster, defect, radius, tol=tol,
                                      constraints=constraints, noisy=noisy)
                                      
     # construct input files and, if requested by the user, run calculations    
@@ -539,8 +569,11 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         
         # if the defect contains hydrogen, replace normal oxygen atoms with 
         # hydroyl oxygen atoms
-        full_defect = hydroxyl_oxygens(defect, gulpcluster, oh_str, oxy_str=o_str,
-                                                        oned=True, to_cart=False)          
+        if contains_hydrogen:
+            full_defect = hydroxyl_oxygens(defect, gulpcluster, oh_str, 
+                                oxy_str=o_str, oned=True, to_cart=False)  
+        else:
+            full_defect = defect        
         
         # create .gin file for the calculation
         coords = atom.getCoordinates()
@@ -567,3 +600,23 @@ def calculate_hydroxyl(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                     
     return
 
+def calculate_coupled_impurity(sysInfo, regionI, regionII, radius, defectCluster,
+                                        gulpExec='./gulp', constraints=None):
+    
+    # dummy variables for lattice and toCart. Due to the way the program
+    # is set up, disloc is set equal to false, as the atoms are displaced 
+    # and relaxed BEFORE we read them in
+    lattice = np.identity(3)
+    toCart = False
+    disloc = False
+    coordType = 'pfractional'
+    
+    # test to see if <defect> is located at a single site
+    if type(defectCluster) is CoupledImpurity:
+        ### NOT YET IMPLEMENTED ###
+        print('Coupled defects have not been implemented yet.')
+        pass
+    else:
+        raise TypeError('Invalid impurity type.')
+                   
+    return

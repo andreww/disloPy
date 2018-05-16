@@ -17,7 +17,7 @@ from dislopy.atomic import crystal as cry
 from dislopy.utilities import atomistic_utils as util
 from dislopy.atomic import transmutation as mutate
 from dislopy.atomic import rodSetup as rs
-from dislopy.multisite import sites_to_replace, sites_to_replace_neb 
+#from dislopy.atomic.multisite import sites_to_replace, sites_to_replace_neb 
 
 from dislopy.atomic.rodSetup import __dict__ as rod_classes
 
@@ -796,8 +796,6 @@ def run_gulp(gulp_exec, basename):
     gin.close()
     gout.close()
     return
-    
-### ROUTINES FOR CALCULATING DEFECT ENERGY SURFACES IN A CYLINDER
 
 def cluster_from_grs(filename, rI, rII, new_rI=None, r=None):
     '''Reads in the .grs file output after a successful cluster-based dislocation
@@ -829,99 +827,3 @@ def cluster_from_grs(filename, rI, rII, new_rI=None, r=None):
                                             periodic_atoms=grs_struc)                            
     
     return new_cluster, sysinfo
-
-def calculateImpurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
-                   constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, 
-                            do_calc=False, centre_on_impurity=True, tol=1e-1):
-    '''Iterates through all atoms in <relaxedCluster> within distance <radius>
-    of the dislocation line, and sequentially replaces one atom of type 
-    <replaceType> with an impurity <newType>. dRMin is the minimum difference
-    between <RI> and <radius>. Ensures that the impurity is not close to region
-    II, where internal strain would not be relaxed. <constraints> contains any 
-    additional tests we may perform on the atoms, eg. if the thickness is > 1||c||,
-    we may wish to restrict substituted atoms to have z (x0) coordinates in the
-    range [0,0.5) ( % 1). The default algorithm used to relax atomic coordinates
-    is BFGS but, because of the N^2 scaling of the memory required to store the 
-    Hessian, other solvers (eg. CG or numerical BFGS) should be used for large
-    simulation cells.
-    
-    Tests to ensure that radius < (RI - dRMin) to be performed in the calling 
-    routine (ie. <impurityEnergySurface> should only be called if radius < 
-    (RI-dRMin) is True. 
-    
-    The keyword <centre_on_impurity> determines the axis of simulation region I
-    (ie. the cylinder of atoms whose coordinates are to be fully relaxed). If
-    this parameter is <True>, then this region is centred on each impurity in turn; 
-    otherwise, region I is centred on the axis of the cluster.
-    '''
-    
-    # dummy variables for lattice and toCart. Due to the way the program
-    # is set up, disloc is set equal to false, as the atoms are displaced 
-    # and relaxed BEFORE we read them in
-    lattice = np.identity(3)
-    toCart = False
-    disloc = False
-    coordType = 'pcell'
-    
-    # test to see if <defect> is located at a single site
-    if type(defect) is mutate.Impurity:
-        pass
-    else:
-        raise TypeError('Invalid impurity type.')
-    
-    use_indices = sites_to_replace(gulpCluster, defect, radius, tol=tol,
-                                      constraints=constraints, noisy=noisy)
-            
-    for i in use_indices:        
-        # set the coordinates and site index of the impurity
-        atom = gulpcluster[i]
-        defect.site_location(atom)
-        defect.set_index(i)            
-        
-        # create .gin file for the calculation
-        coords = atom.getCoordinates()
-        outname = '{}.{}.{}'.format(defect.getName(), defect.getSite(), defect.get_index())
-        outstream = open(outname+'.gin','w')
-       
-        # write structure to output file, including the coordinates of the 
-        # impurity atom(s)
-        if centre_on_impurity:
-            # use coordinates of Impurity in the plane
-            rI_centre = coords[:-1]
-        else:
-            # centre on cylinder axis
-            rI_centre = np.zeros(2)
-            
-        write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False, 
-                            impurities=defect, rI_centre=rI_centre, relax_type='', 
-                                                             add_constraints=True)
-                                                                 
-        # run calculation, if requested by user
-        if do_calc:
-            print('Relaxing structure with defect at site {}...'.format(i))
-            run_gulp(gulpexec, outname)
-                    
-    return
-    
-def calculateCoupledImpurity(sysInfo, regionI, regionII, radius, defectCluster,
-                                        gulpExec='./gulp', constraints=None):
-    '''As above, but for an impurity cluster with defects at multiple sites.
-    '''
-    
-    # dummy variables for lattice and toCart. Due to the way the program
-    # is set up, disloc is set equal to false, as the atoms are displaced 
-    # and relaxed BEFORE we read them in
-    lattice = np.identity(3)
-    toCart = False
-    disloc = False
-    coordType = 'pfractional'
-    
-    # test to see if <defect> is located at a single site
-    if type(defectCluster) is CoupledImpurity:
-        ### NOT YET IMPLEMENTED ###
-        print('Coupled defects have not been implemented yet.')
-        pass
-    else:
-        raise TypeError('Invalid impurity type.')
-                   
-    return
