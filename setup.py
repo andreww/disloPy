@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='dislopy',
-      version=0.98,
+      version=0.99,
       description='Python-based dislocation modelling utilities',
       author='Richard Skelton, Andrew Walker',
       author_email='richard.skelton@anu.edu.au',

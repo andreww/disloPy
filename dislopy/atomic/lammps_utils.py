@@ -198,7 +198,7 @@ def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_ca
     if not (impurities is None):
         if mutate.is_single(impurities):
             mutate.cell_defect(struc, impurities, use_displaced=defected)
-        elif mutate.is_coupled(impurities);
+        elif mutate.is_coupled(impurities):
             mutate.cell_defect_cluster(struc, impurities, use_displaced=defected)
         else:
             raise TypeError("Supplied defect not of type <Impurity>/<CoupledImpurity>")   

@@ -407,7 +407,7 @@ def sites_to_replace_neb(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=Non
                 continue  
                      
         if noisy:        
-            print("Replacing atom {} (index {})...".format(str(atom), i*10)) 
+            print("Replacing atom {} (index {})...".format(str(atom), i)) 
         
         idict[i] = set()
         # inner loop -> sites to which atom <i> might diffuse
@@ -553,10 +553,10 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         if dx_thresh != dx_thresh:
             raise ValueError("Intersite distance must be defined.")
             
-        use_indices = sites_to_replace_neb(gulpCluster, defect, radius, dx_thresh,
+        use_indices = sites_to_replace_neb(gulpcluster, defect, radius, dx_thresh,
                             tol=tol, constraints=constraints, noisy=noisy)
     else:     
-        use_indices = sites_to_replace(gulpCluster, defect, radius, tol=tol,
+        use_indices = sites_to_replace(gulpcluster, defect, radius, tol=tol,
                                      constraints=constraints, noisy=noisy)
                                      
     # construct input files and, if requested by the user, run calculations    
