@@ -361,7 +361,7 @@ def sites_to_replace(cluster, defect, radius, tol=1e-1, constraints=None,
             if not useAtom:
                 continue       
         if noisy:        
-            print("Replacing atom a{} (index {})...".format(str(atom), i)) 
+            print("Replacing atom a {} (index {})...".format(str(atom), i)) 
         
         # record that atom <i> is to be replaced      
         use_indices.append(i)        
