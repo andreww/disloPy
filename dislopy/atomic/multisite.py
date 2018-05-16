@@ -361,7 +361,7 @@ def sites_to_replace(cluster, defect, radius, tol=1e-1, constraints=None,
             if not useAtom:
                 continue       
         if noisy:        
-            print("Replacing atom {} (index {})...".format(str(atom), i)) 
+            print("Replacing atom a{} (index {})...".format(str(atom), i)) 
         
         # record that atom <i> is to be replaced      
         use_indices.append(i)        
@@ -540,7 +540,7 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     toCart = False
     disloc = False
     coordType = 'pcell'
-    print('here')
+
     # test to see if <defect> is located at a single site
     if type(defect) is mutate.Impurity:
         pass
@@ -550,7 +550,6 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     if neb:
         # find all sites for which energies need to be calculated in order
         # to determine energy barriers for diffusion using the NEB approach
-        print('here')
         if dx_thresh != dx_thresh:
             raise ValueError("Intersite distance must be defined.")
             
