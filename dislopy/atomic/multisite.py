@@ -407,7 +407,7 @@ def sites_to_replace_neb(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=Non
                 continue  
                      
         if noisy:        
-            print("Replacing atom {} (index {})...".format(str(atom), i)) 
+            print("Replacing atom {} (index {})...".format(str(atom), i*10)) 
         
         idict[i] = set()
         # inner loop -> sites to which atom <i> might diffuse
