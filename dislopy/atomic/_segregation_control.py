@@ -124,7 +124,8 @@ def handle_segregation_control(param_dict):
                      ('analyse', {'default': False, 'type': to_bool}),
                      ('no_setup', {'default': False, 'type': to_bool}),
                      ('migration', {'default': False, 'type': to_bool}),
-                     ('neb', {'default': False, 'type': to_bool})
+                     ('neb', {'default': False, 'type': to_bool}),
+                     ('dx_thresh', {'default': np.nan, 'type': float})
                     )
                      
     # cards for the <&migration> namelist
@@ -363,6 +364,7 @@ class SegregationSim(object):
                                   constraints=self.cons_funcs,              
                                   noisy=self.control('noisy'),
                                   neb=self.control('neb'), 
+                                  dx_thresh=self.control('dx_thresh'),
                                   contains_hydroxyl=self.control('uses_hydroxyl'),
                                   o_str=self.control('o_str'),
                                   oh_str=self.control('oh_str')

@@ -361,7 +361,7 @@ def sites_to_replace(cluster, defect, radius, tol=1e-1, constraints=None,
             if not useAtom:
                 continue       
         if noisy:        
-            print("Replacing atom {} (index {})...".format(str(atom), i*10)) 
+            print("Replacing atom {} (index {})...".format(str(atom), i)) 
         
         # record that atom <i> is to be replaced      
         use_indices.append(i)        
@@ -381,7 +381,7 @@ def sites_to_replace_neb(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=Non
     # outer loop -> sites within <radius>
     h = cluster.getHeight()
     replace_at_site = defect.getSite()
-    idict = dict()
+    bond_pairs = dict()
     for i in range(cluster.numberOfAtoms):
         atomi = cluster[i]
         
@@ -391,7 +391,7 @@ def sites_to_replace_neb(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=Non
         
         # check that atom is within the region of interest
         x0 = atomi.getCoordinates()
-        if norm(x0[:-1]) > r:
+        if norm(x0[:-1]) > radius:
             continue
         
         # check constraints
@@ -399,7 +399,7 @@ def sites_to_replace_neb(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=Non
             pass
         else:
             for test in constraints:
-                useAtom = test(atom) 
+                useAtom = test(atomi) 
                 if not useAtom:
                     print("Skipping atom {}.".format(i))
                     break
@@ -407,9 +407,9 @@ def sites_to_replace_neb(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=Non
                 continue  
                      
         if noisy:        
-            print("Replacing atom {} (index {})...".format(str(atom), i)) 
+            print("Replacing atom {} (index {})...".format(str(atomi), i)) 
         
-        idict[i] = set()
+        bond_pairs[i] = set()
         # inner loop -> sites to which atom <i> might diffuse
         for j in range(cluster.numberOfAtoms):
             atomj = cluster[j]
@@ -425,7 +425,7 @@ def sites_to_replace_neb(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=Non
             
             if dx < dx_thresh:
                 # record that site j is within jumping distance of site i
-                idict[i].add(j)
+                bond_pairs[i].add(j)
         
     if bonds is not None:
         # use_only atoms from jset which have matching bonds
@@ -484,7 +484,7 @@ def create_bond_file(defect, bond_pairs, cluster):
     bondfile.write('# ...\n')
     bondfile.write('# bond-id-n xn yn zn;\n')
     # record base name of simulation files
-    idfile.write('# {}.{}\n'.format(defect.getName(), defect.getSite()))
+    bondfile.write('# {}.{}\n'.format(defect.getName(), defect.getSite()))
     
     # record bonds
     for i in bond_pairs.keys():
@@ -568,7 +568,7 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         
         # if the defect contains hydrogen, replace normal oxygen atoms with 
         # hydroyl oxygen atoms
-        if contains_hydrogen:
+        if contains_hydroxyl:
             full_defect = hydroxyl_oxygens(defect, gulpcluster, oh_str, 
                                 oxy_str=o_str, oned=True, to_cart=False)  
         else:
