@@ -215,7 +215,7 @@ def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_ca
     outstream.write(' 0. {:.6f} ylo yhi\n'.format(lattice[1, 1]))
     outstream.write(' 0. {:.6f} zlo zhi\n'.format(lattice[2, 2]))
     outstream.write(' {:.3f} {:.3f} {:.3f} xy xz yz\n\n'.format(lattice[1, 0],
-                                                lattice[2, 0], lattice[2, 1])
+                                                lattice[2, 0], lattice[2, 1]))
     
     # write atoms to file
     outstream.write('Atoms\n')
