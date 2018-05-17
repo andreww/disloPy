@@ -400,7 +400,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             r0 = x0[:-1]
             r1 = np.array(site[1:3])
             
-            dr = norm(r1-r0)
+            dr = r1-r0
             print(dr)
             # change constraints for atom -> can only relax in plane normal to dislocation line
             cluster[ti].set_constraints([1, 1, 0])
