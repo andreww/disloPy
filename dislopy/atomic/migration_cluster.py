@@ -351,8 +351,8 @@ def get_barrier(energy_values):
     return eb    
 
 def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None, 
-                 noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
-                                               threshold=5e-1, newspecies=None):
+             noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
+                  threshold=5e-1, newspecies=None, centre_on_impurity=False):
     '''Constructs and, if specified by user, runs input files for migration
     of vacancies along a dislocation line. <plane_shift> allows the user to 
     migrate the atom around intervening atoms (eg. oxygen ions). <adaptive> tells
@@ -401,7 +401,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             r1 = np.array(site[1:3])
             
             dr = r1-r0
-            print(dr)
+
             # change constraints for atom -> can only relax in plane normal to dislocation line
             cluster[ti].set_constraints([1, 1, 0])
             
@@ -409,6 +409,12 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             if newspecies is not None:
                 oldspecies = cluster[ti].getSpecies()
                 cluster[ti].setSpecies(newspecies)
+                
+            # determine centre of region I
+            if centre_in_impurity:
+                rI_centre=site[1:3]
+            else:
+                rI_centre=np.zeros(2)
             
             # construct input files and run calculation (if specified), recording
             # the index of the defect and the atom being translated
@@ -420,7 +426,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
                                                                 dz, 
                                                                 npoints, 
                                                                 sitepairname,
-                                                                rI_centre=site[1:3], 
+                                                                rI_centre=rI_centre, 
                                                                 executable=executable,
                                                                 plane_shift=plane_shift, 
                                                                 node=node,
@@ -433,7 +439,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
                                                               dz, 
                                                               npoints, 
                                                               sitepairname, 
-                                                              rI_centre=site[1:3],
+                                                              rI_centre=rI_centre,
                                                               executable=executable, 
                                                               plane_shift=plane_shift, 
                                                               node=node,

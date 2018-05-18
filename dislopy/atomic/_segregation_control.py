@@ -434,7 +434,8 @@ class SegregationSim(object):
                                         adaptive=self.migration('adaptive'),
                                         threshold=self.migration('threshold'),
                                         newspecies=newspecies,
-                                        noisy=self.control('noisy')
+                                        noisy=self.control('noisy'),
+                                        centre_on_impurity=self.control('centre_on_impurity')
                                        )
                                    
         # read in energies output by non-adaptive calculations
