@@ -450,6 +450,7 @@ class SegregationSim(object):
             mig.write_heights(basename, heights) 
         else: 
             # otherwise, read them in 
+            pass
         
         if self.migration('plot_migration'):  
             mig.plot_barriers(heights, 
