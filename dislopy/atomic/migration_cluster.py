@@ -715,7 +715,9 @@ def extract_barriers_even(basename, npoints, program='gulp'):
             outstream.close()
             
             # record barrier height and maximum
-            heights.append([i, j, site[1], site[2], get_barrier(energy)])
+            Eh = get_barrier(energy)
+            Ed = energy[-1]-energy[0]
+            heights.append([i, j, site[1], site[2], Eh, Ed])
             
     return heights     
     
