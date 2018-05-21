@@ -190,16 +190,16 @@ def perturb(x, mag=0.01):
     
     return x+2*mag*random(3)-mag
     
-def max_index(vec1, vec2):
+def max_index(vec):
     '''Determine for which index the distance between vec1 and vec2 is greatest
     '''
     
     i = 0
-    d = abs(vec1[0]-vec2[0])
-    for j in range(1, len(vec1)):
-        if abs(vec1[j]-vec2[j]) > d:
+    d = abs(vec[0])
+    for j in range(1, len(vec)):
+        if abs(vec[j]) > d:
             i = j
-    return j
+    return i
     
 def parse_bonds(bondfile):
     '''Finds all site pairs in a file containing lists of sites for which 
@@ -232,7 +232,7 @@ def parse_bonds(bondfile):
                 
     return site_dict
     
-def find_sites_in_path(start_cluster, stop_cluster, thresh=1):
+def path_endpoints(start_cluster, stop_cluster, thresh=1):
     '''Find the coordinates of the atoms present in only one of two vacancy-bearing
     dislocation clusters.
     '''
@@ -314,6 +314,12 @@ def construct_displacement_vecs(start_cluster, stop_cluster, start_i, stop_i,
     '''
     
     n = start_cluster.numberOfAtoms
+    
+    # calculate displacement vector between initial and final sites along
+    # the migration path
+    final_coords = stop_cluster[stop_i].getCoordinates()
+    initial_coords = start_cluster[start_i].getCoordinates()
+    dx = final_coords-initial_coords
 
     dx_list = []
     if start_i == stop_i:
@@ -348,11 +354,77 @@ def construct_displacement_vecs(start_cluster, stop_cluster, start_i, stop_i,
                 x = stop_cluster[i].getCoordinates()   
             dxi = x-x0
             dx_list.append(dxi)
-
+    
+    # determine direction to constrain
+    constrain_index = max_index(dx)
+    
     # create increment of update
     dxn_list = np.array(dx_list)/npoints
     
-    return dxn_list
+    return dxn_list, max_index
+    
+def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None, 
+                       noisy=False, plane_shift=np.zeros(3), node=0.5, thresh=1,
+                                    centre_on_impurity=False,  do_perturb=False):
+                     
+    bond_dict = parse_bonds('{}.bonds.dat'.format(basename))
+    
+    for i in in bond_dict.keys():
+        start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(sitename, i), rI, rII)
+        for j in bond_dict[i]:
+            stop, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(sitename, j), rI, rII)
+            
+            start_i, stop_j = path_endpoints(start, stop, thresh=thresh)
+            
+            dxn_ij, constrain_index = construct_disp_vecs(start, stop, start_i, 
+                                                              stop_i, npoints) 
+            
+            pair_name = '{}.{}.{}'.format(basename, start_i, stop_j)                                                  
+            gridded_energies, Eh, Ed = make_disp_files(start,
+                                                       start_i,
+                                                       pair_name,
+                                                       dxn_ijm
+                                                       rI_centre=rI_centre,
+                                                       do_perturb=do_perturb
+                                                      )
+                                                         
+
+def make_disp_files(start, start_i, basename, dxn_list, rI_centre=np.zeros(2), do_perturb=False):               
+    for i in range(npoints):       
+        # update dislocation structure
+        for j in range(start.numberOfAtoms):
+            dxi = dxn_list[j]*i/(npoints-1)
+            new_x = x + dxi
+        if j == start_i and do_perturb == False:
+            # add a small random perturbation to lift symmetry
+            new_x = new_x + perturb()
+        cluster[i].setDisplacedCoordinates(new_x)
+                
+        outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
+        gulp.write_gulp(outstream, cluster, sysinfo, defected=True, to_cart=False,
+                             rI_centre=rI_centre, relax_type='', add_constraints=True)
+        outstream.close()
+            
+        # if an executable has been provided, run the calculation
+        if executable is not None:
+            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))         
+        E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
+        grid.append(new_z)
+        energies.append(E)
+                
+    # if energies have been calculated, extract the maximum energy (relative to
+    # the undisplaced atom), the barrier height, and the energy difference 
+    # between the initial and final sites
+    if grid:
+        energies = np.array(energies)
+        energies -= energies.min()
+        barrier_height = get_barrier(energies)
+        site_energy_diff = energies[-1]-energies[0]
+        
+        return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
+    else:
+        # energies not calculated, return dummy values
+        return [], np.nan, np.nan
     
 def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename, 
                        executable, rI_centre=np.zeros(2), dx=np.zeros(2),
