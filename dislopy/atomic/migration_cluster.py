@@ -568,8 +568,8 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
                 dz = z1+(H-z0)
 
             # calculate the required change of axial position, r
-            r0 = x0[:-1]
-            r1 = np.array(site[1:3])
+            r0 = x0[:]
+            r1 = np.array(site[1:4])
             
             dr = r1-r0
 
@@ -591,7 +591,6 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             # the index of the defect and the atom being translated
             sitepairname = '{}.{}'.format(sitename, ti)
             if not adaptive:
-                print(dr)
                 gridded_energies, Eh, Ed = construct_disp_files(ti, 
                                                                 cluster, 
                                                                 sysinfo, 
