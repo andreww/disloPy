@@ -6,6 +6,7 @@ from __future__ import print_function, division, absolute_import
 
 import numpy as np
 from numpy.linalg import norm
+from numpy.random import random
 import glob
 import re
 
@@ -182,6 +183,176 @@ def scale_plane_shift(plane_shift, x, xmax, node=0.5):
         scale = (1.-ratio)/(1.-node)
         
     return scale*plane_shift
+    
+def perturb(x, mag=0.01):
+    '''Apply random perturbation to coordinates to reduce symmetry.
+    '''
+    
+    return x+2*mag*random(3)-mag
+    
+def max_index(vec1, vec2):
+    '''Determine for which index the distance between vec1 and vec2 is greatest
+    '''
+    
+    i = 0
+    d = abs(vec1[0]-vec2[0])
+    for j in range(1, len(vec1)):
+        if abs(vec1[j]-vec2[j]) > d:
+            i = j
+    return j
+    
+def parse_bonds(bondfile):
+    '''Finds all site pairs in a file containing lists of sites for which 
+    impurity energies are calculated, and the sites to which each is bonded. 
+    Typically, these are created by the routine <sites_to_replace_neb> in
+    module <multisite>.
+    '''
+    
+    # extract all bond-blocks
+    site_str = '\d+(?:\s+-?\d+\.\d+){4}'
+    block_re = re.compile('(?:{}\n)+{};'.format(site_str, site_str))
+    blocklist = block_re.findall(bondfile)
+    
+    # create a list of site-ID pairs for each bond
+    if len(blocklist) == 0:
+        raise ValueError("Number of sites must be > 0.")
+        
+    # else
+    site_re = re.compile(site_str)
+    site_dict = dict()
+    for site in blocklist:
+        sites = site_re.findall(site)
+        for i, match in enumerate(sites):
+            site_index = int(match.rstrip().split()[0])
+            if i == 0:
+                site_dict[site_index] = []
+                current_site = site_index
+            else:
+                site_dict[current_site].append(site_index)
+                
+    return site_dict
+    
+def find_sites_in_path(start_cluster, stop_cluster, thresh=1):
+    '''Find the coordinates of the atoms present in only one of two vacancy-bearing
+    dislocation clusters.
+    '''
+    
+    start_cluster.specifyRegions()
+    stop_cluster.specifyRegions()
+    
+    # extract list of atoms in region I for both clusters - reduces the number of
+    # atoms to be compared
+    r11 = start_cluster.getRegionIAtoms()
+    r12 = stop_cluster.getRegionIAtoms()
+    
+    # go through atoms to find which are present in only 1 cluster
+    found1 = False
+    found2 = False
+    s1=0
+    s2=0
+    for i in range(3347):
+        x1 = r11[i+s1].getCoordinates()[:-1]
+        x2 = r12[i+s2].getCoordinates()[:-1]
+        d = norm(x1-x2)
+        if d > thresh and not found1:
+            x1p = r11[i+1].getCoordinates()[:-1]
+            x2p = r12[i+1].getCoordinates()[:-1]
+            if norm(x1p-x2) < thresh:
+                s1 = 1
+                index_a = i
+            elif norm(x2p-x1) < thresh:
+                s2 = 1
+                index_b = i
+            found1 = True
+        elif d > thresh and not found2:
+            if s2 == 1:
+                s2 = 0
+                index_a = i
+            elif s1 == 1:
+                s1 = 0
+                index_b = i
+            found2 = True
+        else:
+            pass
+
+    # find indices of the initial and final sites for the diffusion path in each
+    # cluster
+    initial_coords = r11[index_a].getCoordinates()
+    final_coords = r12[index_b].getCoordinates()
+    
+    for i, atom in enumerate(start_cluster):
+        x = atom.getCoordinates()
+        if norm(x-initial_coords) < 1e-3:
+            cluster_a = i
+            break
+            
+    for j, atom in enumerate(stop_clusteer):
+        x = atom.getCoordinates()
+        if norm(x-final_coords) < 1e-3:
+            cluster_b = j
+            break
+    
+    return cluster_i, cluster_j
+    
+def scale_plane_shift(shift, i, npoints, node):
+    '''Scales the lateral displacement vector for a migration path according
+    to the relative distance traversed along the migration path.
+    '''
+
+    if i <= node:
+        # region of gradually increasing displacement
+        scale = i/float(node)
+    else:
+        scale = 1-(i-node)/float(npoints-node)
+        scale = (1.-i/float(npoints))/(1.-node/float(npoints))
+        
+    return scale*shift
+    
+def construct_displacement_vecs(start_cluster, stop_cluster, start_i, stop_i,
+                                                                     npoints):
+    '''Construct displacement vectors for all atoms in a cluster.
+    '''
+    
+    n = start_cluster.numberOfAtoms
+
+    dx_list = []
+    if start_i == stop_i:
+        for i in range(n):
+            if i == start_i:
+                dx_list.append(dx)
+            else:
+                dxi = stop_cluster[i].getCoordinates()-start_cluster[i].getCoordinates()
+                dx_list.append(dxi)
+    elif start_i < stop_i:
+        # assumes that cluster_a > cluster_b
+        for i in range(n):
+            x0 = start_cluster[i].getCoordinates()
+            if i == start_i:
+                dx_list.append(dx)
+                continue
+            elif i > start_i and i <= stop_i:
+                x = stop_cluster[i-1].getCoordinates()
+            else:
+                x = stop_cluster[i].getCoordinates()
+            dxi = x-x0
+            dx_list.append(dxi)
+    elif stop_i < start_i:
+        for i in range(n):
+            x0 = start_cluster[i].getCoordinates()
+            if i >= stop_i and i < start_i:
+                x = stop_cluster[i+1].getCoordinates()
+            elif i == start_i:
+                dx_list.append(dx)
+                continue 
+            else:
+                x = stop_cluster[i].getCoordinates()   
+            dxi = x-x0
+            dx_list.append(dxi)
+
+    # create increment of update
+    dxn_list = np.array(dx_list)/npoints
+    
+    return dxn_list
     
 def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename, 
                        executable, rI_centre=np.zeros(2), dx=np.zeros(2),
