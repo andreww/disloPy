@@ -470,7 +470,7 @@ def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename,
                                plane_shift=np.zeros(2),  dx=np.zeros(2)):
     '''Constructs input files for points along the atom migration path.
     '''
-        
+    print('here')    
     x = cluster[index].getCoordinates()
     grid = []
     energies = []
@@ -568,8 +568,8 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
                 dz = z1+(H-z0)
 
             # calculate the required change of axial position, r
-            r0 = x0[:]
-            r1 = np.array(site[1:4])
+            r0 = x0[:-1]
+            r1 = np.array(site[1:3])
             
             dr = r1-r0
 
