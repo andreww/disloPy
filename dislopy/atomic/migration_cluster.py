@@ -732,7 +732,7 @@ def write_heights(basename, heights):
                                   site[1], site[2], site[3], site[4], site[5]))   
     outstream.close() 
                                                         
-def read_heights(basename, heights):
+def read_heights(basename):
     '''Reads migration barrier heights.
     '''
 
@@ -745,7 +745,7 @@ def read_heights(basename, heights):
                 continue
             # else
             site_line = line.rstrip().split()
-            site_info.append([float(x) for x in site_line])
+            barrier_info.append([float(x) for x in site_line])
             
     return np.array(site_info)  
     

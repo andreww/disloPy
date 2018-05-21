@@ -444,9 +444,12 @@ class SegregationSim(object):
                 heights = mig.extract_barriers_even(basename, npar)
         except IOError:
             return
-   
-        # write barrier heights to file
-        mig.write_heights(basename, heights)  
+        
+        if self.migration('do_calc'):  
+            # write barrier heights to file
+            mig.write_heights(basename, heights) 
+        else: 
+            # otherwise, read them in 
         
         if self.migration('plot_migration'):  
             mig.plot_barriers(heights, 
