@@ -747,7 +747,7 @@ def read_heights(basename):
             site_line = line.rstrip().split()
             barrier_info.append([float(x) for x in site_line])
             
-    return np.array(site_info)  
+    return np.array(barrier_info)  
     
 def plot_barriers(heights, plotname, r, mirror_both=False, mirror=False, mirror_axis=1,
                                                          inversion=False, tolerance=1.):
