@@ -411,7 +411,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
                 cluster[ti].setSpecies(newspecies)
                 
             # determine centre of region I
-            if centre_in_impurity:
+            if centre_on_impurity:
                 rI_centre=site[1:3]
             else:
                 rI_centre=np.zeros(2)
