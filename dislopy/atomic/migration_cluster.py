@@ -592,11 +592,11 @@ def plot_barriers(heights, plotname, r, mirror_both=False, mirror=False, mirror_
         i = int(h[0])
         if i in siteinfo.keys():
             if h[-1] < siteinfo[i]['E']:
-                siteinfo[i]['E'] = h[-1]
+                siteinfo[i]['E'] = h[-2]
                 siteinfo[i]['x'] = h[2:4]
         else:
             siteinfo[i] = dict()
-            siteinfo[i]['E'] = h[-1]
+            siteinfo[i]['E'] = h[-2]
             siteinfo[i]['x'] = h[2:4]
 
     # construct positions and energies           
