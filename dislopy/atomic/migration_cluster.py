@@ -591,6 +591,7 @@ def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None,
             # the index of the defect and the atom being translated
             sitepairname = '{}.{}'.format(sitename, ti)
             if not adaptive:
+                print(dr)
                 gridded_energies, Eh, Ed = construct_disp_files(ti, 
                                                                 cluster, 
                                                                 sysinfo, 
