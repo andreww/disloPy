@@ -470,7 +470,7 @@ def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename,
                                plane_shift=np.zeros(2),  dx=np.zeros(2)):
     '''Constructs input files for points along the atom migration path.
     '''
-    print('here')    
+        
     x = cluster[index].getCoordinates()
     grid = []
     energies = []
@@ -510,7 +510,7 @@ def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename,
         return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
     else:
         # energies not calculated, return dummy values
-        return [], np.nan    
+        return [], np.nan, np.nan    
 
 def get_barrier(energy_values):
     '''Calculates the maximum energy barrier that has to be surmounted getting
