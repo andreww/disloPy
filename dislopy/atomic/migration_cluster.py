@@ -386,13 +386,18 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             gridded_energies, Eh, Ed = make_disp_files(start,
                                                        start_i,
                                                        pair_name,
-                                                       dxn_ijm
+                                                       dxn_ij,
                                                        rI_centre=rI_centre,
                                                        do_perturb=do_perturb
                                                       )
                                                          
 
-def make_disp_files(start, start_i, basename, dxn_list, rI_centre=np.zeros(2), do_perturb=False):               
+def make_disp_files(start, start_i, basename, dxn_list, rI_centre=np.zeros(2), 
+                                                            do_perturb=False):
+    '''Generates input files for a constrained optimization calculation of migration
+    barriers along an arbitrary migration path.
+    '''
+                                                                           
     for i in range(npoints):       
         # update dislocation structure
         for j in range(start.numberOfAtoms):
