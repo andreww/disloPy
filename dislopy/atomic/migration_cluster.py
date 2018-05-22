@@ -366,10 +366,13 @@ def construct_displacement_vecs(start_cluster, stop_cluster, start_i, stop_i,
 def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None, 
                        noisy=False, plane_shift=np.zeros(3), node=0.5, thresh=1,
                                     centre_on_impurity=False,  do_perturb=False):
+    '''Calculates migration barriers between all pairs of atoms that are deemed
+    to be bonded.
+    '''
                      
     bond_dict = parse_bonds('{}.bonds.dat'.format(basename))
     
-    for i in in bond_dict.keys():
+    for i in bond_dict.keys():
         start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(sitename, i), rI, rII)
         for j in bond_dict[i]:
             stop, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(sitename, j), rI, rII)
