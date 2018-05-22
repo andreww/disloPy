@@ -840,7 +840,7 @@ def transition_rfo(strucname, rI, rII, maxiter=2500, executable=None):
     
     # produce input file for transition state calculation
     cluster, sysinfo = gulp.cluster_from_grs('{}.grs'.format(strucname), rI, rII)     
-    ostream = open('rfo.{}.gin', 'w')
+    ostream = open('rfo.{}.gin'.format(strucname), 'w')
     gulp.write_gulp(ostream, cluster, sysinfo,  prop=False, maxiter=maxiter, 
                         transition=True, do_relax=False, add_constraints=True)
     
