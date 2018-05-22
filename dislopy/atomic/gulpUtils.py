@@ -400,8 +400,8 @@ atomLine = re.compile(r'([A-Z][a-z]?\d*)\s+(core|c|shel|s|bshe|bcor)' + \
 #speciesLine = re.compile('^([A-Z][a-z]?\d*?)\s+(core|c|shel|s|bshe|bcor)' + \
 #                                                          '\s+-?\d+\.\d+\s*$')
 
-def preamble(outstream, maxiter=500, do_relax=True, relax_type='',
-              polymer=False, molq=False, prop=True, add_constraints=False):
+def preamble(outstream, maxiter=500, do_relax=True, relax_type='', polymer=False,
+                  molq=False, prop=True, add_constraints=False, transition=False):
     '''Writes overall simulation parameters (relaxation algorithm, maximum 
     number of iterations, etc.) to <outstream>.
     
@@ -416,6 +416,8 @@ def preamble(outstream, maxiter=500, do_relax=True, relax_type='',
             outstream.write('opti qok bfgs')
         else:
             outstream.write('opti qok bfgs {}'.format(relax_type))
+    elif transition:
+        outstream.write('transition qok')
     else:
         outstream.write('qok ')
     
@@ -435,8 +437,8 @@ def preamble(outstream, maxiter=500, do_relax=True, relax_type='',
     return
     
 def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart=True,
-                    add_constraints=False, relax_type='conv', impurities=None, prop=True,
-                                   pfractional=False, maxiter=500, rI_centre=np.zeros(2)):
+                 add_constraints=False, relax_type='conv', impurities=None, prop=True,
+               pfractional=False, maxiter=500, rI_centre=np.zeros(2), transition=False):
     '''Writes the crystal <gulp_struc> to <outstream>. If <defected> is True,
     then it uses the displaced coordinates, otherwise it uses the regular atomic
     coordinates (ie. their locations in a perfect crystal with the provided
@@ -473,7 +475,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
             
         # polymer cell -> write cell height
         preamble(outstream, do_relax=do_relax, polymer=True, relax_type=relax_type,
-                               maxiter=maxiter, add_constraints=add_constraints)
+            maxiter=maxiter, add_constraints=add_constraints, transition=transition)
         height = struc.getHeight()
         outstream.write('pcell\n')
         outstream.write('{:.6f} 0\n'.format(height))
@@ -495,7 +497,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
     else:
         # write lattice vectors
         preamble(outstream, do_relax=do_relax, relax_type=relax_type, prop=prop,
-                                                maxiter=maxiter) 
+                                          maxiter=maxiter, transition=transition) 
         writeVectors(struc.getLattice(), outstream)
         
         if relax_type is None:

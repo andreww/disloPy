@@ -823,6 +823,25 @@ def read_heights(basename):
             
     return np.array(barrier_info)  
     
+def make_transition_rfo(strucname, rI, rII, maxiter=2500, executable=None):
+    '''Takes a defect structure produced by the constrained minimization routine
+    and sets up a transition state calculation using the RFO algorithm to find the
+    saddle point. <maxiter> is large because of the slow convergence of the 
+    l-BFGS algorithm used by GULP to find the transition state. 
+    '''
+    
+    # produce input file for transition state calculation
+    cluster, sysinfo = gulp.cluster_from_grs('{}.grs'.format(strucname), rI, rII)     
+    ostream = open('rfo.{}.gin', 'w')
+    gulp.write_gulp(ostream, cluster, sysinfo, do_relax=False, prop=False, 
+                        maxiter=maxiter, transition=True)
+    
+    # run the calculation if an executable has been provided                    
+    if executable is not None:                    
+        gulp.run_gulp(executable, 'rfo.{}'.format(strucname))
+    
+    return
+    
 def plot_barriers(heights, plotname, r, mirror_both=False, mirror=False, mirror_axis=1,
                                                          inversion=False, tolerance=1.):
     '''Plots the lowest energy migration path for each site around the 
