@@ -296,7 +296,7 @@ def path_endpoints(start_cluster, stop_cluster, thresh=1):
             cluster_a = i
             break
             
-    for j, atom in enumerate(stop_clusteer):
+    for j, atom in enumerate(stop_cluster):
         x = atom.getCoordinates()
         if norm(x-final_coords) < 1e-3:
             cluster_b = j
