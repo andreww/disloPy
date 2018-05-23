@@ -451,14 +451,13 @@ def make_disp_files_gen(cluster, start_i, basename, dxn_list, npoints, rI_centre
     for i in range(npoints):       
         # update dislocation structure
         for j in range(cluster.numberOfAtoms):
-            dxi = dxn_list[j]*i/(npoints-1)
-            new_x = x + dxi
+            dxj = dxn_list[j]*i/(npoints-1)
+            new_x = cluster[j].getCoordinates() + dxj
             if j == start_i and do_perturb == False:
                 # add a small random perturbation to lift symmetry
                 new_x = new_x + perturb()
                 
-            
-        cluster[i].setDisplacedCoordinates(new_x)
+            cluster[j].setDisplacedCoordinates(new_x)
                 
         outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
         gulp.write_gulp(outstream, cluster, sysinfo, defected=True, to_cart=False,
