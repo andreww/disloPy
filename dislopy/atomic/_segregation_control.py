@@ -138,7 +138,8 @@ def handle_segregation_control(param_dict):
                        ('plane_shift', {'default': np.zeros(2), 'type': vector}),
                        ('threshold', {'default': 0.5, 'type': float}),
                        ('plot_migration', {'default': False, 'type': to_bool}),
-                       ('new_species', {'default': '', 'type': str})
+                       ('new_species', {'default': '', 'type': str}),
+                       ('use_parallel', {'default': False, 'type': to_bool})
                       )
                     
     # cards for the <&constraints> namelist
@@ -421,21 +422,37 @@ class SegregationSim(object):
             newspecies = None
         
         heights= []
-        if not self.migration('no_setup'):    
-            heights = mig.migrate_sites_general(basename, 
-                                        self.control('new_r1'),  
-                                        self.r2, 
-                                        self.control('site'), 
-                                        npar, 
-                                        executable=executable, 
-                                        node=self.migration('node'),
-                                        plane_shift=self.migration('plane_shift'),
-                                        adaptive=self.migration('adaptive'),
-                                        threshold=self.migration('threshold'),
-                                        newspecies=newspecies,
-                                        noisy=self.control('noisy'),
-                                        centre_on_impurity=self.control('centre_on_impurity')
-                                       )
+        if not self.migration('no_setup'): 
+            if self.migration('use_parallel'):   
+                heights = mig.migrate_sites_parallel(basename, 
+                                                     self.control('new_r1'),  
+                                                     self.r2, 
+                                                     self.control('site'), 
+                                                     npar, 
+                                                     executable=executable, 
+                                                     node=self.migration('node'),
+                                                     plane_shift=self.migration('plane_shift'),
+                                                     adaptive=self.migration('adaptive'),
+                                                     threshold=self.migration('threshold'),
+                                                     newspecies=newspecies,
+                                                     noisy=self.control('noisy'),
+                                                     centre_on_impurity=self.control('centre_on_impurity')
+                                                    )
+            else:
+                heights = mig.migrate_sites_general(basename, 
+                                                    self.control('new_r1'),  
+                                                    self.r2, 
+                                                    self.control('site'), 
+                                                    npar, 
+                                                    executable=executable, 
+                                                    node=self.migration('node'),
+                                                    plane_shift=self.migration('plane_shift'),
+                                                    adaptive=self.migration('adaptive'),
+                                                    threshold=self.migration('threshold'),
+                                                    newspecies=newspecies,
+                                                    noisy=self.control('noisy'),
+                                                    centre_on_impurity=self.control('centre_on_impurity')
+                                                   )
                                    
         # read in energies output by non-adaptive calculations
         try:

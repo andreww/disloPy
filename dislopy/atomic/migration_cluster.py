@@ -662,9 +662,9 @@ def get_barrier(energy_values):
     
     return eb    
 
-def migrate_sites(basename, rI, rII, atom_type, npoints, executable=None, 
-             noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
-                  threshold=5e-1, newspecies=None, centre_on_impurity=False):
+def migrate_sites_parallel(basename, rI, rII, atom_type, npoints, executable=None, 
+                   noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
+                       threshold=5e-1, newspecies=None, centre_on_impurity=False):
     '''Constructs and, if specified by user, runs input files for migration
     of vacancies along a dislocation line. <plane_shift> allows the user to 
     migrate the atom around intervening atoms (eg. oxygen ions). <adaptive> tells
