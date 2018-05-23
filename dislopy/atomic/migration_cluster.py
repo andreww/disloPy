@@ -216,7 +216,7 @@ def parse_bonds(bondfile):
     # extract all bond-blocks
     site_str = '\d+(?:\s+-?\d+\.\d+){4}'
     block_re = re.compile('(?:{}\n)+{};'.format(site_str, site_str))
-    blocklist = block_re.findall(bondfile)
+    blocklist = block_re.findall(bondlines)
     
     # create a list of site-ID pairs for each bond
     if len(blocklist) == 0:
