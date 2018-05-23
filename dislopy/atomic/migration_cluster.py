@@ -446,7 +446,8 @@ def make_disp_files_gen(start, start_i, basename, dxn_list, rI_centre=np.zeros(2
             
         # if an executable has been provided, run the calculation
         if executable is not None:
-            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))         
+            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))  
+                   
         E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
         grid.append(new_z)
         energies.append(E)
@@ -638,7 +639,7 @@ def get_barrier(energy_values):
     
     return eb    
 
-def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None, 
+def migrate_sites(basename, rI, rII, atom_type, npoints, executable=None, 
              noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
                   threshold=5e-1, newspecies=None, centre_on_impurity=False):
     '''Constructs and, if specified by user, runs input files for migration
