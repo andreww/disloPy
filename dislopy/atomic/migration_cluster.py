@@ -427,7 +427,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
 
     return heights                                                         
 
-def make_disp_files_gen(start, start_i, basename, dxn_list, rI_centre=np.zeros(2), 
+def make_disp_files_gen(cluster, start_i, basename, dxn_list, rI_centre=np.zeros(2), 
                             do_perturb=False, constrain_index=2, newspecies=None):
     '''Generates input files for a constrained optimization calculation of migration
     barriers along an arbitrary migration path.
@@ -442,10 +442,14 @@ def make_disp_files_gen(start, start_i, basename, dxn_list, rI_centre=np.zeros(2
     if newspecies is not None:
         oldspecies = cluster[start_i].getSpecies()
         cluster[start_i].setSpecies(newspecies)
+    
+    # lists to hold grid spacing and energies
+    grid = []
+    energies = []
                                                                            
     for i in range(npoints):       
         # update dislocation structure
-        for j in range(start.numberOfAtoms):
+        for j in range(cluster.numberOfAtoms):
             dxi = dxn_list[j]*i/(npoints-1)
             new_x = x + dxi
             if j == start_i and do_perturb == False:
