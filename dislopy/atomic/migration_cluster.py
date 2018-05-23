@@ -557,21 +557,7 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
                 
                 # calculate energies
                 if executable is not None:
-                    gulp.run_gulp(executable, 'disp.{}.{}'.format(counter, basename))
-                
-            # write header, including full displacement vector and barrier height 
-            outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
-            outstream.write('# {:.3f} {:.3f} {:.3f}\n'.format(dr[0], dr[1], dz))
-           
-            # write energies to file if they have been calculated
-            if gridded_energies:     
-                # write energies along path
-                for z, E in gridded_energies:
-                    outstream.write('{} {:.6f}\n'.format(z, E))
-                
-                heights.append([int(site[0]), ti, site[1], site[2], Eh, Ed])
-            
-            outstream.close(){}'.format(counter, basename))        
+                    gulp.run_gulp(executable, 'disp.{}.{}'.format(counter, basename))     
                 
         E = util.extract_energy('disp.{}.{}.gout'.format(counter, basename), 'gulp')[0]           
         energies.insert(imax+2*i, E)
