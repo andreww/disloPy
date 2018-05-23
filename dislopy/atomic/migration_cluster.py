@@ -293,16 +293,16 @@ def path_endpoints(start_cluster, stop_cluster, thresh=1):
     for i, atom in enumerate(start_cluster):
         x = atom.getCoordinates()
         if norm(x-initial_coords) < 1e-3:
-            cluster_a = i
+            start_i = i
             break
             
     for j, atom in enumerate(stop_cluster):
         x = atom.getCoordinates()
         if norm(x-final_coords) < 1e-3:
-            cluster_b = j
+            start_j = j
             break
     
-    return cluster_i, cluster_j
+    return start_i, start_j
     
 def scale_plane_shift(shift, i, npoints, node):
     '''Scales the lateral displacement vector for a migration path according
