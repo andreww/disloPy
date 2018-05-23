@@ -333,9 +333,9 @@ def displacement_vecs(start_cluster, stop_cluster, start_i, stop_i, npoints):
     
     # check that the final element of dx is right
     dz = dx[-1]
-    if abs(dz-H) < dz:
+    if abs(dz-H) < abs(dz):
         dz = dz - H
-    elif abs(dz+H) < dz:
+    elif abs(dz+H) < abs(dz):
         dz = dz + H
         
     dx[-1] = dz 
