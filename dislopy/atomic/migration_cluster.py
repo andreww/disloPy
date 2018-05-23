@@ -318,8 +318,7 @@ def scale_plane_shift(shift, i, npoints, node):
         
     return scale*shift
     
-def construct_displacement_vecs(start_cluster, stop_cluster, start_i, stop_i,
-                                                                     npoints):
+def displacement_vecs(start_cluster, stop_cluster, start_i, stop_i, npoints):
     '''Construct displacement vectors for all atoms in a cluster.
     '''
     
@@ -390,7 +389,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             
             start_i, stop_j = path_endpoints(start, stop, thresh=threshold)
             
-            dxn_ij, constrain_index = construct_disp_vecs(start, stop, start_i, 
+            dxn_ij, constrain_index = displacement_vecs(start, stop, start_i, 
                                                               stop_i, npoints) 
             
             pair_name = '{}.{}.{}'.format(basename, start_i, stop_j)                                                  
