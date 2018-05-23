@@ -398,7 +398,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             else:
                 rI_centre=np.zeros(2) 
             
-            pair_name = '{}.{}.{}'.format(basename, start_i, stop_j)                                                  
+            pair_name = '{}.{}.{}'.format(basename, i, j)                                                  
             gridded_energies, Eh, Ed = make_disp_files_gen(start,
                                                            start_i,
                                                            pair_name,
