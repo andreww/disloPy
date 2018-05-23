@@ -208,6 +208,11 @@ def parse_bonds(bondfile):
     module <multisite>.
     '''
     
+    # open file containing list of bonds
+    bondstream = open(bondfile, 'r')
+    bondlines = bondstream.read()
+    bondstream.close()
+    
     # extract all bond-blocks
     site_str = '\d+(?:\s+-?\d+\.\d+){4}'
     block_re = re.compile('(?:{}\n)+{};'.format(site_str, site_str))
