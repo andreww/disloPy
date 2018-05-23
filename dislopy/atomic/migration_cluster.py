@@ -322,13 +322,23 @@ def displacement_vecs(start_cluster, stop_cluster, start_i, stop_i, npoints):
     '''Construct displacement vectors for all atoms in a cluster.
     '''
     
-    n = start_cluster.numberOfAtoms
+    n = start_cluster.numberOfAtoms 
+    H = start_cluster.getHeight()
     
     # calculate displacement vector between initial and final sites along
     # the migration path
     final_coords = stop_cluster[stop_i].getCoordinates()
     initial_coords = start_cluster[start_i].getCoordinates()
     dx = final_coords-initial_coords
+    
+    # check that the final element of dx is right
+    dz = dx[-1]
+    if abs(dz-H) < dz:
+        dz = dz - H
+    elif abs(dz+H) < dz:
+        dz = dz + H
+        
+    dx[-1] = dz 
 
     dx_list = []
     if start_i == stop_i:
