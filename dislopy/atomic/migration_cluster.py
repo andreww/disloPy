@@ -364,7 +364,7 @@ def construct_displacement_vecs(start_cluster, stop_cluster, start_i, stop_i,
     return dxn_list, constrain_index
     
 def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None, 
-                       noisy=False, plane_shift=np.zeros(3), node=0.5, thresh=1,
+                    noisy=False, plane_shift=np.zeros(3), node=0.5, threshold=1,
                     centre_on_impurity=False, do_perturb=False, newspecies=None, 
                                                                 adaptive=False):
     '''Calculates migration barriers between all pairs of atoms that are deemed
@@ -378,7 +378,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
         for j in bond_dict[i]:
             stop, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(sitename, j), rI, rII)
             
-            start_i, stop_j = path_endpoints(start, stop, thresh=thresh)
+            start_i, stop_j = path_endpoints(start, stop, thresh=threshold)
             
             dxn_ij, constrain_index = construct_disp_vecs(start, stop, start_i, 
                                                               stop_i, npoints) 
