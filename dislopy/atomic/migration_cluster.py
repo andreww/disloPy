@@ -405,6 +405,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                                                            dxn_ij,
                                                            npoints,
                                                            sysinfo,
+                                                           executable=exectuable,
                                                            rI_centre=rI_centre,
                                                            do_perturb=do_perturb,
                                                            constrain_index=constrain_index,
@@ -430,7 +431,8 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
     return heights                                                         
 
 def make_disp_files_gen(cluster, start_i, basename, dxn_list, npoints, sysinfo,  
-                        rI_centre=np.zeros(2), do_perturb=False, constrain_index=2, newspecies=None):
+                      executable=None, rI_centre=np.zeros(2), do_perturb=False, 
+                                            constrain_index=2, newspecies=None):
     '''Generates input files for a constrained optimization calculation of migration
     barriers along an arbitrary migration path.
     '''
