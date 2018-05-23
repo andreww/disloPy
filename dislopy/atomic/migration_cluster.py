@@ -184,11 +184,11 @@ def scale_plane_shift(plane_shift, x, xmax, node=0.5):
         
     return scale*plane_shift
     
-def perturb(x, mag=0.01):
+def perturb(mag=0.01):
     '''Apply random perturbation to coordinates to reduce symmetry.
     '''
     
-    return x+2*mag*random(3)-mag
+    return 2*mag*random(3)-mag
     
 def max_index(vec):
     '''Determine for which index the distance between vec1 and vec2 is greatest
