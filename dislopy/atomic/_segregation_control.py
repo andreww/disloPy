@@ -139,7 +139,7 @@ def handle_segregation_control(param_dict):
                        ('threshold', {'default': 0.5, 'type': float}),
                        ('plot_migration', {'default': False, 'type': to_bool}),
                        ('new_species', {'default': '', 'type': str}),
-                       ('use_parallel', {'default': False, 'type': to_bool})
+                       ('use_parallel', {'default': True, 'type': to_bool})
                       )
                     
     # cards for the <&constraints> namelist
