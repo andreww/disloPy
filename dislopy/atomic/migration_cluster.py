@@ -379,9 +379,9 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
     bond_dict = parse_bonds('{}.bonds.txt'.format(basename))
     
     for i in bond_dict.keys():
-        start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(sitename, i), rI, rII)
+        start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, i), rI, rII)
         for j in bond_dict[i]:
-            stop, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(sitename, j), rI, rII)
+            stop, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, j), rI, rII)
             
             start_i, stop_j = path_endpoints(start, stop, thresh=threshold)
             
