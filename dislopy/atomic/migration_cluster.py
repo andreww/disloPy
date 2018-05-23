@@ -361,11 +361,11 @@ def construct_displacement_vecs(start_cluster, stop_cluster, start_i, stop_i,
     # create increment of update
     dxn_list = np.array(dx_list)/npoints
     
-    return dxn_list, max_index
+    return dxn_list, constrain_index
     
-def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None, 
+def migrate_sites_general(basename, npoints, rI, rII, bondlist,  executable=None, 
                        noisy=False, plane_shift=np.zeros(3), node=0.5, thresh=1,
-                                    centre_on_impurity=False,  do_perturb=False):
+                                    centre_on_impurity=False,  do_perturb=False, newspecies=None):
     '''Calculates migration barriers between all pairs of atoms that are deemed
     to be bonded.
     '''
@@ -383,29 +383,60 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                                                               stop_i, npoints) 
             
             pair_name = '{}.{}.{}'.format(basename, start_i, stop_j)                                                  
-            gridded_energies, Eh, Ed = make_disp_files(start,
-                                                       start_i,
-                                                       pair_name,
-                                                       dxn_ij,
-                                                       rI_centre=rI_centre,
-                                                       do_perturb=do_perturb
-                                                      )
-                                                         
+            gridded_energies, Eh, Ed = make_disp_files_gen(start,
+                                                           start_i,
+                                                           pair_name,
+                                                           dxn_ij,
+                                                           rI_centre=rI_centre,
+                                                           do_perturb=do_perturb,
+                                                           constrain_index=constrain_index,
+                                                           newspecies=newspecies
+                                                          )
+                                                          
+            outstream = open('disp.{}.barrier.dat'.format(pair_name), 'w')    
+            # write header, including full displacement vector and barrier height 
+            xstart = start[start_i].getCoordinates()
+            xstop = stop[stop_j].getCoordinates()
+            outstream.write('# {:.0f} {:.0f}\n'.format(start_i, stop_j))
+           
+            # write energies to file if they have been calculated
+            if gridded_energies:     
+                # write energies along path
+                for z, E in gridded_energies:
+                    outstream.write('{} {:.6f}\n'.format(z, E))
+                
+                heights.append([start_i, stop_j, site[1], site[2], Eh, Ed])
+            
+            outstream.close()
 
-def make_disp_files(start, start_i, basename, dxn_list, rI_centre=np.zeros(2), 
-                                                            do_perturb=False):
+    return heights                                                         
+
+def make_disp_files_gen(start, start_i, basename, dxn_list, rI_centre=np.zeros(2), 
+                            do_perturb=False, constrain_index=2, newspecies=None):
     '''Generates input files for a constrained optimization calculation of migration
     barriers along an arbitrary migration path.
     '''
+    
+    # set constraints
+    constraint_vector = np.ones(3)
+    constraint_vector[constrain_index] = 0
+    cluster[start_i].set_constraints(constraint_vector)
+    
+    # change species of diffusing atom, if requested
+    if newspecies is not None:
+        oldspecies = cluster[start_i].getSpecies()
+        cluster[start_i].setSpecies(newspecies)
                                                                            
     for i in range(npoints):       
         # update dislocation structure
         for j in range(start.numberOfAtoms):
             dxi = dxn_list[j]*i/(npoints-1)
             new_x = x + dxi
-        if j == start_i and do_perturb == False:
-            # add a small random perturbation to lift symmetry
-            new_x = new_x + perturb()
+            if j == start_i and do_perturb == False:
+                # add a small random perturbation to lift symmetry
+                new_x = new_x + perturb()
+                
+            
         cluster[i].setDisplacedCoordinates(new_x)
                 
         outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
@@ -419,6 +450,11 @@ def make_disp_files(start, start_i, basename, dxn_list, rI_centre=np.zeros(2),
         E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
         grid.append(new_z)
         energies.append(E)
+        
+    # unset the constraints
+    cluster[start_i].set_constraints(np.ones(3))
+    if newspecies is not None:
+        cluster[start_i].setSpecies(oldspecies)
                 
     # if energies have been calculated, extract the maximum energy (relative to
     # the undisplaced atom), the barrier height, and the energy difference 
@@ -520,7 +556,19 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
                 outstream.close()
                 
                 # calculate energies
-                gulp.run_gulp(executable, 'disp.{}.{}'.format(counter, basename))        
+                gulp.run_gulp(executable, 'disp.{}.outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
+            # write header, including full displacement vector and barrier height 
+            outstream.write('# {:.3f} {:.3f} {:.3f}\n'.format(dr[0], dr[1], dz))
+           
+            # write energies to file if they have been calculated
+            if gridded_energies:     
+                # write energies along path
+                for z, E in gridded_energies:
+                    outstream.write('{} {:.6f}\n'.format(z, E))
+                
+                heights.append([int(site[0]), ti, site[1], site[2], Eh, Ed])
+            
+            outstream.close(){}'.format(counter, basename))        
                 
         E = util.extract_energy('disp.{}.{}.gout'.format(counter, basename), 'gulp')[0]           
         energies.insert(imax+2*i, E)
@@ -601,7 +649,7 @@ def get_barrier(energy_values):
     
     return eb    
 
-def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None, 
+def migrate_sites(basename, rI, rII, atom_type, npoints, executable=None, 
              noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
                   threshold=5e-1, newspecies=None, centre_on_impurity=False):
     '''Constructs and, if specified by user, runs input files for migration
