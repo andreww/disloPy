@@ -250,12 +250,17 @@ def path_endpoints(start_cluster, stop_cluster, thresh=1):
     r11 = start_cluster.getRegionIAtoms()
     r12 = stop_cluster.getRegionIAtoms()
     
+    # get number of atoms in region I for the two clusters
+    n = r11.numberOfAtoms
+    if n != r12.numberOfAtoms:
+        raise ValueError("Clusters must contain the same number of atoms.")
+    
     # go through atoms to find which are present in only 1 cluster
     found1 = False
     found2 = False
     s1=0
     s2=0
-    for i in range(3347):
+    for i in range(n):
         x1 = r11[i+s1].getCoordinates()[:-1]
         x2 = r12[i+s2].getCoordinates()[:-1]
         d = norm(x1-x2)
