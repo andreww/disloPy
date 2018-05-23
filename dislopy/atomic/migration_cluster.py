@@ -376,7 +376,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
     to be bonded.
     '''
                      
-    bond_dict = parse_bonds('{}.bonds.dat'.format(basename))
+    bond_dict = parse_bonds('{}.bonds.txt'.format(basename))
     
     for i in bond_dict.keys():
         start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(sitename, i), rI, rII)
