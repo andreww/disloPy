@@ -422,7 +422,7 @@ class SegregationSim(object):
         
         heights= []
         if not self.migration('no_setup'):    
-            heights = mig.migrate_sites_gen(basename, 
+            heights = mig.migrate_sites_general(basename, 
                                         self.control('new_r1'),  
                                         self.r2, 
                                         self.control('site'), 
