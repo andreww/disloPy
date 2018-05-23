@@ -390,7 +390,13 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             start_i, stop_j = path_endpoints(start, stop, thresh=threshold)
             
             dxn_ij, constrain_index = displacement_vecs(start, stop, start_i, 
-                                                              stop_j, npoints) 
+                                                              stop_j, npoints)
+                                                              
+            # determine centre of region I
+            if centre_on_impurity:
+                rI_centre=start[start_i].getCoordinates()[1:3]
+            else:
+                rI_centre=np.zeros(2) 
             
             pair_name = '{}.{}.{}'.format(basename, start_i, stop_j)                                                  
             gridded_energies, Eh, Ed = make_disp_files_gen(start,
