@@ -363,9 +363,9 @@ def construct_displacement_vecs(start_cluster, stop_cluster, start_i, stop_i,
     
     return dxn_list, constrain_index
     
-def migrate_sites_general(basename, npoints, rI, rII, bondlist,  executable=None, 
+def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None, 
                        noisy=False, plane_shift=np.zeros(3), node=0.5, thresh=1,
-                                    centre_on_impurity=False,  do_perturb=False, newspecies=None):
+                   centre_on_impurity=False,  do_perturb=False, newspecies=None):
     '''Calculates migration barriers between all pairs of atoms that are deemed
     to be bonded.
     '''
@@ -556,8 +556,11 @@ def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename,
                 outstream.close()
                 
                 # calculate energies
-                gulp.run_gulp(executable, 'disp.{}.outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
+                if executable is not None:
+                    gulp.run_gulp(executable, 'disp.{}.{}'.format(counter, basename))
+                
             # write header, including full displacement vector and barrier height 
+            outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
             outstream.write('# {:.3f} {:.3f} {:.3f}\n'.format(dr[0], dr[1], dz))
            
             # write energies to file if they have been calculated
@@ -649,7 +652,7 @@ def get_barrier(energy_values):
     
     return eb    
 
-def migrate_sites(basename, rI, rII, atom_type, npoints, executable=None, 
+def migrate_sites(basename, n, rI, rII, atom_type, npoints, executable=None, 
              noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
                   threshold=5e-1, newspecies=None, centre_on_impurity=False):
     '''Constructs and, if specified by user, runs input files for migration
