@@ -365,7 +365,8 @@ def construct_displacement_vecs(start_cluster, stop_cluster, start_i, stop_i,
     
 def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None, 
                        noisy=False, plane_shift=np.zeros(3), node=0.5, thresh=1,
-                   centre_on_impurity=False,  do_perturb=False, newspecies=None):
+                    centre_on_impurity=False, do_perturb=False, newspecies=None, 
+                                                                adaptive=False):
     '''Calculates migration barriers between all pairs of atoms that are deemed
     to be bonded.
     '''
