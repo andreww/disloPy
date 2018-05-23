@@ -390,7 +390,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             start_i, stop_j = path_endpoints(start, stop, thresh=threshold)
             
             dxn_ij, constrain_index = displacement_vecs(start, stop, start_i, 
-                                                              stop_i, npoints) 
+                                                              stop_j, npoints) 
             
             pair_name = '{}.{}.{}'.format(basename, start_i, stop_j)                                                  
             gridded_energies, Eh, Ed = make_disp_files_gen(start,
