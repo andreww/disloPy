@@ -411,7 +411,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                                                               
             # determine centre of region I
             if centre_on_impurity:
-                rI_centre=start[start_i].getCoordinates()[1:3]
+                rI_centre=start[start_i].getCoordinates()[:-1]
             else:
                 rI_centre=np.zeros(2) 
             
