@@ -460,10 +460,11 @@ def make_disp_files_gen(cluster, start_i, basename, dxn_list, npoints, sysinfo,
     cluster[start_i].set_constraints(constraint_vector)
     
     # change species of diffusing atom, if requested
+    '''
     if newspecies is not None:
         oldspecies = cluster[start_i].getSpecies()
         cluster[start_i].setSpecies(newspecies)
-    
+    '''
     # lists to hold grid spacing and energies
     grid = []
     energies = []
