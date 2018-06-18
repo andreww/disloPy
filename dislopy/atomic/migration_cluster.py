@@ -441,7 +441,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                 for z, E in gridded_energies:
                     outstream.write('{} {:.6f}\n'.format(z, E))
                 
-                heights.append([start_i, stop_j, site[1], site[2], Eh, Ed])
+                heights.append([start_i, stop_j, xstart[0], xstart[1], Eh, Ed])
             
             outstream.close()
 
