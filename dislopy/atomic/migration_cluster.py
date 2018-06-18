@@ -264,7 +264,13 @@ def path_endpoints(start_cluster, stop_cluster, thresh=1):
         x1 = r11[i+s1].getCoordinates()[:-1]
         x2 = r12[i+s2].getCoordinates()[:-1]
         d = norm(x1-x2)
-        if d > thresh and not found1:
+        if d < thresh:
+            index_a = i+s1 
+            index_b = i+s2
+            found1 = True
+            found2 = True
+            break
+        elif d > thresh and (not found1):
             x1p = r11[i+1].getCoordinates()[:-1]
             x2p = r12[i+1].getCoordinates()[:-1]
             if norm(x1p-x2) < thresh:
@@ -274,7 +280,7 @@ def path_endpoints(start_cluster, stop_cluster, thresh=1):
                 s2 = 1
                 index_b = i
             found1 = True
-        elif d > thresh and not found2:
+        elif d > thresh and (not found2):
             if s2 == 1:
                 s2 = 0
                 index_a = i
