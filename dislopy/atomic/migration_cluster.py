@@ -397,6 +397,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
     '''
                      
     bond_dict = parse_bonds('{}.bonds.txt'.format(basename))
+    heights = []
     
     for i in bond_dict.keys():
         start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, i), rI, rII)
@@ -488,6 +489,8 @@ def make_disp_files_gen(cluster, start_i, basename, dxn_list, npoints, sysinfo,
             gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))  
                    
         E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
+        
+        new_z = norm(new_x-cluster[j].getCoordinates())
         grid.append(new_z)
         energies.append(E)
         
