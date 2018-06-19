@@ -214,7 +214,7 @@ def parse_bonds(bondfile):
     bondstream.close()
     
     # extract all bond-blocks
-    site_str = '\d+(?:\s+-?\d+\.\d+){3}'
+    site_str = '\d+(?:\s+-?\d+\.\d+){4}'
     block_re = re.compile('(?:{}\n)+{};'.format(site_str, site_str))
     blocklist = block_re.findall(bondlines)
     
