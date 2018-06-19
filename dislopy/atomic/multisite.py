@@ -491,13 +491,13 @@ def create_bond_file(defect, bond_pairs, cluster):
         # record coordinates of base site
         coords = cluster[i].getCoordinates()
         bondfile.write('{} {:.6f} {:.6f} {:.6f} {:.6f}'.format(i, coords[0], 
-                                       coords[1], coords[2], norm(coords[:-1])))
+                                                       coords[1], coords[2], norm(coords[:-1])))
                                        
         # record coordinates of bonded sites
         for j in bond_pairs[i]:
             coords = cluster[j].getCoordinates()
             bondfile.write('\n{} {:.6f} {:.6f} {:.6f} {:.6f}'.format(j, coords[0], 
-                                       coords[1], coords[2], norm(coords[:-1])))
+                                                          coords[1], coords[2], norm(coords[:-1])))
         
         # add semi-colon to denote end of block for a single site
         bondfile.write(';\n')
