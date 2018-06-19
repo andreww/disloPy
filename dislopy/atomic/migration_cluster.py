@@ -456,7 +456,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             ###dxn_ij, constrain_index = displacement_vecs(start, stop, start_i, 
             ###                                                  stop_j, npoints)
             dxn, constrain_index = displacement_vecs_new(start, x0, xfinal, npoints)
-                                                              
+            print(constrain_index)                                                  
             # determine centre of region I
             if centre_on_impurity:
                 rI_centre=start[diff_index].getCoordinates()[:-1]
