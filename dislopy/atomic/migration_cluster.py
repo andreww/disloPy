@@ -327,7 +327,32 @@ def scale_plane_shift(shift, i, npoints, node):
         
     return scale*shift
     
-def displacement_vecs(start_cluster, stop_cluster, start_i, stop_i, npoints):
+def displacement_vecs_new(cluster, x0, xfinal, npoints):
+    '''Construct displacement vectors for the diffusing atom in the cluster.
+    '''
+    
+    H = cluster.getHeight()
+    
+    dx = xfinal - x0
+    
+    # check that the final element of dx is right
+    dz = dx[-1]
+    if abs(dz-H) < abs(dz):
+        dz = dz - H
+    elif abs(dz+H) < abs(dz):
+        dz = dz + H
+        
+    dx[-1] = dz
+    
+    # compute incremental values of displacement vector
+    dxn = [ni*dx/(n-1) for ni in range(n)]
+    
+    # determine direction to constrain
+    constrain_index = max_index(dx)
+    
+    return dxn, constrain_index
+    
+def displacement_vecs_old(start_cluster, stop_cluster, start_i, stop_i, npoints):
     '''Construct displacement vectors for all atoms in a cluster.
     '''
     
@@ -391,6 +416,17 @@ def displacement_vecs(start_cluster, stop_cluster, start_i, stop_i, npoints):
     
     return dxn_list, constrain_index
     
+def index_atom_at_x(cluster, x0):
+    '''Returns the index of the atom in cluster with coordinates <x0>.
+    '''
+    
+    for i, atom in enumerate(cluster):
+        dx = norm(atom.getCoordinates()-x0)
+        if dx < 1e-1:
+            return i
+            
+    return np.nan
+    
 def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None, 
                     noisy=False, plane_shift=np.zeros(3), node=0.5, threshold=1,
                     centre_on_impurity=False, do_perturb=False, newspecies=None, 
@@ -404,13 +440,22 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
     
     for i in bond_dict.keys():
         start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, i), rI, rII)
-        for j in bond_dict[i]:
-            stop, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, j), rI, rII)
+        xfinal = bond_dict[i]['site_coords']
+        for j in bond_dict[i].keys():
+            # get coordinates and index of diffusing atom
+            x0 = bond_dict[i][j]
+            diff_index = index_atom_at_x(cluster, x0)
             
-            start_i, stop_j = path_endpoints(start, stop, thresh=threshold)
+            # check that diff_index is an integer
+            if type(diff_index) is not int:
+                raise AttributeError("Missing atom at site {:.0f}".format(j))
+            #stop, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, j), rI, rII)
             
-            dxn_ij, constrain_index = displacement_vecs(start, stop, start_i, 
-                                                              stop_j, npoints)
+            ###start_i, stop_j = path_endpoints(start, stop, thresh=threshold)
+            
+            ###dxn_ij, constrain_index = displacement_vecs(start, stop, start_i, 
+            ###                                                  stop_j, npoints)
+            dxn, constrain_index = displacement_vecs_new(start, x0, xfinal, npoints)
                                                               
             # determine centre of region I
             if centre_on_impurity:
@@ -418,8 +463,23 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             else:
                 rI_centre=np.zeros(2) 
             
-            pair_name = '{}.{}.{}'.format(basename, i, j)                                                  
+            pair_name = '{}.{}.{}'.format(basename, i, j)  
+            '''                                                
             gridded_energies, Eh, Ed = make_disp_files_gen(start,
+                                                           start_i,
+                                                           pair_name,
+                                                           dxn_ij,
+                                                           npoints,
+                                                           sysinfo,
+                                                           executable=executable,
+                                                           rI_centre=rI_centre,
+                                                           do_perturb=do_perturb,
+                                                           constrain_index=constrain_index,
+                                                           newspecies=newspecies
+                                                          )
+            '''
+                                                  
+            gridded_energies, Eh, Ed = make_disp_files_gen_new(start,
                                                            start_i,
                                                            pair_name,
                                                            dxn_ij,
@@ -448,7 +508,72 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             
             outstream.close()
 
-    return heights                                                         
+    return heights  
+    
+def make_disp_files_gen_new(cluster, diffuse_i, basename, dxn, npoints, sysinfo,  
+                      executable=None, rI_centre=np.zeros(2), do_perturb=False, 
+                                            constrain_index=2, newspecies=None):
+    '''Generates input files for a constrained optimization calculation of migration
+    barriers along an arbitrary migration path.
+    '''
+    
+    # set constraints
+    constraint_vector = np.ones(3)
+    constraint_vector[constrain_index] = 0
+    cluster[start_i].set_constraints(constraint_vector)
+    
+    # change species of diffusing atom, if requested
+    '''
+    if newspecies is not None:
+        oldspecies = cluster[start_i].getSpecies()
+        cluster[start_i].setSpecies(newspecies)
+    '''
+    # lists to hold grid spacing and energies
+    grid = []
+    energies = []
+                                                                           
+    for i, dxi in enumerate(dxn):
+        # update dislocation structure
+        new_x = cluster[diffuse_i].getCoordinates() + dxi
+        if do_perturb:
+                # add a small random perturbation to lift symmetry
+                new_x = new_x + perturb()     
+                
+        cluster[diffuse_i].setDisplacedCoordinates(new_x)
+                
+        outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
+        gulp.write_gulp(outstream, cluster, sysinfo, defected=True, to_cart=False,
+                             rI_centre=rI_centre, relax_type='', add_constraints=True)
+        outstream.close()
+            
+        # if an executable has been provided, run the calculation
+        if executable is not None:
+            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))  
+                   
+        E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
+        
+        new_z = norm(new_x-cluster[diffuse_i].getCoordinates())
+        grid.append(new_z)
+        energies.append(E)
+        
+    # unset the constraints
+    cluster[start_i].set_constraints(np.ones(3))
+    if newspecies is not None:
+        cluster[start_i].setSpecies(oldspecies)
+                
+    # if energies have been calculated, extract the maximum energy (relative to
+    # the undisplaced atom), the barrier height, and the energy difference 
+    # between the initial and final sites
+    if grid:
+        energies = np.array(energies)
+        energies -= energies.min()
+        barrier_height = get_barrier(energies)
+        site_energy_diff = energies[-1]-energies[0]
+        
+        return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
+    else:
+        # energies not calculated, return dummy values
+        return [], np.nan, np.nan                                                       
 
 def make_disp_files_gen(cluster, start_i, basename, dxn_list, npoints, sysinfo,  
                       executable=None, rI_centre=np.zeros(2), do_perturb=False, 
