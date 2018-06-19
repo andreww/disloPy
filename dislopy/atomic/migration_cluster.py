@@ -441,9 +441,9 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
     for i in bond_dict.keys():
         start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, i), rI, rII)
         xfinal = bond_dict[i]['site_coords']
-        for j in bond_dict[i].keys():
+        for j in bond_dict[i]['bonded_sites'].keys():
             # get coordinates and index of diffusing atom
-            x0 = bond_dict[i][j]
+            x0 = bond_dict[i]['bonded_sites'][j]
             diff_index = index_atom_at_x(start, x0)
             
             # check that diff_index is an integer
