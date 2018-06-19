@@ -401,7 +401,8 @@ def make_disp_files_gen_new(cluster, diffuse_i, basename, dxn, npoints, sysinfo,
         grid.append(new_z)
         energies.append(E)
         
-    # unset the constraints
+    # unset the displaced coordinates, constraints, and new species
+    cluster[diffuse_i].setDisplacedCoordinates(cluster[diffuse_i].getCoordinates())
     cluster[diffuse_i].set_constraints(np.ones(3))
     if newspecies is not None:
         cluster[diffuse_i].setSpecies(oldspecies)
