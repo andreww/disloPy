@@ -345,7 +345,7 @@ def displacement_vecs_new(cluster, x0, xfinal, npoints):
     dx[-1] = dz
     
     # compute incremental values of displacement vector
-    dxn = [ni*dx/(npoints-1) for ni in range(npoints)]
+    dxn = [ni*(x0+dx)/(npoints-1) for ni in range(npoints)]
     
     # determine direction to constrain
     constrain_index = max_index(dx)
