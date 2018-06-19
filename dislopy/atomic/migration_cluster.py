@@ -238,7 +238,7 @@ def parse_bonds(bondfile):
                 current_site = site_index
             else:
                 site_dict[current_site]['indices'].append(site_index)
-                site_dict[current_site]['bonds'].append(coords)
+                site_dict[current_site]['coords'].append(coords)
                 
     return site_dict
     
