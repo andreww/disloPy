@@ -330,7 +330,7 @@ def scale_plane_shift(shift, i, npoints, node):
 def displacement_vecs_new(cluster, x0, xfinal, npoints):
     '''Construct displacement vectors for the diffusing atom in the cluster.
     '''
-    print(x0, xfinal)
+
     H = cluster.getHeight()
     
     dx = xfinal - x0
@@ -349,7 +349,7 @@ def displacement_vecs_new(cluster, x0, xfinal, npoints):
     
     # determine direction to constrain
     constrain_index = max_index(dx)
-    print(dxn)
+
     return dxn, constrain_index
     
 def displacement_vecs_old(start_cluster, stop_cluster, start_i, stop_i, npoints):
@@ -448,7 +448,8 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             # get coordinates and index of diffusing atom
             x0 = bond_dict[i]['bonded_sites'][j]
             diff_index = index_atom_at_x(start, x0)
-            
+            print(x0)
+            print(start[diff_index])
             # check that diff_index is an integer
             if type(diff_index) is not int:
                 raise AttributeError("Missing atom at site {:.0f}".format(j))
@@ -459,7 +460,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             ###dxn_ij, constrain_index = displacement_vecs(start, stop, start_i, 
             ###                                                  stop_j, npoints)
             dxn, constrain_index = displacement_vecs_new(start, x0, xfinal, npoints)
-            print(constrain_index)                                                  
+                                                 
             # determine centre of region I
             if centre_on_impurity:
                 rI_centre=start[diff_index].getCoordinates()[:-1]
