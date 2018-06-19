@@ -533,10 +533,11 @@ def make_disp_files_gen_new(cluster, diffuse_i, basename, dxn, npoints, sysinfo,
                                                                            
     for i, dxi in enumerate(dxn):
         # update dislocation structure
-        new_x = cluster[diffuse_i].getCoordinates() + dxi
         if do_perturb:
                 # add a small random perturbation to lift symmetry
-                new_x = new_x + perturb()     
+                new_x = dxi + perturb() 
+        else:
+                new_x = dxi   
                 
         cluster[diffuse_i].setDisplacedCoordinates(new_x)
                 
