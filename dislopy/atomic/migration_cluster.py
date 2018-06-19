@@ -444,7 +444,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
         for j in bond_dict[i].keys():
             # get coordinates and index of diffusing atom
             x0 = bond_dict[i][j]
-            diff_index = index_atom_at_x(cluster, x0)
+            diff_index = index_atom_at_x(start, x0)
             
             # check that diff_index is an integer
             if type(diff_index) is not int:
@@ -480,9 +480,9 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             '''
                                                   
             gridded_energies, Eh, Ed = make_disp_files_gen_new(start,
-                                                           start_i,
+                                                           diff_index
                                                            pair_name,
-                                                           dxn_ij,
+                                                           dxn,
                                                            npoints,
                                                            sysinfo,
                                                            executable=executable,
@@ -523,11 +523,10 @@ def make_disp_files_gen_new(cluster, diffuse_i, basename, dxn, npoints, sysinfo,
     cluster[start_i].set_constraints(constraint_vector)
     
     # change species of diffusing atom, if requested
-    '''
     if newspecies is not None:
         oldspecies = cluster[start_i].getSpecies()
         cluster[start_i].setSpecies(newspecies)
-    '''
+
     # lists to hold grid spacing and energies
     grid = []
     energies = []
