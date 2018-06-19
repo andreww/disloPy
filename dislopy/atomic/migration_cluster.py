@@ -520,12 +520,12 @@ def make_disp_files_gen_new(cluster, diffuse_i, basename, dxn, npoints, sysinfo,
     # set constraints
     constraint_vector = np.ones(3)
     constraint_vector[constrain_index] = 0
-    cluster[start_i].set_constraints(constraint_vector)
+    cluster[diffuse_i].set_constraints(constraint_vector)
     
     # change species of diffusing atom, if requested
     if newspecies is not None:
-        oldspecies = cluster[start_i].getSpecies()
-        cluster[start_i].setSpecies(newspecies)
+        oldspecies = cluster[diffuse_i].getSpecies()
+        cluster[diffuse_i].setSpecies(newspecies)
 
     # lists to hold grid spacing and energies
     grid = []
@@ -556,9 +556,9 @@ def make_disp_files_gen_new(cluster, diffuse_i, basename, dxn, npoints, sysinfo,
         energies.append(E)
         
     # unset the constraints
-    cluster[start_i].set_constraints(np.ones(3))
+    cluster[diffuse_i].set_constraints(np.ones(3))
     if newspecies is not None:
-        cluster[start_i].setSpecies(oldspecies)
+        cluster[diffuse_i].setSpecies(oldspecies)
                 
     # if energies have been calculated, extract the maximum energy (relative to
     # the undisplaced atom), the barrier height, and the energy difference 
