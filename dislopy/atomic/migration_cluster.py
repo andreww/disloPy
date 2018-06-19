@@ -459,7 +459,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                                                               
             # determine centre of region I
             if centre_on_impurity:
-                rI_centre=start[start_i].getCoordinates()[:-1]
+                rI_centre=start[diff_index].getCoordinates()[:-1]
             else:
                 rI_centre=np.zeros(2) 
             
@@ -494,9 +494,9 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                                                           
             outstream = open('disp.{}.barrier.dat'.format(pair_name), 'w')    
             # write header, including full displacement vector and barrier height 
-            xstart = start[start_i].getCoordinates()
-            xstop = stop[stop_j].getCoordinates()
-            outstream.write('# {:.0f} {:.0f}\n'.format(start_i, stop_j))
+            #xstart = start[start_i].getCoordinates()
+            #xstop = stop[stop_j].getCoordinates()
+            outstream.write('# {:.0f} {:.0f}\n'.format(i, j))
            
             # write energies to file if they have been calculated
             if gridded_energies:     
@@ -504,7 +504,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                 for z, E in gridded_energies:
                     outstream.write('{} {:.6f}\n'.format(z, E))
                 
-                heights.append([start_i, stop_j, xstart[0], xstart[1], Eh, Ed])
+                heights.append([i, j, x0[0], x0[1], Eh, Ed])
             
             outstream.close()
 
