@@ -233,10 +233,10 @@ def parse_bonds(bondfile):
             if i == 0:
                 site_dict[site_index] = dict()
                 site_dict[site_index]['bonded_sites'] = dict()
-                site_dict[site_index]['site_coords'] = coords
+                site_dict[site_index]['site_coords'] = np.array(coords)
                 current_site = site_index
             else:
-                site_dict[current_site]['bonded_sites'][site_index] = coords
+                site_dict[current_site]['bonded_sites'][site_index] = np.array(coords)
                 
     return site_dict
     
