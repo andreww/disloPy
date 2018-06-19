@@ -545,7 +545,7 @@ def make_disp_files_gen_new(cluster, diffuse_i, basename, dxn, npoints, sysinfo,
                 new_x = dxi   
                 
         cluster[diffuse_i].setDisplacedCoordinates(new_x)
-        cluster.specifyRegions()        
+               
         outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
         gulp.write_gulp(outstream, cluster, sysinfo, defected=True, to_cart=False,
                              rI_centre=rI_centre, relax_type='', add_constraints=True)
