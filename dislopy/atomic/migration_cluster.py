@@ -420,12 +420,15 @@ def index_atom_at_x(cluster, x0):
     '''Returns the index of the atom in cluster with coordinates <x0>.
     '''
     
+    max_d = np.inf
+    index = np.nan
     for i, atom in enumerate(cluster):
         dx = norm(atom.getCoordinates()-x0)
-        if dx < 1.:
-            return i
+        if dx < max_d:
+            index = i
+            max_d = index
             
-    return np.nan
+    return index
     
 def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None, 
                     noisy=False, plane_shift=np.zeros(3), node=0.5, threshold=1,
