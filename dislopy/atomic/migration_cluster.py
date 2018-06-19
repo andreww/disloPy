@@ -422,7 +422,7 @@ def index_atom_at_x(cluster, x0):
     
     max_d = np.inf
     index = np.nan
-    for i, atom in enumerate(cluster.):
+    for i, atom in enumerate(cluster):
         dx = norm(atom.getCoordinates()-x0)
         print(dx, x0)
         if dx < max_d:
