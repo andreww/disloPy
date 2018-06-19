@@ -427,7 +427,7 @@ def index_atom_at_x(cluster, x0):
         print(dx, x0)
         if dx < max_d:
             index = i
-            max_d = index
+            max_d = dx
             
     return index
     
