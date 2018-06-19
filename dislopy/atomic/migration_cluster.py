@@ -422,7 +422,7 @@ def index_atom_at_x(cluster, x0):
     
     for i, atom in enumerate(cluster):
         dx = norm(atom.getCoordinates()-x0)
-        if dx < 1e-1:
+        if dx < 1.:
             return i
             
     return np.nan
