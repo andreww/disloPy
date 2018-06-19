@@ -480,7 +480,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             '''
                                                   
             gridded_energies, Eh, Ed = make_disp_files_gen_new(start,
-                                                           diff_index
+                                                           diff_index,
                                                            pair_name,
                                                            dxn,
                                                            npoints,
