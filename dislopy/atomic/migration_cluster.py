@@ -228,17 +228,13 @@ def parse_bonds(bondfile):
     for site in blocklist:
         sites = site_re.findall(site)
         for i, match in enumerate(sites):
-            matchelements = match.rstrip().split()
-            site_index = int(matchelements[0])
-            coords = [float(x) for x in matchelements[1:-1]]
+            site_index = int(match.rstrip().split()[0])
+            coords = [float(x) for x in match.rstrip().split()[1:-1]]
             if i == 0:
                 site_dict[site_index] = dict()
-                site_dict[site_index]['coords'] = []
-                site_dict[site_index]['indices'] = []
                 current_site = site_index
             else:
-                site_dict[current_site]['indices'].append(site_index)
-                site_dict[current_site]['coords'].append(coords)
+                site_dict[current_site][site_index] = coords
                 
     return site_dict
     
