@@ -240,79 +240,6 @@ def parse_bonds(bondfile):
                 
     return site_dict
     
-def path_endpoints(start_cluster, stop_cluster, thresh=1):
-    '''Find the coordinates of the atoms present in only one of two vacancy-bearing
-    dislocation clusters.
-    '''
-    
-    start_cluster.specifyRegions()
-    stop_cluster.specifyRegions()
-    
-    # extract list of atoms in region I for both clusters - reduces the number of
-    # atoms to be compared
-    r11 = start_cluster.getRegionIAtoms()
-    r12 = stop_cluster.getRegionIAtoms()
-    
-    # get number of atoms in region I for the two clusters
-    n = r11.numberOfAtoms
-    if n != r12.numberOfAtoms:
-        raise ValueError("Clusters must contain the same number of atoms.")
-    
-    # go through atoms to find which are present in only 1 cluster
-    found1 = False
-    found2 = False
-    s1=0
-    s2=0
-    for i in range(n):
-        x1 = r11[i+s1].getCoordinates()[:-1]
-        x2 = r12[i+s2].getCoordinates()[:-1]
-        d = norm(x1-x2)
-        if d < thresh:
-            index_a = i+s1 
-            index_b = i+s2
-            found1 = True
-            found2 = True
-            break
-        elif d > thresh and (not found1):
-            x1p = r11[i+1].getCoordinates()[:-1]
-            x2p = r12[i+1].getCoordinates()[:-1]
-            if norm(x1p-x2) < thresh:
-                s1 = 1
-                index_a = i
-            elif norm(x2p-x1) < thresh:
-                s2 = 1
-                index_b = i
-            found1 = True
-        elif d > thresh and (not found2):
-            if s2 == 1:
-                s2 = 0
-                index_a = i
-            elif s1 == 1:
-                s1 = 0
-                index_b = i
-            found2 = True
-        else:
-            pass
-
-    # find indices of the initial and final sites for the diffusion path in each
-    # cluster
-    initial_coords = r11[index_a].getCoordinates()
-    final_coords = r12[index_b].getCoordinates()
-    
-    for i, atom in enumerate(start_cluster):
-        x = atom.getCoordinates()
-        if norm(x-initial_coords) < 1e-3:
-            start_i = i
-            break
-            
-    for j, atom in enumerate(stop_cluster):
-        x = atom.getCoordinates()
-        if norm(x-final_coords) < 1e-3:
-            start_j = j
-            break
-    
-    return start_i, start_j
-    
 def scale_plane_shift(shift, i, npoints, node):
     '''Scales the lateral displacement vector for a migration path according
     to the relative distance traversed along the migration path.
@@ -352,70 +279,6 @@ def displacement_vecs_new(cluster, x0, xfinal, npoints):
 
     return dxn, constrain_index
     
-def displacement_vecs_old(start_cluster, stop_cluster, start_i, stop_i, npoints):
-    '''Construct displacement vectors for all atoms in a cluster.
-    '''
-    
-    n = start_cluster.numberOfAtoms 
-    H = start_cluster.getHeight()
-    
-    # calculate displacement vector between initial and final sites along
-    # the migration path
-    final_coords = stop_cluster[stop_i].getCoordinates()
-    initial_coords = start_cluster[start_i].getCoordinates()
-    dx = final_coords-initial_coords
-    
-    # check that the final element of dx is right
-    dz = dx[-1]
-    if abs(dz-H) < abs(dz):
-        dz = dz - H
-    elif abs(dz+H) < abs(dz):
-        dz = dz + H
-        
-    dx[-1] = dz 
-
-    dx_list = []
-    if start_i == stop_i:
-        for i in range(n):
-            if i == start_i:
-                dx_list.append(dx)
-            else:
-                dxi = stop_cluster[i].getCoordinates()-start_cluster[i].getCoordinates()
-                dx_list.append(dxi)
-    elif start_i < stop_i:
-        # assumes that cluster_a > cluster_b
-        for i in range(n):
-            x0 = start_cluster[i].getCoordinates()
-            if i == start_i:
-                dx_list.append(dx)
-                continue
-            elif i > start_i and i <= stop_i:
-                x = stop_cluster[i-1].getCoordinates()
-            else:
-                x = stop_cluster[i].getCoordinates()
-            dxi = x-x0
-            dx_list.append(dxi)
-    elif stop_i < start_i:
-        for i in range(n):
-            x0 = start_cluster[i].getCoordinates()
-            if i >= stop_i and i < start_i:
-                x = stop_cluster[i+1].getCoordinates()
-            elif i == start_i:
-                dx_list.append(dx)
-                continue 
-            else:
-                x = stop_cluster[i].getCoordinates()   
-            dxi = x-x0
-            dx_list.append(dxi)
-    
-    # determine direction to constrain
-    constrain_index = max_index(dx)
-    
-    # create increment of update
-    dxn_list = np.array(dx_list)/npoints
-    
-    return dxn_list, constrain_index
-    
 def index_atom_at_x(cluster, x0):
     '''Returns the index of the atom in cluster with coordinates <x0>.
     '''
@@ -448,17 +311,11 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             # get coordinates and index of diffusing atom
             x0 = bond_dict[i]['bonded_sites'][j]
             diff_index = index_atom_at_x(start, x0)
-            print(x0)
-            print(start[diff_index])
+
             # check that diff_index is an integer
             if type(diff_index) is not int:
                 raise AttributeError("Missing atom at site {:.0f}".format(j))
-            #stop, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, j), rI, rII)
-            
-            ###start_i, stop_j = path_endpoints(start, stop, thresh=threshold)
-            
-            ###dxn_ij, constrain_index = displacement_vecs(start, stop, start_i, 
-            ###                                                  stop_j, npoints)
+                
             dxn, constrain_index = displacement_vecs_new(start, x0, xfinal, npoints)
                                                  
             # determine centre of region I
@@ -468,20 +325,6 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                 rI_centre=np.zeros(2) 
             
             pair_name = '{}.{}.{}'.format(basename, i, j)  
-            '''                                                
-            gridded_energies, Eh, Ed = make_disp_files_gen(start,
-                                                           start_i,
-                                                           pair_name,
-                                                           dxn_ij,
-                                                           npoints,
-                                                           sysinfo,
-                                                           executable=executable,
-                                                           rI_centre=rI_centre,
-                                                           do_perturb=do_perturb,
-                                                           constrain_index=constrain_index,
-                                                           newspecies=newspecies
-                                                          )
-            '''
                                                   
             gridded_energies, Eh, Ed = make_disp_files_gen_new(start,
                                                            diff_index,
@@ -498,8 +341,6 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                                                           
             outstream = open('disp.{}.barrier.dat'.format(pair_name), 'w')    
             # write header, including full displacement vector and barrier height 
-            #xstart = start[start_i].getCoordinates()
-            #xstop = stop[stop_j].getCoordinates()
             outstream.write('# {:.0f} {:.0f}\n'.format(i, j))
            
             # write energies to file if they have been calculated
@@ -577,74 +418,7 @@ def make_disp_files_gen_new(cluster, diffuse_i, basename, dxn, npoints, sysinfo,
         return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
     else:
         # energies not calculated, return dummy values
-        return [], np.nan, np.nan                                                       
-
-def make_disp_files_gen(cluster, start_i, basename, dxn_list, npoints, sysinfo,  
-                      executable=None, rI_centre=np.zeros(2), do_perturb=False, 
-                                            constrain_index=2, newspecies=None):
-    '''Generates input files for a constrained optimization calculation of migration
-    barriers along an arbitrary migration path.
-    '''
-    
-    # set constraints
-    constraint_vector = np.ones(3)
-    constraint_vector[constrain_index] = 0
-    cluster[start_i].set_constraints(constraint_vector)
-    
-    # change species of diffusing atom, if requested
-    '''
-    if newspecies is not None:
-        oldspecies = cluster[start_i].getSpecies()
-        cluster[start_i].setSpecies(newspecies)
-    '''
-    # lists to hold grid spacing and energies
-    grid = []
-    energies = []
-                                                                           
-    for i in range(npoints):       
-        # update dislocation structure
-        for j in range(cluster.numberOfAtoms):
-            dxj = dxn_list[j]*i/(npoints-1)
-            new_x = cluster[j].getCoordinates() + dxj
-            if j == start_i and do_perturb == False:
-                # add a small random perturbation to lift symmetry
-                new_x = new_x + perturb()
-                
-            cluster[j].setDisplacedCoordinates(new_x)
-                
-        outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
-        gulp.write_gulp(outstream, cluster, sysinfo, defected=True, to_cart=False,
-                             rI_centre=rI_centre, relax_type='', add_constraints=True)
-        outstream.close()
-            
-        # if an executable has been provided, run the calculation
-        if executable is not None:
-            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))  
-                   
-        E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
-        
-        new_z = norm(new_x-cluster[j].getCoordinates())
-        grid.append(new_z)
-        energies.append(E)
-        
-    # unset the constraints
-    cluster[start_i].set_constraints(np.ones(3))
-    if newspecies is not None:
-        cluster[start_i].setSpecies(oldspecies)
-                
-    # if energies have been calculated, extract the maximum energy (relative to
-    # the undisplaced atom), the barrier height, and the energy difference 
-    # between the initial and final sites
-    if grid:
-        energies = np.array(energies)
-        energies -= energies.min()
-        barrier_height = get_barrier(energies)
-        site_energy_diff = energies[-1]-energies[0]
-        
-        return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
-    else:
-        # energies not calculated, return dummy values
-        return [], np.nan, np.nan
+        return [], np.nan, np.nan  
     
 def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename, 
                        executable, rI_centre=np.zeros(2), dx=np.zeros(2),
