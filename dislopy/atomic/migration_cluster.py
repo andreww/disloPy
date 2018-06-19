@@ -231,11 +231,12 @@ def parse_bonds(bondfile):
             site_index = int(match.rstrip().split()[0])
             coords = [float(x) for x in match.rstrip().split()[1:-1]]
             if i == 0:
+                site_dict[site_index] = dict()
                 site_dict[site_index]['bonded_sites'] = dict()
                 site_dict[site_index]['site_coords'] = coords
                 current_site = site_index
             else:
-                site_dict[current_site][site_index] = coords
+                site_dict[current_site]['bonded_sites'][site_index] = coords
                 
     return site_dict
     
