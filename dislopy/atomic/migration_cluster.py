@@ -330,7 +330,7 @@ def scale_plane_shift(shift, i, npoints, node):
 def displacement_vecs_new(cluster, x0, xfinal, npoints):
     '''Construct displacement vectors for the diffusing atom in the cluster.
     '''
-    
+    print(x0, xfinal)
     H = cluster.getHeight()
     
     dx = xfinal - x0
@@ -349,7 +349,7 @@ def displacement_vecs_new(cluster, x0, xfinal, npoints):
     
     # determine direction to constrain
     constrain_index = max_index(dx)
-    
+    print(dxn)
     return dxn, constrain_index
     
 def displacement_vecs_old(start_cluster, stop_cluster, start_i, stop_i, npoints):
