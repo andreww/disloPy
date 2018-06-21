@@ -439,7 +439,8 @@ def sites_to_replace_bonds(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=N
                 dx = norm(dx_next_im)
                 which_image = 1
             
-            # check that jump distance is below specified threshold    
+            # check that jump distance is below specified threshold
+            print(dx)    
             if dx > dx_thresh:
                 continue
                                   
