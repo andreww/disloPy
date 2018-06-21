@@ -442,8 +442,7 @@ def sites_to_replace_bonds(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=N
             # check that jump distance is below specified threshold 
             if dx > dx_thresh:
                 continue
-                                  
-            ### NEED A ROUTINE HERE FOR DISLOCATIONS WITH REFLECTION SYMMETRY ###                      
+                                                       
             # check for mirror symmetry, if the dislocation has it
             if has_mirror_symmetry:
                 if which_image == 0:
