@@ -124,8 +124,6 @@ def handle_segregation_control(param_dict):
                      ('analyse', {'default': False, 'type': to_bool}),
                      ('no_setup', {'default': False, 'type': to_bool}),
                      ('migration', {'default': False, 'type': to_bool}),
-                     ('neb', {'default': False, 'type': to_bool}),
-                     ('dx_thresh', {'default': np.nan, 'type': float})
                     )
                      
     # cards for the <&migration> namelist
@@ -139,7 +137,10 @@ def handle_segregation_control(param_dict):
                        ('threshold', {'default': 0.5, 'type': float}),
                        ('plot_migration', {'default': False, 'type': to_bool}),
                        ('new_species', {'default': '', 'type': str}),
-                       ('use_parallel', {'default': True, 'type': to_bool})
+                       ('find_bonded', {'default': False, 'type': to_bool}),
+                       ('dx_thresh', {'default': np.nan, 'type': float}),
+                       ('use_parallel', {'default': True, 'type': to_bool}),
+                       ('has_mirror_symmetry', {'default': False, 'type', to_bool})
                       )
                     
     # cards for the <&constraints> namelist
@@ -354,7 +355,6 @@ class SegregationSim(object):
             do_calc = False
         
         # calculate impurity energies
-        #! Replace self.control('neb')
         ms.calculate_impurity(self.sysinfo, 
                                   self.cluster, 
                                   self.control('region_r'),
@@ -364,11 +364,12 @@ class SegregationSim(object):
                                   centre_on_impurity=self.control('centre_on_impurity'),
                                   constraints=self.cons_funcs,              
                                   noisy=self.control('noisy'),
-                                  neb=self.control('neb'), 
-                                  dx_thresh=self.control('dx_thresh'),
                                   contains_hydroxyl=self.control('uses_hydroxyl'),
                                   o_str=self.control('o_str'),
-                                  oh_str=self.control('oh_str')
+                                  oh_str=self.control('oh_str'),
+                                  bonds=self.migration('find_bonded'), 
+                                  has_mirror_symmetry=self.migration('has_mirror_symmetry'),
+                                  dx_thresh=self.migration('dx_thresh')
                                  )
                                   
     def analyse_results(self):

@@ -371,11 +371,11 @@ def sites_to_replace(cluster, defect, radius, tol=1e-1, constraints=None,
     
     return use_indices
     
-def sites_to_replace_neb(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=None,
-                                  constraints=None, noisy=False, theta_thresh=0.5, 
-                                                                 norm_thresh=0.2):
+def sites_to_replace_bonds(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=None,
+                 constraints=None, noisy=False, theta_thresh=0.5, norm_thresh=0.2,
+                                   has_mirror_symmetry=False, dz_min_accept=-1e-1):
     '''Calculates which sites defect energies need to be calculated for if
-    NEB calculations will be done after defect segregation energies are 
+    diffusion calculations will be done after defect segregation energies are 
     calculated.'''
     
     # outer loop -> sites within <radius>
@@ -418,13 +418,47 @@ def sites_to_replace_neb(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=Non
             elif i == j:
                 continue
                 
+            ### NEED A ROUTINE HERE FOR DISLOCATIONS WITH REFLECTION SYMMETRY ###
+                
             # otherwise, calculate the distance to the closest site
             x = atomj.getCoordinates()
-            dx = min([norm(x-x0), norm(x+np.array([0, 0, h])-x0), 
-                                  norm(x-np.array([0, 0, h])-x0)])
             
-            if dx < dx_thresh:
-                # record that site j is within jumping distance of site i
+            # distance vectors for atoms in the same and other images
+            dx_same_im = x-x0
+            dx_prev_im = x+np.array([0, 0, h])-x0
+            dx_next_im = norm(x-np.array([0, 0, h])-x0)
+            
+            # determine which image is closest
+            dx = norm(dx_same_im)
+            which_image = 0
+            if norm(dx_prev_im) < dx:  
+                dx = norm(dx_prev_im)
+                which_image = -1
+            
+            if norm(dx_next_im) < dx:
+                dx = norm(dx_next_im)
+                which_image = 1
+            
+            # check that jump distance is below specified threshold    
+            if dx > dx_thresh:
+                continue
+                                  
+            ### NEED A ROUTINE HERE FOR DISLOCATIONS WITH REFLECTION SYMMETRY ###                      
+            # check for mirror symmetry, if the dislocation has it
+            if has_mirror_symmetry:
+                if which_image == 0:
+                    dz = dx_same_im[-1]
+                elif which_image == -1:
+                    dz = dx_prev_im[-1]
+                else: # which_image == 1
+                    dz = dx_next_im[-1]
+                    
+                # if jump is back, ignore
+                if dz < dz_min_accept: #! SHOULD CHANGE TO GENERAL THRESHOLD
+                    continue
+                else:
+                    bond_pairs[i].add(j)    
+            else:
                 bond_pairs[i].add(j)
         
     if bonds is not None:
@@ -506,8 +540,9 @@ def create_bond_file(defect, bond_pairs, cluster):
     
 def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
          constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, tol=1e-1,
-          centre_on_impurity=False, do_calc=False, neb=False, dx_thresh=np.nan,
-                               contains_hydroxyl=False, oh_str='Oh', o_str='O'):
+                     centre_on_impurity=False, do_calc=False, dx_thresh=np.nan,
+                               contains_hydroxyl=False, oh_str='Oh', o_str='O',
+                                          bonds=False, has_mirror_symmetry=False):
     '''Iterates through all atoms in <relaxedCluster> within distance <radius>
     of the dislocation line, and sequentially replaces one atom of type 
     <replaceType> with an impurity <newType>. dRMin is the minimum difference
@@ -547,14 +582,15 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     else:
         raise TypeError('Invalid impurity type.')
     
-    if neb:
+    if bonds:
         # find all sites for which energies need to be calculated in order
-        # to determine energy barriers for diffusion using the NEB approach
+        # to determine energy barriers for diffusion 
         if dx_thresh != dx_thresh:
             raise ValueError("Intersite distance must be defined.")
             
-        use_indices = sites_to_replace_neb(gulpcluster, defect, radius, dx_thresh,
-                            tol=tol, constraints=constraints, noisy=noisy)
+        use_indices = sites_to_replace_bonds(gulpcluster, defect, radius, dx_thresh,
+                                      tol=tol, constraints=constraints, noisy=noisy, 
+                                           has_mirror_symmetry=has_mirror_symmetry)
     else:     
         use_indices = sites_to_replace(gulpcluster, defect, radius, tol=tol,
                                      constraints=constraints, noisy=noisy)
