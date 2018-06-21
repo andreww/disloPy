@@ -391,6 +391,7 @@ def sites_to_replace_bonds(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=N
         
         # check that atom is within the region of interest
         x0 = atomi.getCoordinates()
+        print(norm(x0[:-1]))
         if norm(x0[:-1]) > radius:
             continue
         
@@ -439,8 +440,7 @@ def sites_to_replace_bonds(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=N
                 dx = norm(dx_next_im)
                 which_image = 1
             
-            # check that jump distance is below specified threshold
-            print(dx)    
+            # check that jump distance is below specified threshold 
             if dx > dx_thresh:
                 continue
                                   
