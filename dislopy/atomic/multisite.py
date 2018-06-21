@@ -426,7 +426,7 @@ def sites_to_replace_bonds(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=N
             # distance vectors for atoms in the same and other images
             dx_same_im = x-x0
             dx_prev_im = x+np.array([0, 0, h])-x0
-            dx_next_im = norm(x-np.array([0, 0, h])-x0)
+            dx_next_im = x-np.array([0, 0, h])-x0
             
             # determine which image is closest
             dx = norm(dx_same_im)
