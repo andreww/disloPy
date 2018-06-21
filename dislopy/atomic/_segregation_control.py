@@ -112,7 +112,7 @@ def handle_segregation_control(param_dict):
                      ('do_calc', {'default': True, 'type': to_bool}),
                      ('noisy', {'default': False, 'type': to_bool}),
                      ('executable', {'default': '', 'type': str}),
-                     ('region_r', {'default': 10, 'type': int}),
+                     ('region_r', {'default': 10, 'type': float}),
                      ('new_r1', {'default': 10, 'type': int}),
                      ('centre_on_impurity', {'default': True, 'type': to_bool}),
                      ('site', {'default': None, 'type': str}),
