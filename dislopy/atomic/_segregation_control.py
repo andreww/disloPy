@@ -140,7 +140,7 @@ def handle_segregation_control(param_dict):
                        ('find_bonded', {'default': False, 'type': to_bool}),
                        ('dx_thresh', {'default': np.nan, 'type': float}),
                        ('use_parallel', {'default': True, 'type': to_bool}),
-                       ('has_mirror_symmetry', {'default': False, 'type', to_bool})
+                       ('has_mirror_symmetry', {'default': False, 'type': to_bool})
                       )
                     
     # cards for the <&constraints> namelist
