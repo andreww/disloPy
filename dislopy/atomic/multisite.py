@@ -641,8 +641,8 @@ def calculate_impurity_energies(sitelist, gulpexec, in_parallel=False, nprocesse
     
     if not in_parallel:
         print('here 1')
-        for i, site in zip(use_indices, site_list):
-            print('Relaxing structure with defect at site {}...'.format(i))
+        for site in site_list:
+            #print('Relaxing structure with defect at site {}...'.format(i))
             gulp.run_gulp(gulpexec, site)
     else:
         print('here 2')
