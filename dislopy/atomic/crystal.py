@@ -465,20 +465,19 @@ class Basis(object):
         self.numberOfAtoms -= 1
 
     def __iter__(self):
-        self.currentindex = 0
         return self
 
     def __next__(self):
         if self._currentindex >= self.numberOfAtoms:
-            #self._currentindex = 0            
+            self._currentindex = 0            
             raise StopIteration
         else:
             self._currentindex += 1
             return self[self._currentindex-1]
-    '''        
+            
     def next(self):
         return self.__next__()
-    '''
+
     def __len__(self):
         '''Returns the number of atoms that will be written to output.
         '''
