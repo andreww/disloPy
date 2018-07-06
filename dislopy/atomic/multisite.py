@@ -634,7 +634,7 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                                                                   
     return 
 
-def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocesses=1):
+def calculate_impurity_energies(sitelist, gulpexec, in_parallel=False, nprocesses=1):
     '''Calculates energies for dislocation clusters containing a single impurity
     previously constructed using the <calculate_impurity> function.
     '''
@@ -642,7 +642,8 @@ def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocess
     if not in_parallel:
         print('here 1')
         for site in site_list:
-            #print('Relaxing structure with defect at site {}...'.format(i))
+            i = site.split('.')[-1]
+            print('Relaxing structure with defect at site {}...'.format(i))
             gulp.run_gulp(gulpexec, site)
     else:
         print('here 2')
@@ -691,6 +692,9 @@ def gulp_process(prefix, gulpexec):
     else:        
         os.mkdir(prefix)
         os.chdir(prefix)
+    
+    i = site.split('.')[-1]
+    print('Relaxing structure with defect at site {}...'.format(i))
     
     # run simulation and return to the primary impurity directory    
     gulp.run_gulp(gulpexec, site)
