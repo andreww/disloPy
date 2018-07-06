@@ -639,6 +639,7 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                 print('Relaxing structure with defect at site {}...'.format(i))
                 gulp.run_gulp(gulpexec, site)
         else:
+            print('here')
             # create iterable object with prefices so that map works properly
             pool = Pool(processes=nprocesses)
             for i, site in zip(use_indices, site_list):
