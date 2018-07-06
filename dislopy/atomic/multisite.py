@@ -646,7 +646,7 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             #    pool.map(f, (site_list)
             pool = Pool(processes=nprocesses)
             for i, site in zip(use_indices, site_list):
-                pool.apply_async(gulp_process, args=(site, i, gulpexec))
+                pool.apply(gulp_process, args=(site, gulpexec))
                 
             pool.close()
             pool.join()
