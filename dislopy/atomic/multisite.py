@@ -672,7 +672,7 @@ def parse_sitelist(dfctname, site):
     sitelist_str = sitefile.readlines()[2]
     sitelist_str = sitelist_str.strip('#').strip()
     
-    ids = [int(x) for x in sitelist_str.strip()]
+    ids = [int(x) for x in sitelist_str.split()]
     sites = ['{}.{}'.format(prefix, i) for i in ids]
     return sites
    

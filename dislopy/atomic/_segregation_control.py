@@ -387,7 +387,7 @@ class SegregationSim(object):
         '''
         
         # read in the site IDs
-        sitelist = ms.parse_sitelist(self.control('site'), self.control('label'))
+        sitelist = ms.parse_sitelist(self.control('label'), self.control('site'))
         
         # run calculation
         ms.calculate_impurity_energies(sitelist, self.control('executable'), 
