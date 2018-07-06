@@ -648,15 +648,15 @@ def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocess
     else:
         print('here 2')
         # create iterable object with prefices so that map works properly
-        #f = lambda prefix: gulp_process(prefix, gulpexec)
-        #with Pool(processes=nprocesses) as pool:
-        #    pool.map(f, (site_list)
-        pool = Pool(processes=nprocesses)
-        for site in site_list:
-            pool.apply_async(gulp_process, args=(site, gulpexec,))
+        f = lambda prefix: gulp_process(prefix, gulpexec)
+        with Pool(processes=nprocesses) as pool:
+            pool.map(f, (site_list))
+        #pool = Pool(processes=nprocesses)
+        #for site in site_list:
+        #    pool.apply_async(gulp_process, args=(site, gulpexec,))
                 
-        pool.close()
-        pool.join()
+        #pool.close()
+        #pool.join()
 
     return
    
