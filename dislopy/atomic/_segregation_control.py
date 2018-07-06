@@ -372,7 +372,7 @@ class SegregationSim(object):
                                   bonds=self.migration('find_bonded'), 
                                   has_mirror_symmetry=self.migration('has_mirror_symmetry'),
                                   dx_thresh=self.migration('dx_thresh'),
-                                  use_parallel=self.control('parallel'),
+                                  in_parallel=self.control('parallel'),
                                   nprocesses=self.control('np')
                                  )
                                   
