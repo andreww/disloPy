@@ -643,7 +643,7 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             pool = Pool(processes=nprocesses)
             for i, site in zip(use_indices, site_list):
                 print('Relaxing structure with defect at site {}...'.format(i))
-                pool.apply_async(gulp_process, args=(site, gulpexec)))
+                pool.apply_async(gulp_process, args=(site, gulpexec))
 
     return
     
