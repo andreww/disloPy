@@ -634,7 +634,7 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                                                                   
     return 
 
-def calculate_impurity_energies(sitelist, gulpexec, in_parallel=False, nprocesses=1):
+def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocesses=1):
     '''Calculates energies for dislocation clusters containing a single impurity
     previously constructed using the <calculate_impurity> function.
     '''
