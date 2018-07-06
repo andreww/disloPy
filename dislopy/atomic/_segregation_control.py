@@ -359,10 +359,10 @@ class SegregationSim(object):
         
         # if no executable has been provided, assume that the user wishes only
         # to create the input files, not run them
-        if self.control('executable') and self.control('do_calc'):
-            do_calc = True
-        else:
-            do_calc = False
+        #if self.control('executable') and self.control('do_calc'):
+        #    do_calc = True
+        #else:
+        #    do_calc = False
         
         # calculate impurity energies
         ms.calculate_impurity(self.sysinfo, 
