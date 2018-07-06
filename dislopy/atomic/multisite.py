@@ -641,13 +641,16 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         else:
             print('here')
             # create iterable object with prefices so that map works properly
-            pool = Pool(processes=nprocesses)
-            for i, site in zip(use_indices, site_list):
-                pool.apply_async(gulp_process, args=(site, i, gulpexec))
+            f = lambda prefix: gulp_process(prefix, gulpexec)
+            with Pool(processes=nprocesses) as pool:
+                pool.map(f, (site_list,))
+            #pool = Pool(processes=nprocesses)
+            #for i, site in zip(use_indices, site_list):
+            #    pool.apply_async(gulp_process, args=(site, i, gulpexec))
 
     return
     
-def gulp_process(prefix, i, gulpexec):
+def gulp_process(prefix, gulpexec):
     '''An individual GULP process to be called when running in parallel.
     '''
     
@@ -662,8 +665,6 @@ def gulp_process(prefix, i, gulpexec):
     else:        
         os.mkdir(prefix)
         os.chdir(prefix)
-        
-    print('Relaxing structure with defect at site {}...'.format(i))
     
     # run simulation and return to the primary impurity directory    
     gulp.run_gulp(gulpexec, site)
