@@ -250,7 +250,7 @@ class CoupledImpurity(object):
     def __iter__(self):
         return self
         
-    def next(self):
+    def __next__(self):
         if self.currentindex >= len(self.impurities):
             # reset iteration state
             self.currentindex = 0
@@ -258,6 +258,9 @@ class CoupledImpurity(object):
         else:
             self.currentindex += 1
             return self.impurities[self.currentindex-1]
+            
+    def next(self):
+        return self.__next__()
             
     def to_cell_coords(self, lattice):
         '''Converts the coordinates of all atoms contained in the 
