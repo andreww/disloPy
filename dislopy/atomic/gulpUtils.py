@@ -628,7 +628,7 @@ def parse_gulp(filename, crystalStruc, path='./'):
     # delete list of atoms
     del allAtoms
 
-    return sysInfo, crystalStruc
+    return sysInfo
 
 # Utility functions used to parse specific GULP input
 
@@ -807,7 +807,7 @@ def cluster_from_grs(filename, rI, rII, new_rI=None, r=None):
     
     # read in the .grs file and convert it to cartesian coordinates
     grs_struc = cry.Crystal()
-    sysinfo, grs_struc = parse_gulp(filename, grs_struc)
+    sysinfo = parse_gulp(filename, grs_struc)
     
     for atom in grs_struc:
         # arrange coords in order x, y, z
