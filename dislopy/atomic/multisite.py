@@ -631,29 +631,51 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         gulp.write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False,
                             impurities=full_defect, rI_centre=rI_centre, relax_type='',
                                                                   add_constraints=True)
-                                                                 
-    # run calculation, if requested by user
-    if do_calc:
-        if not in_parallel:
-            print('here 1')
-            for i, site in zip(use_indices, site_list):
-                print('Relaxing structure with defect at site {}...'.format(i))
-                gulp.run_gulp(gulpexec, site)
-        else:
-            print('here 2')
-            # create iterable object with prefices so that map works properly
-            #f = lambda prefix: gulp_process(prefix, gulpexec)
-            #with Pool(processes=nprocesses) as pool:
-            #    pool.map(f, (site_list)
-            pool = Pool(processes=nprocesses)
-            for site in site_list:
-                pool.apply(gulp_process, args=(site, gulpexec))
+                                                                  
+    return 
+
+def calculate_impurity_energies(sitelist, gulpexec, in_parallel=False, nprocesses=1):
+    '''Calculates energies for dislocation clusters containing a single impurity
+    previously constructed using the <calculate_impurity> function.
+    '''
+    
+    if not in_parallel:
+        print('here 1')
+        for i, site in zip(use_indices, site_list):
+            print('Relaxing structure with defect at site {}...'.format(i))
+            gulp.run_gulp(gulpexec, site)
+    else:
+        print('here 2')
+        # create iterable object with prefices so that map works properly
+        #f = lambda prefix: gulp_process(prefix, gulpexec)
+        #with Pool(processes=nprocesses) as pool:
+        #    pool.map(f, (site_list)
+        pool = Pool(processes=nprocesses)
+        for site in site_list:
+            pool.apply(gulp_process, args=(site, gulpexec))
                 
-            pool.close()
-            pool.join()
+        pool.close()
+        pool.join()
 
     return
+   
+def parse_sitelist(dfctname, site):
+    '''Reads in a list of sites for which clusters containing defects.
+    '''
     
+    prefix = '{}.{}'.format(dfctname, site)
+    
+    # read in the site IDs from the *.id.txt file
+    sitefile = open('{}.id.txt'.format(prefix), 'r')
+    
+    # get sites and convert to int
+    sitelist_str = sitefile.readlines()[2]
+    sitelist_str = sitelist_str.strip('#').strip()
+    
+    ids = [int(x) for x in sitelist_str.strip()]
+    sites = ['{}.{}'.format(prefix, i) for i in ids]
+    return sites
+   
 def gulp_process(prefix, gulpexec):
     '''An individual GULP process to be called when running in parallel.
     '''

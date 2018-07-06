@@ -234,6 +234,9 @@ class SegregationSim(object):
         
         if not self.control('no_setup'):
             # check that the user has supplied a .grs file containing a dislocation
+            # user may simply not want to create input files, eg. if simulations
+            # have already been run on another machine and they just want to 
+            # parse the results
             if not self.control('dislocation_file'):
                 raise ValueError('Must supply a dislocation.')
             
@@ -242,12 +245,17 @@ class SegregationSim(object):
             
             # make and segregate the defect
             self.make_defect()
-            self.segregate_defect()   
+            self.segregate_defect()  
+        
+        # if no executable has been provided, assume that the user wishes only
+        # to create the input files, not run them
+        if self.control('executable') and self.control('do_calc'):
+            do_calc = True
         else:
-            # user may simply not want to create input files, eg. if simulations
-            # have already been run on another machine and they just want to 
-            # parse the results
-            pass 
+            do_calc = False
+        
+        if do_calc:
+            self.calculate_defect()
         
         # if the user wishes the output to be analysed, do so now -> check that
         # the calculation has been run
@@ -361,8 +369,8 @@ class SegregationSim(object):
                                   self.cluster, 
                                   self.control('region_r'),
                                   self.dfct, 
-                                  do_calc=do_calc, 
-                                  gulpexec=self.control('executable'),
+                                  #do_calc=do_calc, 
+                                  #gulpexec=self.control('executable'),
                                   centre_on_impurity=self.control('centre_on_impurity'),
                                   constraints=self.cons_funcs,              
                                   noisy=self.control('noisy'),
@@ -371,10 +379,20 @@ class SegregationSim(object):
                                   oh_str=self.control('oh_str'),
                                   bonds=self.migration('find_bonded'), 
                                   has_mirror_symmetry=self.migration('has_mirror_symmetry'),
-                                  dx_thresh=self.migration('dx_thresh'),
-                                  in_parallel=self.control('parallel'),
-                                  nprocesses=self.control('np')
+                                  dx_thresh=self.migration('dx_thresh')
                                  )
+                                 
+    def calculate_defect(self):
+        '''Calculates energies of defect-bearing clusters.
+        '''
+        
+        # read in the site IDs
+        sitelist = ms.parse_sitelist(self.control('site'), self.control('label'))
+        
+        # run calculation
+        ms.calculate_impurity_energies(sitelist, self.control('executable'), 
+                                       in_parallel=self.control('parallel'), 
+                                               nprocesses=self.control('np'))
                                   
     def analyse_results(self):
         '''Analyses the output of the segregation calculation, getting segregation
