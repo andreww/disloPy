@@ -641,12 +641,15 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         else:
             print('here')
             # create iterable object with prefices so that map works properly
-            f = lambda prefix: gulp_process(prefix, gulpexec)
-            with Pool(processes=nprocesses) as pool:
-                pool.map(f, (site_list,))
-            #pool = Pool(processes=nprocesses)
-            #for i, site in zip(use_indices, site_list):
-            #    pool.apply_async(gulp_process, args=(site, i, gulpexec))
+            #f = lambda prefix: gulp_process(prefix, gulpexec)
+            #with Pool(processes=nprocesses) as pool:
+            #    pool.map(f, (site_list)
+            pool = Pool(processes=nprocesses)
+            for i, site in zip(use_indices, site_list):
+                pool.apply_async(gulp_process, args=(site, i, gulpexec))
+                
+            pool.close()
+            pool.join()
 
     return
     
