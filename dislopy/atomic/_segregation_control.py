@@ -124,6 +124,8 @@ def handle_segregation_control(param_dict):
                      ('analyse', {'default': False, 'type': to_bool}),
                      ('no_setup', {'default': False, 'type': to_bool}),
                      ('migration', {'default': False, 'type': to_bool}),
+                     ('parallel', {'default': False, 'type': to_bool}),
+                     ('np', {'default': 1, 'type': int})
                     )
                      
     # cards for the <&migration> namelist
@@ -370,6 +372,8 @@ class SegregationSim(object):
                                   bonds=self.migration('find_bonded'), 
                                   has_mirror_symmetry=self.migration('has_mirror_symmetry'),
                                   dx_thresh=self.migration('dx_thresh')
+                                  use_parallel=self.control('parallel'),
+                                  nprocesses=self.control('np')
                                  )
                                   
     def analyse_results(self):

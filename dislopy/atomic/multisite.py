@@ -4,12 +4,13 @@ at atomic sites in a crystal.
 '''
 from __future__ import print_function, absolute_import
 
-import sys
+import sys, re, os 
 
 import numpy as np
-import re
 
 from numpy.linalg import norm
+from multiprocessing import Pool
+from shutil import copyfile
 
 from dislopy.atomic import crystal as cry
 from dislopy.atomic import qe_utils as qe
@@ -540,8 +541,8 @@ def create_bond_file(defect, bond_pairs, cluster):
 def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
          constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, tol=1e-1,
                      centre_on_impurity=False, do_calc=False, dx_thresh=np.nan,
-                               contains_hydroxyl=False, oh_str='Oh', o_str='O',
-                                          bonds=False, has_mirror_symmetry=False):
+                  contains_hydroxyl=False, oh_str='Oh', o_str='O', bonds=False,
+                    has_mirror_symmetry=False, in_parallel=False, nprocesses=1):
     '''Iterates through all atoms in <relaxedCluster> within distance <radius>
     of the dislocation line, and sequentially replaces one atom of type 
     <replaceType> with an impurity <newType>. dRMin is the minimum difference
@@ -594,7 +595,8 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         use_indices = sites_to_replace(gulpcluster, defect, radius, tol=tol,
                                      constraints=constraints, noisy=noisy)
                                      
-    # construct input files and, if requested by the user, run calculations    
+    # construct input files and, if requested by the user, run calculations  
+    site_list = []  
     for i in use_indices:        
         # set the coordinates and site index of the impurity
         atom = gulpcluster[i]
@@ -611,8 +613,11 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         
         # create .gin file for the calculation
         coords = atom.getCoordinates()
-        outname = '{}.{}.{}'.format(defect.getName(), defect.getSite(), defect.get_index())
-        outstream = open(outname+'.gin','w')
+        prefix = make_outname(defect)
+        outstream = open(make_outname(defect)+'.gin','w')
+        
+        # record prefix for later use in parallel run
+        site_list.append(prefix)
        
         # write structure to output file, including the coordinates of the 
         # impurity atom(s)
@@ -627,12 +632,50 @@ def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
                             impurities=full_defect, rI_centre=rI_centre, relax_type='',
                                                                   add_constraints=True)
                                                                  
-        # run calculation, if requested by user
-        if do_calc:
-            print('Relaxing structure with defect at site {}...'.format(i))
-            gulp.run_gulp(gulpexec, outname)
-                    
+    # run calculation, if requested by user
+    if do_calc:
+        if not in_parallel:
+            for i, site in zip(use_indices, site_list):
+                print('Relaxing structure with defect at site {}...'.format(i))
+                gulp.run_gulp(gulpexec, site)
+        else:
+            # create iterable object with prefices so that map works properly
+            pool = Pool(processes=nprocesses)
+            for i, site in zip(use_indices, site_list):
+                print('Relaxing structure with defect at site {}...'.format(i))
+                pool.apply_async(gulp_process, args=(site, gulpexec)))
+
     return
+    
+def gulp_process(prefix, i, gulpexec):
+    '''An individual GULP process to be called when running in parallel.
+    '''
+    
+    # create the directory from which to run the GULP simulation
+    if os.path.exists(prefix):
+        if not os.path.isdir(prefix):
+            # the name <prefix> is taken, and NOT by a directory
+            raise Exception("Name {} taken by non-directory.".format(prefix))
+        else:
+            # assume that using directory <prefix> is fine
+            pass
+    else:        
+        os.mkdir(prefix)
+        os.chdir(prefix)
+    
+    # run simulation and return to the primary impurity directory    
+    gulp.run_gulp(gulpexec, site)
+    os.chdir('../')
+    
+    # copy output file to main directory 
+    copyfile('{}/{}.gout'.format(prefix, prefix), '{}.gout'.format(prefix))
+    return 0
+    
+def make_outname(defect):
+    '''Returns a string containing identifying information for the defect.
+    '''
+    
+    return '{}.{}.{}'.format(defect.getName(), defect.getSite(), defect.get_index())
 
 def calculate_coupled_impurity(sysInfo, regionI, regionII, radius, defectCluster,
                                         gulpExec='./gulp', constraints=None):
