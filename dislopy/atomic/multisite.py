@@ -640,13 +640,11 @@ def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocess
     '''
     
     if not in_parallel:
-        print('here 1')
         for site in site_list:
             i = site.split('.')[-1]
             print('Relaxing structure with defect at site {}...'.format(i))
             gulp.run_gulp(gulpexec, site)
     else:
-        print('here 2')
         # create iterable object with prefices so that map works properly
         #f = lambda prefix: gulp_process(prefix, gulpexec)
         #site_list_w_exec = [[site, gulpexec] for site in site_list]
@@ -692,7 +690,11 @@ def gulp_process(prefix, gulpexec):
             pass
     else:        
         os.mkdir(prefix)
-        os.chdir(prefix)
+    
+    # copy .gin file into child directory, and then descend into subdirectory
+    # to run simulation
+    copyfile('{}.gin'.format(prefix), '{}/{}.gin'.format(prefix, prefix))    
+    os.chdir(prefix)
     
     i = prefix.split('.')[-1]
     print('Relaxing structure with defect at site {}...'.format(i))
