@@ -697,7 +697,7 @@ def gulp_process(siteinfo):#prefix, gulpexec):
         os.mkdir(prefix)
         os.chdir(prefix)
     
-    i = site.split('.')[-1]
+    i = prefix.split('.')[-1]
     print('Relaxing structure with defect at site {}...'.format(i))
     
     # run simulation and return to the primary impurity directory    
