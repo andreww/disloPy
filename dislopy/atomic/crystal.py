@@ -475,8 +475,8 @@ class Basis(object):
             self._currentindex += 1
             return self[self._currentindex-1]
             
-    #def next(self):
-    #    return self.__next__()
+    def next(self):
+        return self.__next__()
 
     def __len__(self):
         '''Returns the number of atoms that will be written to output.
