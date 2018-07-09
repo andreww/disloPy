@@ -654,7 +654,7 @@ def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocess
         #    pool.map(gulp_process, (site_list_w_exec))
         pool = Pool(processes=nprocesses)
         for site in site_list:
-            pool.apply_async(gulp_process, args=(site, gulpexec,))
+            pool.apply_async(gulp_process, args=(site, gulpexec))
                 
         pool.close()
         pool.join()
