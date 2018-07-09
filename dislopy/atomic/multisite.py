@@ -648,9 +648,10 @@ def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocess
     else:
         print('here 2')
         # create iterable object with prefices so that map works properly
-        f = lambda prefix: gulp_process(prefix, gulpexec)
+        #f = lambda prefix: gulp_process(prefix, gulpexec)
+        site_list_w_exec = [[site, gulpexec] for site in site_list]
         with Pool(processes=nprocesses) as pool:
-            pool.map(f, (site_list))
+            pool.map(gulp_process, (site_list))
         #pool = Pool(processes=nprocesses)
         #for site in site_list:
         #    pool.apply_async(gulp_process, args=(site, gulpexec,))
@@ -677,9 +678,12 @@ def parse_sitelist(dfctname, site):
     sites = ['{}.{}'.format(prefix, i) for i in ids]
     return sites
    
-def gulp_process(prefix, gulpexec):
+def gulp_process(thing):#prefix, gulpexec):
     '''An individual GULP process to be called when running in parallel.
     '''
+    
+    prefix = thing[0]
+    gulpexec = thing[1]
     
     # create the directory from which to run the GULP simulation
     if os.path.exists(prefix):
