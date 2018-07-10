@@ -9,9 +9,10 @@ import sys
 
 import numpy as np
 import re
-import subprocess
+import subprocess, os
 
 from numpy.linalg import norm
+from shutil import copyfile
 
 from dislopy.atomic import crystal as cry
 from dislopy.utilities import atomistic_utils as util
@@ -798,6 +799,37 @@ def run_gulp(gulp_exec, basename):
     gin.close()
     gout.close()
     return
+    
+def gulp_process(prefix, gulpexec):
+    '''An individual GULP process to be called when running in parallel.
+    '''
+    
+    # create the directory from which to run the GULP simulation
+    if os.path.exists(prefix):
+        if not os.path.isdir(prefix):
+            # the name <prefix> is taken, and NOT by a directory
+            raise Exception("Name {} taken by non-directory.".format(prefix))
+        else:
+            # assume that using directory <prefix> is fine
+            pass
+    else:        
+        os.mkdir(prefix)
+    
+    # copy .gin file into child directory, and then descend into subdirectory
+    # to run simulation
+    copyfile('{}.gin'.format(prefix), '{}/{}.gin'.format(prefix, prefix))    
+    os.chdir(prefix)
+    
+    i = prefix.split('.')[-1]
+    print('Relaxing structure with defect at site {}...'.format(i))
+    
+    # run simulation and return to the primary impurity directory    
+    run_gulp(gulpexec, prefix)
+    os.chdir('../')
+    
+    # copy output file to main directory 
+    copyfile('{}/{}.gout'.format(prefix, prefix), '{}.gout'.format(prefix))
+    return 0
 
 def cluster_from_grs(filename, rI, rII, new_rI=None, r=None):
     '''Reads in the .grs file output after a successful cluster-based dislocation

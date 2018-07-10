@@ -645,11 +645,6 @@ def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocess
             print('Relaxing structure with defect at site {}...'.format(i))
             gulp.run_gulp(gulpexec, site)
     else:
-        # create iterable object with prefices so that map works properly
-        #f = lambda prefix: gulp_process(prefix, gulpexec)
-        #site_list_w_exec = [[site, gulpexec] for site in site_list]
-        #with Pool(processes=nprocesses) as pool:
-        #    pool.map(gulp_process, (site_list_w_exec))
         pool = Pool(processes=nprocesses)
         for site in site_list:
             pool.apply_async(gulp_process, args=(site, gulpexec))
@@ -675,10 +670,10 @@ def parse_sitelist(dfctname, site):
     ids = [int(x) for x in sitelist_str.split()]
     sites = ['{}.{}'.format(prefix, i) for i in ids]
     return sites
-   
+'''   
 def gulp_process(prefix, gulpexec):
-    '''An individual GULP process to be called when running in parallel.
-    '''
+    ''An individual GULP process to be called when running in parallel.
+    ''
     
     # create the directory from which to run the GULP simulation
     if os.path.exists(prefix):
@@ -706,7 +701,7 @@ def gulp_process(prefix, gulpexec):
     # copy output file to main directory 
     copyfile('{}/{}.gout'.format(prefix, prefix), '{}.gout'.format(prefix))
     return 0
-    
+'''    
 def make_outname(defect):
     '''Returns a string containing identifying information for the defect.
     '''
