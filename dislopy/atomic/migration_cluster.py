@@ -664,7 +664,7 @@ def calculate_migration_points(site_pairs, executable, npoints, in_parallel=Fals
                 prefix = 'disp.{}.{}'.format(n, pair)
                 gulp.run_gulp(executable, prefix)
     else:
-        pool = Pool(process=nprocesses)
+        pool = Pool(process=np)
         files_to_calc = ['disp.{}.{}'.format(ni, prefix) for ni in range(npoints) 
                                                          for prefix in site_pairs]
         for disp_file in files_to_calc:
