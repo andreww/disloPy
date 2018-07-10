@@ -646,8 +646,9 @@ def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocess
     else:
         pool = Pool(processes=nprocesses)
         for site in site_list:
+            i = site.split('.')[-1]
             pool.apply_async(gulp.gulp_process, args=(site, gulpexec, 
-                      'Relaxing structure with defect at site{}...'.format(i)))
+                      'Relaxing structure with defect at site {}...'.format(i)))
                 
         pool.close()
         pool.join()
