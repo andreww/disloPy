@@ -634,14 +634,15 @@ def read_migration_energies(site_pairs, npoints):
     
     for basename in site_pairs:
         path_energies = []
-        for n in range(npoints)
+        for n in range(npoints):
             E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
             path_energies.append(E)
         
-        energy_dict    
-        energies -= energies.min()
-        barrier_height = get_barrier(energies)
-        site_energy_diff = energies[-1]-energies[0]
+        path_energies = np.array(path_energies) 
+        path_energies -= path_energies[0]
+        barrier_height = get_barrier(path_energies)
+        site_energy_diff = path_energies[-1]-path_energies[0]        
+        energy_dict[basename] = np.copy(path_energies)  
     
 def calculate_migration_points(site_pairs, executable, npoints, in_parallel=False, np=1):
     '''Optimize structures and calculate energies for all <n> points along the 
