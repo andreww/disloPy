@@ -800,9 +800,12 @@ def run_gulp(gulp_exec, basename):
     gout.close()
     return
     
-def gulp_process(prefix, gulpexec):
+def gulp_process(prefix, gulpexec, message=None):
     '''An individual GULP process to be called when running in parallel.
     '''
+    
+    if message is not None:
+        print(message)
     
     # create the directory from which to run the GULP simulation
     if os.path.exists(prefix):
@@ -819,10 +822,7 @@ def gulp_process(prefix, gulpexec):
     # to run simulation
     copyfile('{}.gin'.format(prefix), '{}/{}.gin'.format(prefix, prefix))    
     os.chdir(prefix)
-    
-    i = prefix.split('.')[-1]
-    print('Relaxing structure with defect at site {}...'.format(i))
-    
+   
     # run simulation and return to the primary impurity directory    
     run_gulp(gulpexec, prefix)
     os.chdir('../')
