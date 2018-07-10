@@ -525,8 +525,12 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
         
         if noisy:
             print("Calculating migration barrier for site {}...".format(int(site[0])), end='')
-   
-        cluster, sysinfo = gulp.cluster_from_grs('{}.grs'.format(sitename), rI, rII)
+        
+        if not in_parallel:
+            cluster, sysinfo = gulp.cluster_from_grs('{}.grs'.format(sitename), rI, rII)
+        else:
+            # sub-directory exists for this file
+            cluster, sysinfo = gulp.cluster_from_grs('{}/{}.grs'.format(sitename, sitename), rI, rII)
         
         # height of simulation cell
         H = cluster.getHeight()
@@ -615,7 +619,7 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
                 print("done.")
                 
         if noisy:
-            print('done.')
+            print("done.")
     
     # calculate energies, if requested to do so by the user
     if executable is not None:                                               
@@ -626,7 +630,7 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
             
     return heights
     
-def read_migration_energies(site_pairs, npoints):
+def read_migration_energies(site_pairs, npoints, in_subdirectory=False):
     '''Reads in energies calculated for points along migration paths.
     '''
     
@@ -635,7 +639,12 @@ def read_migration_energies(site_pairs, npoints):
     for basename in site_pairs:
         path_energies = []
         for n in range(npoints):
-            E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
+            prefix = 'disp.{}.{}'.format(i, basename)
+            if not in_subdirectory
+                E = util.extract_energy('{}.gout'.format(prefix), 'gulp')[0]  
+            else:
+                E = util.extract_energy('{}/{}.gout'.format(prefix, prefix), 'gulp')[0]
+                
             path_energies.append(E)
         
         path_energies = np.array(path_energies) 
