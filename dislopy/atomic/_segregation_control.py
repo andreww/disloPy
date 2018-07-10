@@ -141,7 +141,7 @@ def handle_segregation_control(param_dict):
                        ('new_species', {'default': '', 'type': str}),
                        ('find_bonded', {'default': False, 'type': to_bool}),
                        ('dx_thresh', {'default': np.nan, 'type': float}),
-                       ('use_parallel', {'default': True, 'type': to_bool}),
+                       ('pipe_only', {'default': True, 'type': to_bool}),
                        ('has_mirror_symmetry', {'default': False, 'type': to_bool})
                       )
                     
@@ -446,21 +446,23 @@ class SegregationSim(object):
         
         heights= []
         if not self.migration('no_setup'): 
-            if self.migration('use_parallel'):   
-                heights = mig.migrate_sites_parallel(basename, 
-                                                     self.control('new_r1'),  
-                                                     self.r2, 
-                                                     self.control('site'), 
-                                                     npar, 
-                                                     executable=executable, 
-                                                     node=self.migration('node'),
-                                                     plane_shift=self.migration('plane_shift'),
-                                                     adaptive=self.migration('adaptive'),
-                                                     threshold=self.migration('threshold'),
-                                                     newspecies=newspecies,
-                                                     noisy=self.control('noisy'),
-                                                     centre_on_impurity=self.control('centre_on_impurity')
-                                                    )
+            if self.migration('pipe_only'):   
+                heights = mig.migrate_sites_pipe(basename, 
+                                                 self.control('new_r1'),  
+                                                 self.r2, 
+                                                 self.control('site'), 
+                                                 npar, 
+                                                 executable=executable, 
+                                                 node=self.migration('node'),
+                                                 plane_shift=self.migration('plane_shift'),
+                                                 adaptive=self.migration('adaptive'),
+                                                 threshold=self.migration('threshold'),
+                                                 newspecies=newspecies,
+                                                 noisy=self.control('noisy'),
+                                                 centre_on_impurity=self.control('centre_on_impurity'),
+                                                 in_parallel=self.control('parallel'),
+                                                 nprocesses=self.control('np')
+                                                )
             else:
                 heights = mig.migrate_sites_general(basename, 
                                                     self.control('new_r1'),  
@@ -474,7 +476,9 @@ class SegregationSim(object):
                                                     threshold=self.migration('threshold'),
                                                     newspecies=newspecies,
                                                     noisy=self.control('noisy'),
-                                                    centre_on_impurity=self.control('centre_on_impurity')
+                                                    centre_on_impurity=self.control('centre_on_impurity'),
+                                                    in_parallel=self.control('parallel'),
+                                                    nprocesses=self.control('np')
                                                    )
                                    
         # read in energies output by non-adaptive calculations

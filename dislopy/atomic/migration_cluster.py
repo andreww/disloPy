@@ -7,6 +7,8 @@ from __future__ import print_function, division, absolute_import
 import numpy as np
 from numpy.linalg import norm
 from numpy.random import random
+from multiprocessing import Pool
+
 import glob
 import re
 
@@ -291,12 +293,150 @@ def index_atom_at_x(cluster, x0):
             index = i
             max_d = dx
             
-    return index
+    return index 
+    
+def make_disp_files_general(cluster, diffuse_i, basename, dxn, npoints, sysinfo,  
+                       executable=None, rI_centre=np.zeros(2), do_perturb=False, 
+                                            constrain_index=2, newspecies=None):
+    '''Generates input files for a constrained optimization calculation of migration
+    barriers along an arbitrary migration path.
+    '''
+    
+    # set constraints
+    constraint_vector = np.ones(3)
+    constraint_vector[constrain_index] = 0
+    cluster[diffuse_i].set_constraints(constraint_vector)
+    
+    # change species of diffusing atom, if requested
+    if newspecies is not None:
+        oldspecies = cluster[diffuse_i].getSpecies()
+        cluster[diffuse_i].setSpecies(newspecies)
+
+    # lists to hold grid spacing and energies
+    grid = []
+    # energies = []
+                                                                           
+    for i, dxi in enumerate(dxn):
+        # update dislocation structure
+        if do_perturb:
+                # add a small random perturbation to lift symmetry
+                new_x = dxi + perturb() 
+        else:
+                new_x = dxi   
+                
+        cluster[diffuse_i].setDisplacedCoordinates(new_x)
+               
+        outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
+        gulp.write_gulp(outstream, cluster, sysinfo, defected=True, to_cart=False,
+                             rI_centre=rI_centre, relax_type='', add_constraints=True)
+        outstream.close()
+        
+        new_z = norm(new_x-cluster[diffuse_i].getCoordinates())
+        grid.append(new_z)
+        
+        
+
+    '''           
+        # if an executable has been provided, run the calculation
+        if executable is not None:
+            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))  
+                   
+        E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
+        
+        new_z = norm(new_x-cluster[diffuse_i].getCoordinates())
+        grid.append(new_z)
+        energies.append(E)
+    '''    
+    # unset the displaced coordinates, constraints, and new species
+    cluster[diffuse_i].setDisplacedCoordinates(cluster[diffuse_i].getCoordinates())
+    cluster[diffuse_i].set_constraints(np.ones(3))
+    if newspecies is not None:
+        cluster[diffuse_i].setSpecies(oldspecies)
+        
+    return np.array(grid)
+    '''            
+    # if energies have been calculated, extract the maximum energy (relative to
+    # the undisplaced atom), the barrier height, and the energy difference 
+    # between the initial and final sites
+    if grid:
+        energies = np.array(energies)
+        energies -= energies.min()
+        barrier_height = get_barrier(energies)
+        site_energy_diff = energies[-1]-energies[0]
+        
+        return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
+    else:
+        # energies not calculated, return dummy values
+        return [], np.nan, np.nan  
+    '''
+        
+def make_disp_files_pipe(index, cluster, sysinfo, dz, npoints, basename, 
+                       rI_centre=np.zeros(2), executable=None, node=0.5,
+                               plane_shift=np.zeros(2),  dx=np.zeros(2)):
+    '''Constructs input files for points along an atom migration path along the
+    dislocation line
+    '''
+        
+    x = cluster[index].getCoordinates()
+    grid = []
+    #energies = []
+
+    for i in range(npoints):
+        # calculate new position of atom
+        new_z = i/(npoints-1)*dz
+        pln_x = i/(npoints-1)*dx
+        # calculate displacement of atom in the plane at this point DUE TO PLANE
+        # SHIFT
+        shift = scale_plane_shift(plane_shift, new_z, dz, node)
+        
+        # update dislocation structure
+        new_x = x + np.array([shift[0]+pln_x[0], shift[1]+pln_x[1], new_z])
+        cluster[index].setCoordinates(new_x)
+        outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
+        gulp.write_gulp(outstream, cluster, sysinfo, defected=False, to_cart=False,
+                         rI_centre=rI_centre, relax_type='', add_constraints=True)
+        outstream.close()
+        
+        grid.append(new_z)
+        
+    return grid
+    
+    '''        
+        # if an executable has been provided, run the calculation
+        if executable is not None:
+            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))         
+            E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
+            grid.append(new_z)
+            energies.append(E)
+            
+    # if energies have been calculated, extract the maximum energy (relative to
+    # the undisplaced atom), the barrier height, and the energy difference 
+    # between the initial and final sites
+    if grid:
+        energies = np.array(energies)
+        energies -= energies.min()
+        barrier_height = get_barrier(energies)
+        site_energy_diff = energies[-1]-energies[0]
+        
+        return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
+    else:
+        # energies not calculated, return dummy values
+        return [], np.nan, np.nan  
+    '''  
+
+def get_barrier(energy_values):
+    '''Calculates the maximum energy barrier that has to be surmounted getting
+    between sites.
+    '''
+    
+    eb = energy_values.max()-energy_values.min()
+    
+    return eb 
     
 def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None, 
                     noisy=False, plane_shift=np.zeros(3), node=0.5, threshold=1,
                     centre_on_impurity=False, do_perturb=False, newspecies=None, 
-                                                                adaptive=False):
+                                                in_parallel=False, nprocesses=1):
     '''Calculates migration barriers between all pairs of atoms that are deemed
     to be bonded.
     '''
@@ -304,6 +444,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
     bond_dict = parse_bonds('{}.bonds.txt'.format(basename))
     heights = []
     
+    site_pairs = []
     for i in bond_dict.keys():
         start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, i), rI, rII)
         xfinal = bond_dict[i]['site_coords']
@@ -325,20 +466,25 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                 rI_centre=np.zeros(2) 
             
             pair_name = '{}.{}.{}'.format(basename, i, j)  
+            site_pairs.append(pair_name)
                                                   
-            gridded_energies, Eh, Ed = make_disp_files_gen_new(start,
-                                                           diff_index,
-                                                           pair_name,
-                                                           dxn,
-                                                           npoints,
-                                                           sysinfo,
-                                                           executable=executable,
-                                                           rI_centre=rI_centre,
-                                                           do_perturb=do_perturb,
-                                                           constrain_index=constrain_index,
-                                                           newspecies=newspecies
-                                                          )
-                                                          
+            #gridded_energies, Eh, Ed = make_disp_files_general(start,
+            grid = make_disp_files_general(start,
+                                                               diff_index,
+                                                               pair_name,
+                                                               dxn,
+                                                               npoints,
+                                                               sysinfo,
+                                                               executable=executable,
+                                                               rI_centre=rI_centre,
+                                                               do_perturb=do_perturb,
+                                                               constrain_index=constrain_index,
+                                                               newspecies=newspecies
+                                                              )
+                                                              
+            #!!! RUN STUFF HERE?
+                                                              
+            '''                                              
             outstream = open('disp.{}.barrier.dat'.format(pair_name), 'w')    
             # write header, including full displacement vector and barrier height 
             outstream.write('# {:.0f} {:.0f}\n'.format(i, j))
@@ -352,246 +498,14 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
                 heights.append([i, j, x0[0], x0[1], Eh, Ed])
             
             outstream.close()
+            '''
+            
+    return heights    
 
-    return heights  
-    
-def make_disp_files_gen_new(cluster, diffuse_i, basename, dxn, npoints, sysinfo,  
-                      executable=None, rI_centre=np.zeros(2), do_perturb=False, 
-                                            constrain_index=2, newspecies=None):
-    '''Generates input files for a constrained optimization calculation of migration
-    barriers along an arbitrary migration path.
-    '''
-    
-    # set constraints
-    constraint_vector = np.ones(3)
-    constraint_vector[constrain_index] = 0
-    cluster[diffuse_i].set_constraints(constraint_vector)
-    
-    # change species of diffusing atom, if requested
-    if newspecies is not None:
-        oldspecies = cluster[diffuse_i].getSpecies()
-        cluster[diffuse_i].setSpecies(newspecies)
-
-    # lists to hold grid spacing and energies
-    grid = []
-    energies = []
-                                                                           
-    for i, dxi in enumerate(dxn):
-        # update dislocation structure
-        if do_perturb:
-                # add a small random perturbation to lift symmetry
-                new_x = dxi + perturb() 
-        else:
-                new_x = dxi   
-                
-        cluster[diffuse_i].setDisplacedCoordinates(new_x)
-               
-        outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
-        gulp.write_gulp(outstream, cluster, sysinfo, defected=True, to_cart=False,
-                             rI_centre=rI_centre, relax_type='', add_constraints=True)
-        outstream.close()
-            
-        # if an executable has been provided, run the calculation
-        if executable is not None:
-            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))  
-                   
-        E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
-        
-        new_z = norm(new_x-cluster[diffuse_i].getCoordinates())
-        grid.append(new_z)
-        energies.append(E)
-        
-    # unset the displaced coordinates, constraints, and new species
-    cluster[diffuse_i].setDisplacedCoordinates(cluster[diffuse_i].getCoordinates())
-    cluster[diffuse_i].set_constraints(np.ones(3))
-    if newspecies is not None:
-        cluster[diffuse_i].setSpecies(oldspecies)
-                
-    # if energies have been calculated, extract the maximum energy (relative to
-    # the undisplaced atom), the barrier height, and the energy difference 
-    # between the initial and final sites
-    if grid:
-        energies = np.array(energies)
-        energies -= energies.min()
-        barrier_height = get_barrier(energies)
-        site_energy_diff = energies[-1]-energies[0]
-        
-        return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
-    else:
-        # energies not calculated, return dummy values
-        return [], np.nan, np.nan  
-    
-def adaptive_construct(index, cluster, sysinfo, dz, nlevels, basename, 
-                       executable, rI_centre=np.zeros(2), dx=np.zeros(2),
-                                       plane_shift=np.zeros(2), node=0.5):
-    '''Constructs input files for points along the atom migration path, with
-    the points determined by a binary search algorithm. May fail for complex
-    paths (eg. those with multiple local maxima).
-    '''
-    
-    ## user MUST provide an executable
-    #if executable is None:
-    #    raise ValueError("A valid executable must be provided.")
-    
-    # starting coordinates
-    x = cluster[index].getCoordinates()
-    
-    # lists to hold grid spacing and energies
-    grid = []
-    energies = []
-    
-    # do first level
-    for i in range(3):
-        new_z = i/2.*dz
-        if executable is not None:
-            # calculate the energy directly
-            
-            pln_x = i/2.*dx
-            # calculate displacement of atom in the plane at this point
-            shift = scale_plane_shift(plane_shift, new_z, dz, node)
-            
-            # update dislocation structure
-            new_x = x + np.array([shift[0]+pln_x[0], shift[1]+pln_x[1], new_z])
-            cluster[index].setCoordinates(new_x)
-            outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
-            gulp.write_gulp(outstream, cluster, sysinfo, defected=False,
-                      to_cart=False, rI_centre=rI_centre, relax_type='',
-                                                    add_constraints=True)
-            outstream.close()
-        
-            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))
-      
-        # extract energy from GULP output file            
-        E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]
-        
-        grid.append(new_z)
-        energies.append(E)
-    
-    # refine grid subsequent levels 
-    imax = 1
-    E_max = energies[imax] 
-    grid_max = grid[imax]  
-    counter = 3 # keep track of number of structures calculated
-    for level in range(nlevels-1):
-        # nodes halfway between the current maximum and the adjacent nodes
-        new_z_m1 = grid_max-0.5**(level+2)*dz
-        new_z_p1 = grid_max+0.5**(level+2)*dz
-        grid.insert(imax, new_z_m1)
-        grid.insert(imax+2, new_z_p1)
-        
-        if executable is not None:
-            # in-plane change associate with new nodes
-            pln_x_m1 = new_z_m1/dz*dx
-            pln_x_p1 = new_z_p1/dz*dx
-                       
-            shift_m1 = scale_plane_shift(plane_shift, new_z_m1, dz, node)
-            shift_p1 = scale_plane_shift(plane_shift, new_z_p1, dz, node)
-            
-            # update dislocation structure
-            new_x_m1 = x + np.array([shift_m1[0]+pln_x_m1[0], shift_m1[1]+pln_x_m1[1], 
-                                                                            new_z_m1])
-            new_x_p1 = x + np.array([shift_p1[0]+pln_x_p1[0], shift_p1[1]+pln_x_p1[1],
-                                                                            new_z_p1])
-            
-            for i in range(2):
-                if i == 0:
-                    # do lower point
-                    cluster[index].setCoordinates(new_x_m1)
-                else:
-                    # do upper point
-                    cluster[index].setCoordinates(new_x_p1)
-                    
-                outstream = open('disp.{}.{}.gin'.format(counter, basename), 'w')           
-                gulp.write_gulp(outstream, cluster, sysinfo, defected=False, to_cart=False,
-                                 rI_centre=rI_centre, relax_type='', add_constraints=True)
-                outstream.close()
-                
-                # calculate energies
-                if executable is not None:
-                    gulp.run_gulp(executable, 'disp.{}.{}'.format(counter, basename))     
-                
-        E = util.extract_energy('disp.{}.{}.gout'.format(counter, basename), 'gulp')[0]           
-        energies.insert(imax+2*i, E)
-            
-        counter += 1    
-            
-        # determine new maximum energy
-        if energies[imax] > energies[imax+1] and energies[imax] > energies[imax+1]:
-            E_max = energies[imax]
-        elif energies[imax+2] > energies[imax+1]:
-            E_max = energies[imax+2]
-            imax +=2
-        else:
-            # highest energy location unchanged
-            imax += 1
-            
-    # shift energy so that undisplaced vacancy is as 0 eV
-    energies = np.array(energies)
-    energies -= energies.min()
-    barrier_height = get_barrier(energies)
-    site_energy_diff = energies[-1]-energies[0]
-            
-    return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
-        
-def construct_disp_files(index, cluster, sysinfo, dz, npoints, basename, 
-                       rI_centre=np.zeros(2), executable=None, node=0.5,
-                               plane_shift=np.zeros(2),  dx=np.zeros(2)):
-    '''Constructs input files for points along the atom migration path.
-    '''
-        
-    x = cluster[index].getCoordinates()
-    grid = []
-    energies = []
-
-    for i in range(npoints):
-        # calculate new position of atom
-        new_z = i/(npoints-1)*dz
-        pln_x = i/(npoints-1)*dx
-        # calculate displacement of atom in the plane at this point DUE TO PLANE
-        # SHIFT
-        shift = scale_plane_shift(plane_shift, new_z, dz, node)
-        
-        # update dislocation structure
-        new_x = x + np.array([shift[0]+pln_x[0], shift[1]+pln_x[1], new_z])
-        cluster[index].setCoordinates(new_x)
-        outstream = open('disp.{}.{}.gin'.format(i, basename), 'w')
-        gulp.write_gulp(outstream, cluster, sysinfo, defected=False, to_cart=False,
-                         rI_centre=rI_centre, relax_type='', add_constraints=True)
-        outstream.close()
-        
-        # if an executable has been provided, run the calculation
-        if executable is not None:
-            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))         
-            E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
-            grid.append(new_z)
-            energies.append(E)
-            
-    # if energies have been calculated, extract the maximum energy (relative to
-    # the undisplaced atom), the barrier height, and the energy difference 
-    # between the initial and final sites
-    if grid:
-        energies = np.array(energies)
-        energies -= energies.min()
-        barrier_height = get_barrier(energies)
-        site_energy_diff = energies[-1]-energies[0]
-        
-        return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
-    else:
-        # energies not calculated, return dummy values
-        return [], np.nan, np.nan    
-
-def get_barrier(energy_values):
-    '''Calculates the maximum energy barrier that has to be surmounted getting
-    between sites.
-    '''
-    
-    eb = energy_values.max()-energy_values.min()
-    
-    return eb    
-
-def migrate_sites_parallel(basename, rI, rII, atom_type, npoints, executable=None, 
-                   noisy=False, plane_shift=np.zeros(2), node=0.5, adaptive=False,
-                       threshold=5e-1, newspecies=None, centre_on_impurity=False):
+def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None, 
+                               noisy=False, plane_shift=np.zeros(2), node=0.5,
+                    threshold=5e-1, newspecies=None, centre_on_impurity=False,
+                                              in_parallel=False, nprocesses=1):
     '''Constructs and, if specified by user, runs input files for migration
     of vacancies along a dislocation line. <plane_shift> allows the user to 
     migrate the atom around intervening atoms (eg. oxygen ions). <adaptive> tells
@@ -605,6 +519,7 @@ def migrate_sites_parallel(basename, rI, rII, atom_type, npoints, executable=Non
     if noisy:
         print("Preparing to calculate migration barriers.")
     
+    site_pairs = []
     for site in site_info:
         sitename = '{}.{}'.format(basename, int(site[0]))
         
@@ -658,33 +573,22 @@ def migrate_sites_parallel(basename, rI, rII, atom_type, npoints, executable=Non
             # construct input files and run calculation (if specified), recording
             # the index of the defect and the atom being translated
             sitepairname = '{}.{}'.format(sitename, ti)
-            if not adaptive:
-                gridded_energies, Eh, Ed = construct_disp_files(ti, 
-                                                                cluster, 
-                                                                sysinfo, 
-                                                                dz, 
-                                                                npoints, 
-                                                                sitepairname,
-                                                                rI_centre=rI_centre, 
-                                                                executable=executable,
-                                                                plane_shift=plane_shift, 
-                                                                node=node,
-                                                                dx=dr
-                                                               )
-            else:
-                gridded_energies, Eh, Ed = adaptive_construct(ti, 
-                                                              cluster, 
-                                                              sysinfo, 
-                                                              dz, 
-                                                              npoints, 
-                                                              sitepairname, 
-                                                              rI_centre=rI_centre,
-                                                              executable=executable, 
-                                                              plane_shift=plane_shift, 
-                                                              node=node,
-                                                              dx=dr
-                                                             )
-                                        
+            site_pairs.append(sitepairname)
+            #gridded_energies, Eh, Ed = make_disp_files_pipe(ti, 
+            grid = make_disp_files_pipe(ti,
+                                                            cluster, 
+                                                            sysinfo, 
+                                                            dz, 
+                                                            npoints, 
+                                                            sitepairname,
+                                                            rI_centre=rI_centre, 
+                                                            executable=executable,
+                                                            plane_shift=plane_shift, 
+                                                            node=node,
+                                                            dx=dr
+                                                           )
+            
+            '''
             outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
             # write header, including full displacement vector and barrier height 
             outstream.write('# {:.3f} {:.3f} {:.3f}\n'.format(dr[0], dr[1], dz))
@@ -698,6 +602,7 @@ def migrate_sites_parallel(basename, rI, rII, atom_type, npoints, executable=Non
                 heights.append([int(site[0]), ti, site[1], site[2], Eh, Ed])
             
             outstream.close()
+            '''
                 
             # undo any changes to atom <ti>
             cluster[ti].set_constraints([1, 1, 1])
@@ -711,8 +616,52 @@ def migrate_sites_parallel(basename, rI, rII, atom_type, npoints, executable=Non
                 
         if noisy:
             print('done.')
+    
+    # calculate energies, if requested to do so by the user
+    if executable is not None:                                               
+        calculate_migration_points(site_pairs, executable, npoints,
+                                     in_parallel=in_parallel, np=np)
+        
+    #write_energies(site_pairs, 
             
     return heights
+    
+def read_migration_energies(site_pairs, npoints):
+    '''Reads in energies calculated for points along migration paths.
+    '''
+    
+    energy_dict = dict()
+    
+    for basename in site_pairs:
+        path_energies = []
+        for n in range(npoints)
+            E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
+            path_energies.append(E)
+        
+        energy_dict    
+        energies -= energies.min()
+        barrier_height = get_barrier(energies)
+        site_energy_diff = energies[-1]-energies[0]
+    
+def calculate_migration_points(site_pairs, executable, npoints, in_parallel=False, np=1):
+    '''Optimize structures and calculate energies for all <n> points along the 
+    migration paths with endpoints defined in <site_pairs>.
+    '''
+    
+    if not in_parallel:
+        for pair in site_pairs:
+            for n in range(npoints):
+                prefix = 'disp.{}.{}'.format(n, pair)
+                gulp.run_gulp(executable, prefix)
+    else:
+        pool = Pool(process=nprocesses)
+        files_to_calc = ['disp.{}.{}'.format(ni, prefix) for ni in range(npoints) 
+                                                         for prefix in site_pairs]
+        for disp_file in files_to_calc:
+            pool.apply_async(gulp.gulp_process, (disp_file, executable))
+            
+        pool.close()
+        pool.join()
     
 def reorder_path(energy_path):
     '''Changes the zero index of <energypath> so that it starts with the lowest

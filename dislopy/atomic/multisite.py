@@ -4,13 +4,12 @@ at atomic sites in a crystal.
 '''
 from __future__ import print_function, absolute_import
 
-import sys, re, os 
+import sys, re
 
 import numpy as np
 
 from numpy.linalg import norm
 from multiprocessing import Pool
-from shutil import copyfile
 
 from dislopy.atomic import crystal as cry
 from dislopy.atomic import qe_utils as qe
@@ -670,38 +669,7 @@ def parse_sitelist(dfctname, site):
     ids = [int(x) for x in sitelist_str.split()]
     sites = ['{}.{}'.format(prefix, i) for i in ids]
     return sites
-'''   
-def gulp_process(prefix, gulpexec):
-    ''An individual GULP process to be called when running in parallel.
-    ''
     
-    # create the directory from which to run the GULP simulation
-    if os.path.exists(prefix):
-        if not os.path.isdir(prefix):
-            # the name <prefix> is taken, and NOT by a directory
-            raise Exception("Name {} taken by non-directory.".format(prefix))
-        else:
-            # assume that using directory <prefix> is fine
-            pass
-    else:        
-        os.mkdir(prefix)
-    
-    # copy .gin file into child directory, and then descend into subdirectory
-    # to run simulation
-    copyfile('{}.gin'.format(prefix), '{}/{}.gin'.format(prefix, prefix))    
-    os.chdir(prefix)
-    
-    i = prefix.split('.')[-1]
-    print('Relaxing structure with defect at site {}...'.format(i))
-    
-    # run simulation and return to the primary impurity directory    
-    gulp.run_gulp(gulpexec, prefix)
-    os.chdir('../')
-    
-    # copy output file to main directory 
-    copyfile('{}/{}.gout'.format(prefix, prefix), '{}.gout'.format(prefix))
-    return 0
-'''    
 def make_outname(defect):
     '''Returns a string containing identifying information for the defect.
     '''
