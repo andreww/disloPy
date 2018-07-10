@@ -499,7 +499,12 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             
             outstream.close()
             '''
-            
+    
+    # calculate energies, if requested to do so by the user
+    if executable is not None:                                               
+        calculate_migration_points(site_pairs, executable, npoints,
+                                     in_parallel=in_parallel, np=nprocesses)
+                                             
     return heights    
 
 def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None, 
@@ -624,7 +629,7 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
     # calculate energies, if requested to do so by the user
     if executable is not None:                                               
         calculate_migration_points(site_pairs, executable, npoints,
-                                     in_parallel=in_parallel, np=np)
+                                     in_parallel=in_parallel, np=nprocesses)
         
     #write_energies(site_pairs, 
             
