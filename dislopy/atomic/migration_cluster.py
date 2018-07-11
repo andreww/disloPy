@@ -445,6 +445,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
     heights = []
     
     site_pairs = []
+    energy_dict = dict() #!
     for i in bond_dict.keys():
         start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, i), rI, rII)
         xfinal = bond_dict[i]['site_coords']
@@ -467,6 +468,10 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             
             pair_name = '{}.{}.{}'.format(basename, i, j)  
             site_pairs.append(pair_name)
+            
+            energy_dict[pair_name] = dict() #!
+            energy_dict['x0'] = np.copy(x0) #!
+            energy_dict['x1'] = np.copy(xfinal) #!
                                                   
             #gridded_energies, Eh, Ed = make_disp_files_general(start,
             grid = make_disp_files_general(start,
@@ -525,6 +530,7 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
         print("Preparing to construct input files for migration calculations.")
     
     site_pairs = []
+    energy_dict = dict() #! 
     for site in site_info:
         sitename = '{}.{}'.format(basename, int(site[0]))
         
@@ -597,6 +603,13 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
                                                             dx=dr
                                                            )
             
+            
+            # record the grid of points along the migration path
+            energy_dict[sitepairname] = dict()
+            energy_dict[sitepairname]['x0'] = np.copy(x0)
+            energy_dict[sitepairname]['x1'] = np.copy(site[1:4]) 
+            energy_dict[sitepairname]['i'] = int(site[0])
+            energy_dict[sitepairname]['j']
             '''
             outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
             # write header, including full displacement vector and barrier height 
@@ -632,19 +645,40 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
                                      in_parallel=in_parallel, np=nprocesses)
         
     #write_energies(site_pairs, 
-            
-    return heights
+    read_migration_energies(energy_dict, npoints, in_subdirectory=not(in_parallel)) #!
     
-def read_migration_energies(site_pairs, npoints, in_subdirectory=False):
+    for pair in energy_dict.keys():
+        outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')
+        # write the components of (a) the initial site, (b) the final site, and
+        # (c) the vector from one to the other
+        x0 = energy_dict[pair]['x0']
+        x1 = energy_dict[pair]['x1']
+        dx = x1-x0
+        outstream.write('# x0: {:.3f} {:.3f} {:.3f}\n'.format(x0[0], x0[1], x0[2]))
+        outstream.write('# x1: {:.3f} {:.3f} {:.3f}\n'.format(x1[0], x1[1], x1[2]))
+        outstream.write('# dx: {:.3f} {:.3f} {:.3f}\n'.format(dx[0], dx[1], dx[2]))
+        
+        # write energies at each point along the migration path
+        for z, E in zip(energy_dict[pair]['grid'], energy_dict[pair]['E']):
+             outstream.write('{} {:.6f}\n'.format(z, E))
+             
+        outstream.close()
+        
+        # get the indices of start and final sites
+        i, j = [int(index) for index in pair.split('.')[-2:]]
+        heights.append([i, j, x1[0], x1[1], energy_dict[pair]['Eh'],
+                                            energy_dict[pair]['E'][-1]]) 
+            
+    return np.array(heights)
+    
+def read_migration_energies(energy_dict, npoints, in_subdirectory=False):
     '''Reads in energies calculated for points along migration paths.
     '''
     
-    energy_dict = dict()
-    
-    for basename in site_pairs:
+    for sitepair in energy_dict.keys():
         path_energies = []
         for n in range(npoints):
-            prefix = 'disp.{}.{}'.format(i, basename)
+            prefix = 'disp.{}.{}'.format(i, sitepair)
             if not in_subdirectory:
                 E = util.extract_energy('{}.gout'.format(prefix), 'gulp')[0]  
             else:
@@ -655,8 +689,11 @@ def read_migration_energies(site_pairs, npoints, in_subdirectory=False):
         path_energies = np.array(path_energies) 
         path_energies -= path_energies[0]
         barrier_height = get_barrier(path_energies)
-        site_energy_diff = path_energies[-1]-path_energies[0]        
-        energy_dict[basename] = np.copy(path_energies)  
+        #site_energy_diff = path_energies[-1]-path_energies[0]        
+        energy_dict[sitepair]['E'] = np.copy(path_energies)  
+        energy_dict[sitepair['Eh'] = barrier_height
+        
+    return 
     
 def calculate_migration_points(site_pairs, executable, npoints, noisy=False, in_parallel=False, np=1):
     '''Optimize structures and calculate energies for all <n> points along the 
