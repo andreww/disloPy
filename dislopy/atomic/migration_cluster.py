@@ -314,7 +314,6 @@ def make_disp_files_general(cluster, diffuse_i, basename, dxn, npoints, sysinfo,
 
     # lists to hold grid spacing and energies
     grid = []
-    # energies = []
                                                                            
     for i, dxi in enumerate(dxn):
         # update dislocation structure
@@ -333,20 +332,7 @@ def make_disp_files_general(cluster, diffuse_i, basename, dxn, npoints, sysinfo,
         
         new_z = norm(new_x-cluster[diffuse_i].getCoordinates())
         grid.append(new_z)
-        
-        
-
-    '''           
-        # if an executable has been provided, run the calculation
-        if executable is not None:
-            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))  
-                   
-        E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
-        
-        new_z = norm(new_x-cluster[diffuse_i].getCoordinates())
-        grid.append(new_z)
-        energies.append(E)
-    '''    
+ 
     # unset the displaced coordinates, constraints, and new species
     cluster[diffuse_i].setDisplacedCoordinates(cluster[diffuse_i].getCoordinates())
     cluster[diffuse_i].set_constraints(np.ones(3))
@@ -354,21 +340,6 @@ def make_disp_files_general(cluster, diffuse_i, basename, dxn, npoints, sysinfo,
         cluster[diffuse_i].setSpecies(oldspecies)
         
     return np.array(grid)
-    '''            
-    # if energies have been calculated, extract the maximum energy (relative to
-    # the undisplaced atom), the barrier height, and the energy difference 
-    # between the initial and final sites
-    if grid:
-        energies = np.array(energies)
-        energies -= energies.min()
-        barrier_height = get_barrier(energies)
-        site_energy_diff = energies[-1]-energies[0]
-        
-        return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
-    else:
-        # energies not calculated, return dummy values
-        return [], np.nan, np.nan  
-    '''
         
 def make_disp_files_pipe(index, cluster, sysinfo, dz, npoints, basename, 
                        rI_centre=np.zeros(2), executable=None, node=0.5,
@@ -379,7 +350,6 @@ def make_disp_files_pipe(index, cluster, sysinfo, dz, npoints, basename,
         
     x = cluster[index].getCoordinates()
     grid = []
-    #energies = []
 
     for i in range(npoints):
         # calculate new position of atom
@@ -399,30 +369,7 @@ def make_disp_files_pipe(index, cluster, sysinfo, dz, npoints, basename,
         
         grid.append(new_z)
         
-    return grid
-    
-    '''        
-        # if an executable has been provided, run the calculation
-        if executable is not None:
-            gulp.run_gulp(executable, 'disp.{}.{}'.format(i, basename))         
-            E = util.extract_energy('disp.{}.{}.gout'.format(i, basename), 'gulp')[0]  
-            grid.append(new_z)
-            energies.append(E)
-            
-    # if energies have been calculated, extract the maximum energy (relative to
-    # the undisplaced atom), the barrier height, and the energy difference 
-    # between the initial and final sites
-    if grid:
-        energies = np.array(energies)
-        energies -= energies.min()
-        barrier_height = get_barrier(energies)
-        site_energy_diff = energies[-1]-energies[0]
-        
-        return [[z, E] for z, E in zip(grid, energies)], barrier_height, site_energy_diff
-    else:
-        # energies not calculated, return dummy values
-        return [], np.nan, np.nan  
-    '''  
+    return grid 
 
 def get_barrier(energy_values):
     '''Calculates the maximum energy barrier that has to be surmounted getting
@@ -444,7 +391,7 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
     bond_dict = parse_bonds('{}.bonds.txt'.format(basename))
     
     site_pairs = []
-    energy_dict = dict() #!
+    energy_dict = dict()
     for i in bond_dict.keys():
         start, sysinfo = gulp.cluster_from_grs('{}.{}.grs'.format(basename, i), rI, rII)
         xfinal = bond_dict[i]['site_coords']
@@ -467,43 +414,24 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
             
             pair_name = '{}.{}.{}'.format(basename, i, j)  
             site_pairs.append(pair_name)
-                                                  
-            #gridded_energies, Eh, Ed = make_disp_files_general(start,
+
             grid = make_disp_files_general(start,
-                                                               diff_index,
-                                                               pair_name,
-                                                               dxn,
-                                                               npoints,
-                                                               sysinfo,
-                                                               executable=executable,
-                                                               rI_centre=rI_centre,
-                                                               do_perturb=do_perturb,
-                                                               constrain_index=constrain_index,
-                                                               newspecies=newspecies
-                                                              )
-                                                              
-            #!!! RUN STUFF HERE?
+                                           diff_index,
+                                           pair_name,
+                                           dxn,
+                                           npoints,
+                                           sysinfo,
+                                           executable=executable,
+                                           rI_centre=rI_centre,
+                                           do_perturb=do_perturb,
+                                           constrain_index=constrain_index,
+                                           newspecies=newspecies
+                                          )
             
-            energy_dict[pair_name] = dict() #!
+            energy_dict[pair_name] = dict()
             energy_dict[pair_name]['grid'] = np.copy(grid)
-            energy_dict[pair_name]['x0'] = np.copy(x0) #!
-            energy_dict[pair_name]['x1'] = np.copy(xfinal) #!
-                                                              
-            '''                                              
-            outstream = open('disp.{}.barrier.dat'.format(pair_name), 'w')    
-            # write header, including full displacement vector and barrier height 
-            outstream.write('# {:.0f} {:.0f}\n'.format(i, j))
-           
-            # write energies to file if they have been calculated
-            if gridded_energies:     
-                # write energies along path
-                for z, E in gridded_energies:
-                    outstream.write('{} {:.6f}\n'.format(z, E))
-                
-                heights.append([i, j, x0[0], x0[1], Eh, Ed])
-            
-            outstream.close()
-            '''
+            energy_dict[pair_name]['x0'] = np.copy(x0)
+            energy_dict[pair_name]['x1'] = np.copy(xfinal)
     
     # calculate energies, if requested to do so by the user
     if executable is not None:                                               
@@ -592,19 +520,19 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
             # the index of the defect and the atom being translated
             sitepairname = '{}.{}'.format(sitename, ti)
             site_pairs.append(sitepairname)
-            #gridded_energies, Eh, Ed = make_disp_files_pipe(ti, 
+            
             grid = make_disp_files_pipe(ti,
-                                                            cluster, 
-                                                            sysinfo, 
-                                                            dz, 
-                                                            npoints, 
-                                                            sitepairname,
-                                                            rI_centre=rI_centre, 
-                                                            executable=executable,
-                                                            plane_shift=plane_shift, 
-                                                            node=node,
-                                                            dx=dr
-                                                           )
+                                        cluster, 
+                                        sysinfo, 
+                                        dz, 
+                                        npoints, 
+                                        sitepairname,
+                                        rI_centre=rI_centre, 
+                                        executable=executable,
+                                        plane_shift=plane_shift, 
+                                        node=node,
+                                        dx=dr
+                                       )
             
             
             # record the grid of points along the migration path
@@ -612,21 +540,6 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
             energy_dict[sitepairname]['grid'] = np.copy(grid)
             energy_dict[sitepairname]['x0'] = np.copy(x0)
             energy_dict[sitepairname]['x1'] = np.copy(site[1:4]) 
-            '''
-            outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
-            # write header, including full displacement vector and barrier height 
-            outstream.write('# {:.3f} {:.3f} {:.3f}\n'.format(dr[0], dr[1], dz))
-           
-            # write energies to file if they have been calculated
-            if gridded_energies:     
-                # write energies along path
-                for z, E in gridded_energies:
-                    outstream.write('{} {:.6f}\n'.format(z, E))
-                
-                heights.append([int(site[0]), ti, site[1], site[2], Eh, Ed])
-            
-            outstream.close()
-            '''
                 
             # undo any changes to atom <ti>
             cluster[ti].set_constraints([1, 1, 1])
@@ -634,12 +547,6 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
             if newspecies is not None:
                 # revert the species of the translated atom
                 cluster[ti].setSpecies(oldspecies)
-        
-            #if noisy:
-            #    print("done.")
-                
-        #if noisy:
-        #    print("done.")
     
     # calculate energies, if requested to do so by the user
     if executable is not None:                                               
@@ -755,7 +662,6 @@ def read_migration_barrier(sitename, npoints, program='gulp'):
     energies -= energies.min()
     
     # reorder barrier so that the index of the minimum energy point is 0
-    #energies = reorder_path(energies)
     return energies
     
 def extract_barriers_even(basename, npoints, program='gulp'):
@@ -930,7 +836,7 @@ def adjacent_sites_3d(x0, simcell, species, direction=np.array([1., 0., 0.]),
     for j, atom in enumerate(simcell):
         if not(species.lower() == atom.getSpecies().lower()):
             continue
-        #else
+        # else
         # calculate unit vector in the direction from the defect <site> to 
         # the <atom>
         x = atom.getCoordinates() % 1

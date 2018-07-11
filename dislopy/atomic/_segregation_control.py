@@ -355,30 +355,21 @@ class SegregationSim(object):
         '''Creates the input files for the segregation energy calculation.
         '''
         
-        # if no executable has been provided, assume that the user wishes only
-        # to create the input files, not run them
-        #if self.control('executable') and self.control('do_calc'):
-        #    do_calc = True
-        #else:
-        #    do_calc = False
-        
         # calculate impurity energies
-        ms.calculate_impurity(self.sysinfo, 
-                                  self.cluster, 
-                                  self.control('region_r'),
-                                  self.dfct, 
-                                  #do_calc=do_calc, 
-                                  #gulpexec=self.control('executable'),
-                                  centre_on_impurity=self.control('centre_on_impurity'),
-                                  constraints=self.cons_funcs,              
-                                  noisy=self.control('noisy'),
-                                  contains_hydroxyl=self.control('uses_hydroxyl'),
-                                  o_str=self.control('o_str'),
-                                  oh_str=self.control('oh_str'),
-                                  bonds=self.migration('find_bonded'), 
-                                  has_mirror_symmetry=self.migration('has_mirror_symmetry'),
-                                  dx_thresh=self.migration('dx_thresh')
-                                 )
+        ms.insert_defect(self.sysinfo, 
+                         self.cluster, 
+                         self.control('region_r'),
+                         self.dfct, 
+                         centre_on_impurity=self.control('centre_on_impurity'),
+                         constraints=self.cons_funcs,              
+                         noisy=self.control('noisy'),
+                         contains_hydroxyl=self.control('uses_hydroxyl'),
+                         o_str=self.control('o_str'),
+                         oh_str=self.control('oh_str'),
+                         bonds=self.migration('find_bonded'), 
+                         has_mirror_symmetry=self.migration('has_mirror_symmetry'),
+                         dx_thresh=self.migration('dx_thresh')
+                        )
                                  
     def calculate_defect(self):
         '''Calculates energies of defect-bearing clusters.

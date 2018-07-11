@@ -537,7 +537,7 @@ def create_bond_file(defect, bond_pairs, cluster):
         
     bondfile.close() 
     
-def calculate_impurity(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
+def insert_defect(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
          constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, tol=1e-1,
                      centre_on_impurity=False, do_calc=False, dx_thresh=np.nan,
                   contains_hydroxyl=False, oh_str='Oh', o_str='O', bonds=False,
