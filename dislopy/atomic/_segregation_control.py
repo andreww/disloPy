@@ -132,8 +132,6 @@ def handle_segregation_control(param_dict):
     migration_cards = (('do_calc', {'default': True, 'type': to_bool}),
                        ('no_setup', {'default': False, 'type': to_bool}),
                        ('npoints', {'default': 3, 'type': int}),
-                       ('nlevels', {'default': 1, 'type': int}),
-                       ('adaptive', {'default': False, 'type': to_bool}),
                        ('node', {'default': 0.5, 'type': float}),
                        ('plane_shift', {'default': np.zeros(2), 'type': vector}),
                        ('threshold', {'default': 0.5, 'type': float}),
@@ -426,12 +424,6 @@ class SegregationSim(object):
         # basename to use
         basename = '{}.{}'.format(self.control('label'), self.control('site'))
         
-        if self.migration('adaptive'):
-            npar = self.migration('nlevels')
-            
-        else:
-            npar = self.migration('npoints')
-        
         if self.migration('do_calc'):                            
             executable = self.control('executable')
         else:
@@ -451,7 +443,7 @@ class SegregationSim(object):
                                                  self.control('new_r1'),  
                                                  self.r2, 
                                                  self.control('site'), 
-                                                 npar, 
+                                                 self.migration('npoints'), 
                                                  executable=executable, 
                                                  node=self.migration('node'),
                                                  plane_shift=self.migration('plane_shift'),
@@ -467,7 +459,7 @@ class SegregationSim(object):
                                                     self.control('new_r1'),  
                                                     self.r2, 
                                                     self.control('site'), 
-                                                    npar, 
+                                                    self.migration('npoints'), 
                                                     executable=executable, 
                                                     node=self.migration('node'),
                                                     plane_shift=self.migration('plane_shift'),
@@ -481,8 +473,8 @@ class SegregationSim(object):
                                    
         # read in energies output by non-adaptive calculations
         try:
-            if not self.migration('adaptive') and not heights:
-                heights = mig.extract_barriers_even(basename, npar)
+            if heights is None:
+                heights = mig.extract_barriers_even(basename, self.migration('npoints'))
         except IOError:
             return
 
