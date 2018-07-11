@@ -682,6 +682,8 @@ def calculate_migration_points(site_pairs, executable, npoints, noisy=False, in_
                 ni = disp_file.split('.')[1]
                 if ni == 0:
                     message = "Calculating barrier for migration from site {} to site {}".format(i, j)
+                else:
+                    message = None
             else:
                 message = None
                 
