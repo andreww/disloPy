@@ -691,7 +691,7 @@ def read_migration_energies(energy_dict, npoints, in_subdirectory=False):
         barrier_height = get_barrier(path_energies)
         #site_energy_diff = path_energies[-1]-path_energies[0]        
         energy_dict[sitepair]['E'] = np.copy(path_energies)  
-        energy_dict[sitepair['Eh'] = barrier_height
+        energy_dict[sitepair]['Eh'] = barrier_height
         
     return 
     
