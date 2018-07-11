@@ -691,7 +691,7 @@ def read_migration_energies(energy_dict, npoints, in_subdirectory=False):
         
         # get the indices of start and final sites
         i, j = [int(index) for index in pair.split('.')[-2:]]
-        heights.append([i, j, x1[0], x1[1], Eh, path_energies]) 
+        heights.append([i, j, x1[0], x1[1], Eh, path_energies[-1]]) 
         
     return np.array(heights)
     
