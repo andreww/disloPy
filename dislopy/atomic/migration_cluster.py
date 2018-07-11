@@ -719,8 +719,8 @@ def write_heights(basename, heights):
     outstream = open('{}.barrier.dat'.format(basename), 'w')
     outstream.write('# site-index atom-index x y barrier-height net-energy-diff\n')
     for site in heights:
-        outstream.write('{} {} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(site[0],  
-                                  site[1], site[2], site[3], site[4], site[5]))   
+        outstream.write('{:.0f} {:.0f} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(site[0],  
+                                        site[1], site[2], site[3], site[4], site[5]))   
     outstream.close() 
                                                         
 def read_heights(basename):
