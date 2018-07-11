@@ -442,7 +442,6 @@ def migrate_sites_general(basename, rI, rII, bondlist, npoints, executable=None,
     '''
                      
     bond_dict = parse_bonds('{}.bonds.txt'.format(basename))
-    heights = []
     
     site_pairs = []
     energy_dict = dict() #!
@@ -529,7 +528,6 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
     
     # read in list of sites
     site_info = read_sites(basename)
-    heights = []
     
     if noisy:
         print("Preparing to construct input files for migration calculations.")
