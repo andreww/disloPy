@@ -676,7 +676,7 @@ def read_migration_energies(energy_dict, npoints, in_subdirectory=False):
     for sitepair in energy_dict.keys():
         path_energies = []
         for n in range(npoints):
-            prefix = 'disp.{}.{}'.format(i, sitepair)
+            prefix = 'disp.{}.{}'.format(n, sitepair)
             if not in_subdirectory:
                 E = util.extract_energy('{}.gout'.format(prefix), 'gulp')[0]  
             else:
