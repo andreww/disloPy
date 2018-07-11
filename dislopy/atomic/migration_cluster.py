@@ -686,7 +686,7 @@ def read_migration_energies(energy_dict, npoints, in_subdirectory=False):
         outstream.write('# dx: {:.3f} {:.3f} {:.3f}\n'.format(dx[0], dx[1], dx[2]))
         
         # write energies at each point along the migration path
-        for z, E in zip(energy_dict[pair]['grid'], energy_dict[pair]['E']):
+        for z, E in zip(energy_dict[pair]['grid'], path_energies):
              outstream.write('{} {:.6f}\n'.format(z, E))
              
         outstream.close()
