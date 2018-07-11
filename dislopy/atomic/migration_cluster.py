@@ -606,6 +606,7 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
             
             # record the grid of points along the migration path
             energy_dict[sitepairname] = dict()
+            energy_dict[sitepairname]['grid'] = np.copy(grid)
             energy_dict[sitepairname]['x0'] = np.copy(x0)
             energy_dict[sitepairname]['x1'] = np.copy(site[1:4]) 
             '''
