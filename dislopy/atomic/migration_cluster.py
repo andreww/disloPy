@@ -620,11 +620,11 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
                 # revert the species of the translated atom
                 cluster[ti].setSpecies(oldspecies)
         
-            if noisy:
-                print("done.")
+            #if noisy:
+            #    print("done.")
                 
-        if noisy:
-            print("done.")
+        #if noisy:
+        #    print("done.")
     
     # calculate energies, if requested to do so by the user
     if executable is not None:                                               
@@ -680,7 +680,7 @@ def calculate_migration_points(site_pairs, executable, npoints, noisy=False, in_
             if noisy:
                 i, j = disp_file.split('.')[-2:]
                 ni = disp_file.split('.')[1]
-                if ni == 0:
+                if int(ni) == 0:
                     message = "Calculating barrier for migration from site {} to site {}".format(i, j)
                 else:
                     message = None
