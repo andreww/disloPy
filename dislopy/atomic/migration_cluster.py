@@ -608,8 +608,6 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
             energy_dict[sitepairname] = dict()
             energy_dict[sitepairname]['x0'] = np.copy(x0)
             energy_dict[sitepairname]['x1'] = np.copy(site[1:4]) 
-            energy_dict[sitepairname]['i'] = int(site[0])
-            energy_dict[sitepairname]['j']
             '''
             outstream = open('disp.{}.barrier.dat'.format(sitepairname), 'w')    
             # write header, including full displacement vector and barrier height 
