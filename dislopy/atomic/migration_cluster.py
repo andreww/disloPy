@@ -672,7 +672,7 @@ def read_migration_energies(energy_dict, npoints, in_subdirectory=False):
         
         path_energies = np.array(path_energies) 
         path_energies -= path_energies[0]
-        barrier_height = get_barrier(path_energies)
+        Eh = get_barrier(path_energies)
       
         # produce output 
         outstream = open('disp.{}.barrier.dat'.format(pair), 'w')
