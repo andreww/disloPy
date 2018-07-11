@@ -522,14 +522,14 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
     heights = []
     
     if noisy:
-        print("Preparing to calculate migration barriers.")
+        print("Preparing to construct input files for migration calculations.")
     
     site_pairs = []
     for site in site_info:
         sitename = '{}.{}'.format(basename, int(site[0]))
         
-        if noisy:
-            print("Calculating migration barrier for site {}...".format(int(site[0])), end='')
+        #if noisy:
+        #    print("Calculating migration barrier for site {}...".format(int(site[0])), end='')
         
         if not in_parallel:
             cluster, sysinfo = gulp.cluster_from_grs('{}.grs'.format(sitename), rI, rII)
@@ -545,8 +545,8 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
         translate_index = atom_to_translate(site, possible_sites, cluster)
 
         for ti in translate_index:       
-            if noisy:
-                print('...from site {}...'.format(ti), end='')
+            #if noisy:
+            #    print('...from site {}...'.format(ti), end='')
                 
             x0 = cluster[ti].getCoordinates()
 
@@ -628,7 +628,7 @@ def migrate_sites_pipe(basename, rI, rII, atom_type, npoints, executable=None,
     
     # calculate energies, if requested to do so by the user
     if executable is not None:                                               
-        calculate_migration_points(site_pairs, executable, npoints,
+        calculate_migration_points(site_pairs, executable, npoints, noisy=noisy,
                                      in_parallel=in_parallel, np=nprocesses)
         
     #write_energies(site_pairs, 
@@ -658,7 +658,7 @@ def read_migration_energies(site_pairs, npoints, in_subdirectory=False):
         site_energy_diff = path_energies[-1]-path_energies[0]        
         energy_dict[basename] = np.copy(path_energies)  
     
-def calculate_migration_points(site_pairs, executable, npoints, in_parallel=False, np=1):
+def calculate_migration_points(site_pairs, executable, npoints, noisy=False, in_parallel=False, np=1):
     '''Optimize structures and calculate energies for all <n> points along the 
     migration paths with endpoints defined in <site_pairs>.
     '''
@@ -666,6 +666,10 @@ def calculate_migration_points(site_pairs, executable, npoints, in_parallel=Fals
     if not in_parallel:
         for pair in site_pairs:
             for n in range(npoints):
+                if noisy:
+                    i, j = pair.split()[-2:]
+                    print("Calculating barrier for migrationfrom site {} to site {}".format(i, j)
+                    
                 prefix = 'disp.{}.{}'.format(n, pair)
                 gulp.run_gulp(executable, prefix)
     else:
@@ -673,7 +677,13 @@ def calculate_migration_points(site_pairs, executable, npoints, in_parallel=Fals
         files_to_calc = ['disp.{}.{}'.format(ni, prefix) for ni in range(npoints) 
                                                          for prefix in site_pairs]
         for disp_file in files_to_calc:
-            pool.apply_async(gulp.gulp_process, (disp_file, executable))
+            if noisy:
+                i, j = disp_file.split()[-2:]
+                message = ("Calculating barrier for migration from site {} to site {}".format(i, j)
+            else:
+                message = None
+                
+            pool.apply_async(gulp.gulp_process, (disp_file, executable, message))
             
         pool.close()
         pool.join()
