@@ -668,7 +668,7 @@ def calculate_migration_points(site_pairs, executable, npoints, noisy=False, in_
             for n in range(npoints):
                 if noisy:
                     i, j = pair.split()[-2:]
-                    print("Calculating barrier for migrationfrom site {} to site {}".format(i, j)
+                    print("Calculating barrier for migrationfrom site {} to site {}".format(i, j))
                     
                 prefix = 'disp.{}.{}'.format(n, pair)
                 gulp.run_gulp(executable, prefix)
@@ -679,7 +679,7 @@ def calculate_migration_points(site_pairs, executable, npoints, noisy=False, in_
         for disp_file in files_to_calc:
             if noisy:
                 i, j = disp_file.split()[-2:]
-                message = ("Calculating barrier for migration from site {} to site {}".format(i, j)
+                message = "Calculating barrier for migration from site {} to site {}".format(i, j)
             else:
                 message = None
                 
