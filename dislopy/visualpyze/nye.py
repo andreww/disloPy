@@ -452,10 +452,10 @@ def auto_nye(unit_cell, dis_cell, index, max_bond_length, atomtype, cell_dim,
     # create list of bonds for all sites in the dislocated cell and associate
     # them with bonds Pi in the perfect crystal
     if cell_dim == 1:
-        Qpot = bond_candidates_cluster(dis_cell, atomtype, bondr, R, RI, RII, 
+        Qpot = bond_candidates_cluster(dis_cell, atomtype, max_bond_length, R, RI, RII, 
                               use_species=use_species, bonded_type=bonded_type)
     elif cell_dim == 3:
-        Qpot = bond_candidates_sc(dis_cell, atom_type, max_bond_length,
+        Qpot = bond_candidates_sc(dis_cell, atomtype, max_bond_length,
                               use_species=use_species, bonded_type=bonded_type)
     
     # associated bonds in perfect and dislocated crystals
