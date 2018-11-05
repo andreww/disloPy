@@ -9,6 +9,7 @@ from numpy.linalg import norm, inv
 
 from dislopy.atomic import crystal as cry
 from dislopy.atomic import gulpUtils as gulp
+from dislopy.utilities import atomistic_utils as util
 
 def perfect_bonds(cellname, atom_index, max_bond_length, use_species=False,
                                                         bonded_type=None):
