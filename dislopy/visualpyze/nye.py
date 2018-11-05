@@ -170,10 +170,11 @@ def bond_candidates_sc(discell, atom_type, max_bond_length, use_species=False,
                             continue
 
                         xj = xj0+l*lattice[0]+m*lattice[1]+n*lattice[2]
+                        
                         if norm(xi-xj) < max_bond_length:
                             Qpoti.append([j, xi-xj])
 
-         Qpot[i] = [xi, Qpoti]
+        Qpot[i] = [xi, Qpoti]
          
     return Qpot
 
