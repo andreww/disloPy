@@ -133,7 +133,7 @@ def bond_candidates_cluster(dis_cell, atom_type, max_bond_length, R, RI, RII,
  
     return Qpot
     
-def bond_candidates_sc(discell, atom_type, max_bond_length, use_species=False,
+def bond_candidates_sc(dis_cell, atom_type, max_bond_length, use_species=False,
                                                             bonded_type=None):
     '''Extracts candidate bonds for atoms in a 3D-periodic supercell, which may
     contain topological defects
@@ -144,23 +144,25 @@ def bond_candidates_sc(discell, atom_type, max_bond_length, use_species=False,
         bonded_type = atom_type
         
     # extract cell parameters of <discell>
-    lattice = discell.getLattice()
+    dis_sc = cry.Crystal()
+    sinfo = gulp.parse_gulp(dis_cell, dis_sc)
+    lattice = dis_sc.getLattice()
     
     Qpot = dict()
-    for i in range(discell.numberOfAtoms):
+    for i in range(dis_sc.numberOfAtoms):
         if use_species:
-            atomspecies = discell[i].getSpecies()
+            atomspecies = dis_sc[i].getSpecies()
             if atomspecies != atom_type:
                 continue
                 
         # extract coordinates of atom i (in \AA, a.u., etc.)
-        xi = discell[i].getCoordinates()
+        xi = dis_sc[i].getCoordinates()
         xi = xi[0]*lattice[0]+xi[1]*lattice[1]+xi[2]*lattice[2]
         # search neighbouring atoms
         Qpoti = []
-        for j in range(discell.numberOfAtoms):
+        for j in range(dis_sc.numberOfAtoms):
             # extract coordinates and convert from fractional to cartesian
-            xj0 = discell[j].getCoordinates()
+            xj0 = dis_sc[j].getCoordinates()
             xj0 = xj0[0]*lattice[0]+xj0[1]*lattice[1]+xj0[2]*lattice[2]
             # iterate through periodic images of atom j
             for l in range(-1, 2):
