@@ -60,8 +60,21 @@ def perfect_bonds(cellname, atom_index, max_bond_length, use_species=False,
                         P.append(x0-y)
                    
     return P
+    
+def multisite_perfect_bonds(cellname, indices, max_bond_length, 
+                use_species=False, bonded_type=None):
+    '''Finds the set of bonds <P> around all of the sites in <indices>.
+    '''
+    
+    Plist = []
+    for atom_index in indices:
+        P = perfect_bonds(cellname, atom_index, max_bond_length,
+                          use_species=use_species, bonded_type=bonded_type)
+        Plist.append(P)
+        
+    return Plist
 
-def bond_candidates(dis_cell, atom_type, max_bond_length, R, RI, RII, 
+def bond_candidates_cluster(dis_cell, atom_type, max_bond_length, R, RI, RII, 
                                           use_species=False, bonded_type=None):
     '''Extracts candidate bonds for all sites of the specified type with radius
     R.
@@ -118,6 +131,51 @@ def bond_candidates(dis_cell, atom_type, max_bond_length, R, RI, RII,
         Qpot[i] = [x, Qpoti]
  
     return Qpot
+    
+def bond_candidates_sc(discell, atom_type, max_bond_length, use_species=False,
+                                                            bonded_type=None):
+    '''Extracts candidate bonds for atoms in a 3D-periodic supercell, which may
+    contain topological defects
+    '''
+    
+    if bonded_type is None:
+        # use <atom_type> sublattice
+        bonded_type = atom_type
+        
+    # extract cell parameters of <discell>
+    lattice = discell.getLattice()
+    
+    Qpot = dict()
+    for i in range(discell.numberOfAtoms):
+        if use_species:
+            atomspecies = discell[i].getSpecies()
+            if atomspecies != atom_type:
+                continue
+                
+        # extract coordinates of atom i (in \AA, a.u., etc.)
+        xi = discell[i].getCoordinates()
+        xi = xi[0]*lattice[0]+xi[1]*lattice[1]+xi[2]*lattice[2]
+        # search neighbouring atoms
+        Qpoti = []
+        for j in range(discell.numberOfAtoms):
+            # extract coordinates and convert from fractional to cartesian
+            xj0 = discell[j].getCoordinates()
+            xj0 = xj0[0]*lattice[0]+xj0[1]*lattice[1]+xj0[2]*lattice[2]
+            # iterate through periodic images of atom j
+            for l in range(-1, 2):
+                for m in range(-1, 2):
+                    for n in range(-1, 2):
+                        if j == i and (l == 0 and m == 0 and n == 0):
+                            # original atom, skip
+                            continue
+
+                        xj = xj0+l*lattice[0]+m*lattice[1]+n*lattice[2]
+                        if norm(xi-xj) < max_bond_length:
+                            Qpoti.append([j, xi-xj])
+
+         Qpot[i] = [xi, Qpoti]
+         
+    return Qpot
 
 def associate_bonds(Qpot, P, phimax=0.5, scale=1.5):
     '''Rearranges the list of potentials atomic bonds <Qpot> so that they 
@@ -156,6 +214,48 @@ def associate_bonds(Qpot, P, phimax=0.5, scale=1.5):
                 mapping.append([j_site, Pj, Qmin])
                 
         Qordered[site] = [x, mapping]
+        
+    return Qordered
+    
+def multisite_associate_bonds(Qpot, Plist, phimax=0.5, scale=1.5):
+    '''When there are multiple sites in the perfect crystal which, although 
+    potentially symmetry equivalent, have different representations in the
+    Cartesian reference frame, there are multiple sets of perfect bonds <P>.
+    This determines which of these is the closest to a given set of bonds <Q>
+    found in the defect-containing simulation cell.
+    '''
+    
+    # number of distinct sets of bonds in the perfect lattice
+    nsets = len(Plist)
+        
+    Qolist = []
+    # find bond matches for each set of perfect bonds <P> in <Plist>
+    for P in Plist:
+        Qotemp = associate_bonds(Qpot, P, phimax=phimax, scale=scale)
+        Qolist.append(Qotemp)
+        
+    # for each site in Qpot, determine which set of bonds <P> gives the 
+    # best match, defined as the number of bonds <Qi> having matches <Pi> 
+    Qordered = dict()
+    for i in Qpot.keys():
+        # index to keep track of maximum number of matches
+        max_matches = -1
+        which_P = None
+        for n in range(nsets):
+            matches = len(Qolist[n][i][1])
+            # check to see if the n-th set of perfect bonds returns more matches
+            # NOTE: currently cannot reliably handle situations in which two
+            # or more sets of perfect bonds return the same number of matches
+            if matches > max_matches:
+                max_matches = matches
+                which_P = n
+                
+        # check that a match has been found
+        if max_matches == -1:
+            raise Warning("Valid match not found")
+            
+        # else
+        Qordered[i] = Qolist[which_P][i]
         
     return Qordered
 
@@ -328,22 +428,40 @@ def unravel_nye(a):
         
     return x, ajk
     
-def auto_nye(unit_cell, dis_cell, index, bondr, atomtype, R, RI, RII,
-                                        use_species=False, bonded_type=None):
+def auto_nye(unit_cell, dis_cell, index, max_bond_length, atomtype, cell_dim, 
+            R=None,  RI=None, RII=None, use_species=False, bonded_type=None):
     '''Given a perfect crystal and a cylindrical cluster containing a single 
     dislocation, calculates the Nye tensor for every atom of the specified type
     <atomtype>.
     '''
     
     # get bonds in the perfect crystal
-    P = perfect_bonds(unit_cell, index, bondr, use_species=use_species,
-                                                     bonded_type=bonded_type)
+    if type(index) is int:
+        # compute list of bonds for only a single site
+        P = perfect_bonds(unit_cell, index, max_bond_length, 
+                           use_species=use_species, bonded_type=bonded_type)
+    elif util.isiter(index) and not (False in [type(i) for i in index]):
+        # compute list of bond vectors around multiple sites in perfect crystal
+        P = multisite_perfect_bonds(unit_cell, index, max_bond_length, 
+                           use_species=use_species, bonded_type=bonded_type) 
+    else:
+        raise TypeError("<index> must be either and integer or list of integers.")                                               
     
     # create list of bonds for all sites in the dislocated cell and associate
     # them with bonds Pi in the perfect crystal
-    Qpot = bond_candidates(dis_cell, atomtype, bondr, R, RI, RII, 
+    if cell_dim == 1:
+        Qpot = bond_candidates_cluster(dis_cell, atomtype, bondr, R, RI, RII, 
                               use_species=use_species, bonded_type=bonded_type)
-    Qord = associate_bonds(Qpot, P)
+    elif cell_dim == 3:
+        Qpot = bond_candidates_sc(dis_cell, atom_type, max_bond_length,
+                              use_species=use_species, bonded_type=bonded_type)
+    
+    # associated bonds in perfect and dislocated crystals
+    if type(index) is int:                         
+        Qord = associate_bonds(Qpot, P)
+    else: 
+        # must have multiple sets of bonds for the perfect crystal
+        Qord = multisite_associate_bonds(Qpot, P)
 
     # calculate the lattice correspondence tensor and its derivatives
     G = lattice_correspondence_G(Qord)
@@ -353,7 +471,6 @@ def auto_nye(unit_cell, dis_cell, index, bondr, atomtype, R, RI, RII,
     a = calculate_nye(T, Qord)
     x, ajk = unravel_nye(a)
     return x, ajk
-
 
 def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi=300, psize=200,
                                             cmap_type='bwr'):
@@ -399,7 +516,7 @@ def save_nye(x, ajk, nye_file):
     '''Saves the components of the Nye tensor <ajk> at each of the 
     positions <x> to the file <nye_file>.
     '''
-    #
+
     outstream = open(nye_file, 'w')
     n = len(x)
     nye_components = ['a00', 'a01', 'a02', 'a10', 'a11', 'a12', 'a20',
@@ -419,8 +536,5 @@ def save_nye(x, ajk, nye_file):
         for c in nye_components:
             outstream.write(' {:.4e}'.format(ajk[c][site]))
         outstream.write('\n')
-    #
+        
     outstream.close()
-    
-
-
