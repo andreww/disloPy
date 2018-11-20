@@ -8,6 +8,8 @@ import argparse
 
 import numpy as np
 
+from shutil import copyfile
+
 supported_codes = ('gulp')
 
 # note that this uses a slightly modified version of <control_file>, to allow
@@ -53,6 +55,7 @@ def control_file_seg(filename):
                 card_name = re.search('&(?P<name>\w+)\s+{', temp).group('name')
                 if card_name == 'defects':
                     in_defects = True
+                    new_impurity = []
                 else: # regular namelist 
                     sim_parameters[card_name] = dict()
                     in_namelist = True
@@ -69,6 +72,7 @@ def control_file_seg(filename):
             elif in_defects:
                 if '};;' in temp: # end of <defects>
                     in_defects = False
+                    impurities.append(new_impurity)
                 elif not temp:
                     # empty line
                     pass
@@ -93,7 +97,7 @@ def control_file_seg(filename):
                         else:
                             new_atom['is_bshe'] = False
                             
-                    impurities.append(new_atom)
+                    new_impurity.append(new_atom)
                     
     return sim_parameters, impurities
 
@@ -115,17 +119,18 @@ def handle_segregation_control(param_dict):
                      ('region_r', {'default': 10, 'type': float}),
                      ('new_r1', {'default': 10, 'type': int}),
                      ('centre_on_impurity', {'default': True, 'type': to_bool}),
-                     ('site', {'default': None, 'type': str}),
-                     ('label', {'default': 'dfct', 'type': str}),
-                     ('uses_hydroxyl', {'default': False, 'type': to_bool}),
-                     ('o_str', {'default': 'O', 'type': str}),
-                     ('oh_str', {'default': 'Oh', 'type': str}),
                      ('n', {'default': 1, 'type': int}),
                      ('analyse', {'default': False, 'type': to_bool}),
                      ('no_setup', {'default': False, 'type': to_bool}),
                      ('migration', {'default': False, 'type': to_bool}),
                      ('parallel', {'default': False, 'type': to_bool}),
-                     ('np', {'default': 1, 'type': int})
+                     ('np', {'default': 1, 'type': int}),                    
+                     ('collate', {'default': True, 'type': to_bool}),
+                     ('site', {'default': None, 'type': str}),
+                     ('label', {'default': 'dfct', 'type': str}),
+                     ('uses_hydroxyl', {'default': False, 'type': to_bool}),
+                     ('o_str', {'default': 'O', 'type': str}),
+                     ('oh_str', {'default': 'Oh', 'type': str})
                     )
                      
     # cards for the <&migration> namelist
@@ -207,8 +212,14 @@ class SegregationSim(object):
         simulation from setup to analysis of results.
         '''
         
-        self.sim, self.atoms = control_file_seg(filename)
+        self.sim, self.impurities = control_file_seg(filename)
         handle_segregation_control(self.sim)
+        
+        # if <self.impurities> is empty, the user will want to run a vacancy 
+        # segregation calculation. Add an empty list to <self.impurities> to 
+        # represent this vacancy    
+        if len(self.impurities) == 0:
+            self.impurities.append([])
         
         # make it easy to access namelists
         self.control = lambda card: self.sim['control'][card]
@@ -227,8 +238,20 @@ class SegregationSim(object):
         if self.analysis('mirror') and self.analysis('inversion'):
             raise ValueError('Mirror and inversion symmetry cannot both be True.')
         
-        # make cluster
-        self.make_cluster()
+        # index to track for which defect in <self.impurities> we are 
+        # calculating energies.
+        self.current_index = 0
+        
+        # if no executable has been provided, assume that the user wishes only
+        # to create the input files, not run them
+        if self.control('executable') and self.control('do_calc'):
+            do_calc = True
+        elif self.control('do_calc') and not self.control('executable'):
+            raise Warning('Atomistic calculation requested but no executable ' +
+                          'provided. Setting <do_calc> to False.')
+            do_calc = False
+        else:
+            do_calc = False
         
         if not self.control('no_setup'):
             # check that the user has supplied a .grs file containing a dislocation
@@ -237,31 +260,87 @@ class SegregationSim(object):
             # parse the results
             if not self.control('dislocation_file'):
                 raise ValueError('Must supply a dislocation.')
-            
+                
+            # make cluster
+            self.make_cluster()
+                
             # create constraint functions
-            self.form_constraints()
-            
-            # make and segregate the defect
-            self.make_defect()
-            self.segregate_defect()  
-        
-        # if no executable has been provided, assume that the user wishes only
-        # to create the input files, not run them
-        if self.control('executable') and self.control('do_calc'):
-            do_calc = True
-        else:
-            do_calc = False
-        
-        if do_calc:
-            self.calculate_defect()
+            self.form_constraints()  
+
+        # run separately for 1 vs. multiple defect configurations
+        if len(self.impurities) == 1:    
+            if not self.control('no_setup'):
+                # create defect and input files
+                self.make_defect()
+                self.segregate_defect()
+        else:    
+            for i in range(len(self.impurities)): 
+                # make and segregate the defect
+                self.current_index = i
+                dirname = '{}{:.0f}'.format(self.control('label'), self.current_index)
+                if not self.control('no_setup'):
+                    # make subdirectories for each configuration
+                    if not os.path.exists(dirname):
+                        os.mkdir(dirname)             
+                    elif not os.path.isdir(dirname):
+                        # make sure that <dirname> is a directory
+                        raise TypeError('{} exists and is not a directory.'.format(dirname))
+                    
+                    os.chdir(dirname)
+                    
+                    # create defect and generate input files
+                    self.make_defect()
+                    self.segregate_defect()  
+                else:
+                    # change to <dirname> for calculations, but first check that it exists
+                    if os.path.exists(dirname):
+                        os.chdir(dirname)
+                    else:
+                        raise NameError('{} does not exist.'.format(dirname))
+                         
+                if do_calc:
+                    self.calculate_defect()
+              
+                # move to the next defect configuration
+                os.chdir('../')
         
         # if the user wishes the output to be analysed, do so now -> check that
         # the calculation has been run
         if self.control('analyse') and self.control('executable'):
-            self.analyse_results()  
-            
+            if len(self.impurities) == 1:
+                self.analyse_results()  
+            else:
+                # start by analyzing the results for each configuration 
+                # individually
+                for i in range(len(self.impurities)):
+                    # analyze results for configuration <i>
+                    self.current_index = i
+                    os.chdir('{}{:.0f}'.format(self.control('label'), self.current_index))
+                    self.analyse_results()
+                    os.chdir('../')
+                
+                if self.control('collate'):    
+                    # collect lowest energy configurations for each atomic site in a
+                    # separate directory
+                    energies = self.all_config_energies()
+                    emin, min_i, degen = self.minimum_energies(energies)
+                    self.collate_energies(min_i)
+                    self.save_optimum_configs(min_i, emin)
+                    
+                    # go down into collection directory and analyse PES
+                    os.chdir(self.control('label'))
+                    self.analyse_results()
+                    os.chdir('../')
+         
+        # calculate migration barriers; at present, migration barriers can be
+        # calculated only if the number of defect configurations provided is 1   
         if self.control('migration'):
-            self.migration_barriers() 
+            if len(self.impurities) == 1:
+                self.migration_barriers() 
+            else:
+                raise ValueError("<self.control('migration')> cannot be True " +
+                                 "if more than one defect configuration has " +
+                                 "been provided.")
         
     def make_cluster(self):
         '''Constructs the base cluster that will be used in all subsequent
@@ -288,7 +367,7 @@ class SegregationSim(object):
         self.dfct = mut.Impurity(self.control('site'), self.control('label'))
         
         # add any impurity atoms supplied by the user
-        for atom in self.atoms:
+        for atom in self.impurities[self.current_index]:
             if self.control('program') == 'gulp': # support other programs later
                 coords = np.array([float(x) for x in atom['coords'].rstrip().split()])
                 new_atom = gulp.GulpAtom(atom['symbol'], coords)
@@ -407,6 +486,125 @@ class SegregationSim(object):
                                         fit_r=self.analysis('fit_r'),
                                         tolerance=self.analysis('tolerance')
                                        )
+
+    ###!!!EXPERIMENTAL!!!### 
+
+    def single_config_energy(self):
+        '''Gets a list of defect segregation energies for the <confignum>-th 
+        configuration of the defect.
+        '''
+        
+        os.chdir('{}{:.0f}'.format(self.control('label'), self.current_index)) 
+        sim_name = '{}.{}'.format(self.control('label'), self.control('site'))
+        self.site_info = seg.parse_control(sim_name)
+        E = seg.get_energies(sim_name, self.site_info)
+        dE = seg.defect_excess_energy(E, self.analysis('E0'), self.control('n'))
+        E_seg = seg.segregation_energy(dE, self.analysis('dE0'))
+        os.chdir('../')
+        return E_seg
+
+    def all_config_energies(self):
+        '''Get defect segregation energies for all configurations of the
+        defect.'''
+        
+        # extract energies
+        energies = []
+        for i in range(len(self.impurities)):
+            self.current_index = i
+            Eseg_i = self.single_config_energy()
+            if i == 0:
+                # record length of <i>-th energy list
+                e_length = len(Eseg_i)
+            else:
+                if len(Eseg_i) != e_length:
+                    raise ValueError("Number of energies for configuration {:0.f} is incorrect".format(i))
+            energies.append(Eseg_i)
+        
+        # take transpose of energies matrix so that all energies for the same
+        # atomic site are on the same row
+        energies = np.array(energies)
+        energies = energies.T
+        return energies
+
+    def minimum_energies(self, energies):
+        '''Create a list containing the minimum segregation energy
+        for each site among those calculated for different configurations
+        of a particular defect.
+        '''
+        
+        if len(energies[0]) == 1:
+            # there is only a single configuration - this shouldn't happen
+            return energies, np.zeros(len(energies)), None
+            
+        # otherwise, find the lowest energy for each site
+        min_energies = []
+        min_indices = []
+        degenerates = None
+        for i, site in enumerate(energies):
+            min_E = min(site)
+            min_energies.append(min_E)
+            min_j = np.where(site == min_E)[0]
+            if len(min_j) == 1:
+                min_indices.append(min_j[0])
+            else:
+                print("Degenerate energies for site {:.0f}".format(i))
+                # save the first config to copy to the master directory, and
+                # then record which configurations are energy degenerate
+                min_indices.append(min_j[0])
+                if degenerates is None:
+                    degenerates = dict()
+                degenerates[i] = min_j
+                
+        return min_energies, min_indices, degenerates
+
+    def collate_energies(self, min_i, program='gulp'):
+        '''Moves the data files associated with the minimum energy configurations <min_i> at each 
+        site in <site_info> to a single directory for post-processing.
+        '''
+
+        if os.path.exists(self.control('label')):
+            if os.path.isdir(self.control('label')):
+                pass
+            else:
+                raise UserWarning('Name for aggregation directory already in use by non-directory.')
+        else:
+            os.mkdir(self.control('label'))
+
+        if program.lower() == 'gulp':
+            suffices = ['gin', 'gout', 'grs', 'xyz']
+        else:
+            raise ValueError('Currently, programs other than GULP are unsupported for this simulation type.')
+        
+        sim_base = '{}.{}'.format(self.control('label'), self.control('site'))
+        for i, j in zip(min_i, self.site_info):
+            site_j = int(j[0])
+            for suffix in suffices:
+                copyfile('{}{:.0f}/{}.{:.0f}.{}'.format(self.control('label'), i, sim_base, site_j, suffix),
+                         '{}/{}.{:.0f}.{}'.format(self.control('label'), sim_base, site_j, suffix))
+
+        # move one of the *.id.txt files into the collation directory
+        copyfile('{}0/{}.id.txt'.format(self.control('label'), sim_base), '{}/{}.id.txt'.format(self.control('label'), sim_base))
+        
+        return
+        
+    def save_optimum_configs(self, min_i, energies):
+        '''Save the optimum configuration (and its energy) of the defect at each
+        site in <self.site_info>.
+        '''
+        
+        ostream = open('{}.{}.opt.txt'.format(self.control('label'), self.control('site')), 'w')
+        
+        # write header
+        ostream.write('# site-index x y config-number E\n')
+        
+        for site, i, E in zip(self.site_info, min_i, energies):
+            ostream.write('{:.0f} {:.6f} {:.6f} {:.0f} {:.6f}\n'.format(site[0],
+                                                     site[1], site[2], i, E))
+                                                     
+        ostream.close()
+        return
+
+    ###!!!END EXPERIMENTAL!!!###    
                                        
     def migration_barriers(self):
         '''Calculates migration barriers for pipe diffusion at each defect site.

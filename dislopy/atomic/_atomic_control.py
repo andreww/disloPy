@@ -5,6 +5,7 @@ import numpy as np
 import re
 import argparse
 import sys
+import os
 from numpy.linalg import norm
 
 # list of atomic simulation codes currently supported by disloPy 
