@@ -127,7 +127,7 @@ def handle_atomistic_control(param_dict):
                      ('para_exec', {'default': 'mpiexec', 'type': to_bool}),
                      ('para_nproc', {'default': 1, 'type': int}),
                      ('set_omp', {'default': False, 'type': to_bool}),
-                     ('omp_threads', 'default': 1, 'type': int})
+                     ('omp_threads', {'default': 1, 'type': int})
                     )
     
     # cards for the <&elast> namelist. Note that if dislocations are specified 
