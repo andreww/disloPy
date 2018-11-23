@@ -281,26 +281,26 @@ def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_ca
         outstream.write('{} {:.2f}\n'.format(species[0], species[1]))
 
     # change the input script
-    read_and_write_data(ostream, sysinfo)
+    read_and_write_data(outstream, sysinfo)
 
-    iscript = open('script.{}'.format(ostream.name), 'w')
+    iscript = open('script.{}'.format(outstream.name), 'w')
     iscript.write(sysinfo['input_script'])
     iscript.close() 
 
-    ostream.close()    
+    outstream.close()    
     return
 
-def read_and_write_data(ostream, sysinfo):
+def read_and_write_data(outstream, sysinfo):
     '''Changes the values of the <read_data> and <write_data> variables in 
     the lammps input script to match the datafile containing the dislocation(s),
-    <ostream>.
+    <outstream>.
     '''
 
     read_data = re.search('read_data\s+\S+', sysinfo['input_script']).group()
     write_data = re.search('write_data\s+\S+', sysinfo['input_script']).group()
 
-    sysinfo['input_script'].replace(read_data, 'read_data {}'.format(ostream.name))
-    sysinfo['input_script'].replace(write_data, 'write_data new.{}'.format(ostream.name))
+    sysinfo['input_script'].replace(read_data, 'read_data {}'.format(outstream.name))
+    sysinfo['input_script'].replace(write_data, 'write_data new.{}'.format(outstream.name))
     return
     
 def run_lammps(lammps_exec, basename, nproc=1, para_exec='mpiexec', 
