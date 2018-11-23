@@ -37,7 +37,7 @@ class LammpsAtom(cry.Atom):
         to the atom, one MUST be given here. If <index> is specified, this value
         supercedes the one given in <self._number>.
         '''
-        
+
         # scales for the x, y, and z components of the atomic coordinates
         scalex = norm(lattice[0])
         scaley = norm(lattice[1])
@@ -50,12 +50,6 @@ class LammpsAtom(cry.Atom):
         # check that an index has been provided
         if self._index < 1:
                 raise AttributeError("Cannot find value of atom index.")
-        
-        if not (q is None):
-            # using charges -> need to include q
-            atom_format = '{} {} {:.6f} {:.6f} {:.6f} {:.6f}'
-        else:
-            atom_format = '{} {} {:.6f} {:.6f} {:.6f}'
 
         # write coordinates and/or constraints of atom
         if defected:
@@ -63,13 +57,22 @@ class LammpsAtom(cry.Atom):
         else:
             coords = self.getCoordinates()
 
-        if not (q is None):
-            outstream.write(atom_format.format(self._index, self.getSpecies(), 
-                                   self.q, coords[0]*scalex, coords[1]*scaley, 
-                                                              coords[2]*scalez))
+        if not (self._charge is None):
+            # using charges -> need to include q in atom line
+            atom_format = '{} {} {:.6f} {:.6f} {:.6f} {:.6f}'
+            outstream.write(atom_format.format(self._index, 
+                                               self.getSpecies(), 
+                                               self._charge, 
+                                               coords[0]*scalex, 
+                                               coords[1]*scaley, 
+                                               coords[2]*scalez))
         else:
-            outstream.write(atom_format.format(self._index, self.getSpecies(),
-                          coords[0]*scalex, coords[1]*scaley, coords[2]*scalez))
+            atom_format = '{} {} {:.6f} {:.6f} {:.6f}'
+            outstream.write(atom_format.format(self._index,
+                                               self.getSpecies(),
+                                               coords[0]*scalex, 
+                                               coords[1]*scaley, 
+                                               coords[2]*scalez))
 
         if add_constraints:
             # add constraints if non-trivial 
@@ -78,7 +81,7 @@ class LammpsAtom(cry.Atom):
             outstream.write('\n')
 
         return
-    
+
     def set_index(self, i):
         '''Set index to <i>.
         '''
@@ -92,15 +95,14 @@ class LammpsAtom(cry.Atom):
 
         new_atom = LammpsAtom(self.getSpecies(), self.getCoordinates(),
                                       index=self._index, q=self._charge)
-                                      
+
         new_atom.set_constraints(self.get_constraints())
-        
+
         # make sure new atom is writable to output
         if self.writeToOutput():
             pass
         else:
             new_atom.switchOutputMode()
-            
 
         return new_atom
 
@@ -113,37 +115,58 @@ def assign_indices(lmp_struc):
 
     return
 
-def parse_lammps(basename, unit_cell, path='./'):
+def parse_lammps(datafile, unit_cell, input_script, path='./'):
     '''Parses LAMMPS file (FILES?) contained in <basename>, extracting geometrical
     parameters to <unit_cell> and simulation parameters to <sys_info>.
 
     vital system info includes: number of atom types, atomic masses
     '''
 
-    # regex to find cell lengths, cell angles, and atoms
+    # record atomic masses and the contents of the input script as system info
+    sysinfo = dict()
+    sysinfo['masses'] = []
+    input_script_file = open(input_script, 'r')
+    input_script_lines = input_script_file.read()
+    input_script_file.close()
+    sysinfo['input_script'] = input_script_lines
+
+    # regex to find cell lengths, cell angles, masses, and atomic coordinates
     # atom line has the format atom-ID atom-type q (charge) x y z
-    lattice_reg = re.compile('^\s*0+\.0+(?:e\+0+)?\s+(?P<x>\d+\.\d+)(?:e\+0+)?' +
-                                                '\s+(?P<vec>\w)lo\s+\whi')    
-    atom_reg = re.compile('^\s*\d+\s+(?P<i>\d+)\s+(?P<q>-?\d+\.\d+)' +
-                            '(?P<coords>(?:\s+-?\d+\.\d+){3})')
+    anynum = '-?\d+\.?\d*(?:e(?:\+|-)\d+)?'
 
-    # regex to find the projection of the b and c lattice vectors onto the x (b)
-    # and x and y (c) axes, because LAMMPS is weird. What's wrong with a 3x3 array?
-    tilt_reg = re.compile('\s*(?P<proj>-?\d+\.?\d*(?:e\+\d+)?(?:\s+-?\d+\.?\d*'+
-                                '(?:e\+\d+)?){2})\s+xy\s+xz\s+yz')
-
+    # determine which style is used for the Atoms input
+    style_reg = re.search('atom_style\s+(?P<atom_style>\w+)', sysinfo['input_script'])
+    atom_style = style_reg.group('atom_style')
+    if atom_style == 'charge':
+        atom_line = '^\s*\d+\s+(?P<i>\d+)\s+(?P<q>{})(?P<coords>(?:\s+{}){{3}})'.format(anynum, anynum)
+    elif atom_style == 'atomic':
+        atom_line = '^\s*\d+\s+(?P<i>\d+)(?P<coords>(?:\s+{}){{3}})'.format(anynum)
+    else:
+        raise ValueError("Atom input style {} not currently supported.".format(atom_style))
     
+    tilt_line = '^\s*(?P<proj>{}(?:\s+{}){{2}})\s+xy\s+xz\s+yz'.format(anynum, anynum)
+    lattice_line = '^\s*0+\.0+(?:e\+0+)?\s+(?P<x>{})\s+(?P<vec>\w)lo\s+\whi'.format(anynum)
+    mass_line = '^\s*(?P<i>\d+)\s+(?P<m>{})\s*'.format(anynum)
+
+    lattice_reg = re.compile(lattice_line)
+    atom_reg = re.compile(atom_line)  
+    tilt_reg = re.compile(tilt_line)
+    mass_reg = re.compile(mass_line)
+
     # check that the user has passed a data.* file if <use_data> is True
-    if use_data and datafile is None:
-        raise NameError("No file containing simulation data specified.")
+    #if use_data and datafile is None:
+    #    raise NameError("No file containing simulation data specified.")
 
-    struc_file = atm.read_file(basename, path=path)
-
+    struc_file = atm.read_file(datafile, path=path)
     cell_lengths = np.zeros(3) 
 
+    in_atoms = False
+    in_masses = False 
     for line in struc_file:
         # try to match lattice
-        lattmatch = lattice_reg.match(line)
+        lattmatch = lattice_reg.search(line)
+        # look for skews
+        tiltmatch = tilt_reg.search(line)
         if lattmatch:
             if lattmatch.group('vec') == 'x':
                 index = 0
@@ -153,33 +176,61 @@ def parse_lammps(basename, unit_cell, path='./'):
                 index = 2
 
             cell_lengths[index] = float(lattmatch.group('x'))
-        else:
+            continue
+        if tiltmatch:
+            projections = [float(x) for x in tiltmatch.group('proj').split()]
+            continue
+        if line.strip().split()[0].lower() == 'atoms':
+            in_atoms = True
+            continue
+        if in_atoms:
             # look for atoms
-            atommatch = atom_reg.match(line)
+            atommatch = atom_reg.search(line)
             if atommatch:
-                # parse coordinates
+                # parse coordinates and add atom to <unit_cell>
                 coords = np.array([float(x) for x in atommatch.group('coords').split()])
-                new_atom = LammpsAtom(atommatch.group('i'), coords, 
-                                    q=float(atommatch.group('q')))
-                
-                unit_cell.addAtom(new_atom)
-            else:
-                # look for skews
-                tiltmatch = tilt_reg.match(line)
-                if tiltmatch:
-                    projections = [float(x) for x in tiltmatch.group('proj').split()]
+                if atom_style == 'charge':
+                    new_atom = LammpsAtom(atommatch.group('i'), coords, q=float(atommatch.group('q')))
+                elif atom_style == 'atomic':
+                    new_atom = LammpsAtom(atommatch.group('i'), coords)
 
+                unit_cell.addAtom(new_atom)
+                continue
+            elif (not line.strip()) or line.strip().startswith('#'):
+                # empty line or comment -> may still be in the Atoms section
+                continue
+            else:
+                in_atoms = False
+                # still want to check some other stuff
+        if line.strip().split()[0].lower() == 'masses':
+            in_masses = True
+            continue
+        if in_masses:
+            mass_match = mass_reg.search(line)
+            if mass_match:
+                sysinfo['masses'].append([int(mass_match.group('i')), 
+                                         float(mass_match.group('m'))])
+                continue
+            elif (not line.strip()) or line.strip().startswith('#'):
+                # as above
+                continue
+            else:
+                in_masses = False
+                pass
+        
     # construct lattice vectors and set latt vecs of <unit_cell> 
     x = np.array([cell_lengths[0], 0., 0.])
-    y = np.array([projections[0], cell_lengths[1], 0.])
-    z = np.array([projections[1], projections[2], cell_lengths[2]])
-
     unit_cell.setVector(x, 0)
+    y = np.array([projections[0], cell_lengths[1], 0.])
     unit_cell.setVector(y, 1)
+    z = np.array([projections[1], projections[2], cell_lengths[2]])
     unit_cell.setVector(z, 2)
 
-    sys_info = None
-    return sys_info
+    # scale the atomic coordinates (this is right...maybe?)
+    for atom in unit_cell:
+        atom.to_cell(unit_cell.getLattice())
+
+    return sysinfo
 
 def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_cart=True,
                     add_constraints=False, relax_type='conv', impurities=None):
@@ -187,13 +238,13 @@ def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_ca
     because atomic coordinates in LAMMPS are, by default, given in cartesian
     coordinates, the write function here sets the default value of <to_cart>
     to be <True>.
-    
+
     #!!!At present, only crystals with orthogonal lattice vectors are supported.
     '''
 
 
     outstream.write('This is the first line of a LAMMPS file\n\n')
-    
+
     # insert any impurities
     if not (impurities is None):
         if mutate.is_single(impurities):
@@ -205,7 +256,7 @@ def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_ca
 
     # calculate total number of atoms in <lmp_struc> plus any impurities
     outstream.write('  {} atoms\n\n'.format(len(struc)))
-    
+
     # number of distinct elements
     outstream.write('  {} atom types\n\n'.format(struc.number_of_elements()))
 
@@ -216,26 +267,48 @@ def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_ca
     outstream.write(' 0. {:.6f} zlo zhi\n'.format(lattice[2, 2]))
     outstream.write(' {:.3f} {:.3f} {:.3f} xy xz yz\n\n'.format(lattice[1, 0],
                                                 lattice[2, 0], lattice[2, 1]))
-    
+
     # write atoms to file
-    outstream.write('Atoms\n')
+    outstream.write('Atoms\n\n')
+    assign_indices(struc)
     for i, atom in enumerate(struc):
-        atom.set_index(i)
+        #atom.set_index(i+1)
         atom.write(outstream, lattice=lattice, defected=defected, to_cart=to_cart)
-        
+
     # atomic masses
     outstream.write('\nMasses\n\n')
     for species in sys_info['masses']:
         outstream.write('{} {:.2f}\n'.format(species[0], species[1]))
 
-    pass
+    # change the input script
+    read_and_write_data(ostream, sysinfo)
+
+    iscript = open('script.{}'.format(ostream.name), 'w')
+    iscript.write(sysinfo['input_script'])
+    iscript.close() 
+
+    ostream.close()    
+    return
+
+def read_and_write_data(ostream, sysinfo):
+    '''Changes the values of the <read_data> and <write_data> variables in 
+    the lammps input script to match the datafile containing the dislocation(s),
+    <ostream>.
+    '''
+
+    read_data = re.search('read_data\s+\S+', sysinfo['input_script']).group()
+    write_data = re.search('write_data\s+\S+', sysinfo['input_script']).group()
+
+    sysinfo['input_script'].replace(read_data, 'read_data {}'.format(ostream.name))
+    sysinfo['input_script'].replace(write_data, 'write_data new.{}'.format(ostream.name))
+    return
     
-def run_lammps(lammps_exec, basename, nproc=1, para_exec='mpiexec', set_omp=False,
-                                                                  omp_threads=1):
+def run_lammps(lammps_exec, basename, nproc=1, para_exec='mpiexec', 
+                                                  set_omp=False, omp_threads=1):
     '''Runs a lammps simulation. Since lammps is a parallel code, there is the 
     option to run it in parallel, with the number of processors given by <nproc>.    
     '''
-    
+
     # check the number of processors used -> if > 1, use parallel executable
     # (default MPI)
     if nproc < 1:
@@ -244,21 +317,22 @@ def run_lammps(lammps_exec, basename, nproc=1, para_exec='mpiexec', set_omp=Fals
         use_para = True
     else:
         use_para = False
-        
+
     # set number of openMPI threads per process (if > 1)
     if use_para and set_omp and omp_threads >= 1:        
         os.putenv('OMP_NUM_THREADS', str(int(omp_threads)))
-        
+
     # input and output files
-    lin = open('in.{}'.format(basename), 'r')
+    lin = open('script.{}'.format(basename), 'r')
     lout = open('out.{}'.format(basename), 'w')
-    
+
     # run lammps    
     if use_para:
         subprocess.call([para_exec, '-np', str(nproc), lammps_exec], stdin=lin,
                                                                     stdout=lout)
     else:
         subprocess.call(lammps_exec, stdin=lin, stdout=lout)
-        
+
     lin.close()
     lout.close()
+    return

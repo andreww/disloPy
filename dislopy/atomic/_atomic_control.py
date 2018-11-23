@@ -9,7 +9,7 @@ import os
 from numpy.linalg import norm
 
 # list of atomic simulation codes currently supported by disloPy 
-supported_codes = ('qe', 'gulp', 'castep')
+supported_codes = ('qe', 'gulp', 'castep', lammps)
 
 #!!! need to shift the relevant functions to a simulation method-agnostic module  
 from dislopy.utilities.control_functions import control_file, from_mapping, change_type,  \
@@ -123,7 +123,11 @@ def handle_atomistic_control(param_dict):
                      ('suffix', {'default': 'in', 'type': str}),
                      ('executable', {'default': '', 'type': str}),
                      ('calculate_core_energy', {'default': False, 'type': to_bool}),
-                     ('maxcyc', {'default': 100, 'type': int})
+                     ('maxcyc', {'default': 100, 'type': int}),
+                     ('para_exec', {'default': 'mpiexec', 'type': to_bool}),
+                     ('para_nproc', {'default': 1, 'type': int}),
+                     ('set_omp', {'default': False, 'type': to_bool}),
+                     ('omp_threads', 'default': 1, 'type': int})
                     )
     
     # cards for the <&elast> namelist. Note that if dislocations are specified 
@@ -365,6 +369,9 @@ class AtomisticSim(object):
             self.parse_fn = castep.parse_castep
             self.write_fn = castep.write_castep
             self.ab_initio = True
+        elif self.control('program') == 'lammps':
+            self.parse_fn = lammps.parse_lammps
+            self.write_fn = lammps.write_lammps
         
         # read in unit cell and translate so that origin of dislocation is at
         # (0., 0.)
@@ -559,13 +566,14 @@ class AtomisticSim(object):
         else:
             relaxtype = None
         
-        if self.control('program') != 'gulp':    
-            self.write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True, 
-                                                add_constraints=False, relax_type=relaxtype)
-        else:
+        if self.control('program').lower() == 'gulp':
             self.write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True,
                                                 add_constraints=False, relax_type=relaxtype, 
-                                                             maxiter=self.control('maxcyc'))
+                                                             maxiter=self.control('maxcyc'))   
+        else:
+            self.write_fn(outstream, supercell, self.sys_info, to_cart=False, defected=True, 
+                                                add_constraints=False, relax_type=relaxtype)
+        
         
         # run calculations, if requested by the user
         if self.control('run_sim'):
@@ -596,6 +604,13 @@ class AtomisticSim(object):
             qe.run_qe(self.control('executable'), basename)
         elif 'castep' == self.control('program'):
             castep.run_castep(self.control('executable'), basename)
+        elif 'lammps' == self.control('program'):
+            lammps.run_lammps(self.control('executable'), basename,
+                              para_exec=self.control('para_exec'),
+                              nproc=self.control('para_nproc'),
+                              set_omp=self.control('set_omp'),
+                              omp_threads=self.control('omp_threads')
+                             )
             
         return
         

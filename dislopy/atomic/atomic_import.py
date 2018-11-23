@@ -6,6 +6,7 @@ import sys
 from dislopy.atomic import gulpUtils as gulp
 from dislopy.atomic import qe_utils as qe
 from dislopy.atomic import castep_utils as castep
+from dislopy.atomic import lammps_utils as lammps
 from dislopy.atomic import crystal as cry
 from dislopy.atomic import rodSetup as rod
 from dislopy.atomic import fields
