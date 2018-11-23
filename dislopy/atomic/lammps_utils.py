@@ -123,19 +123,19 @@ def parse_lammps(datafile, unit_cell, input_script, path='./'):
     '''
 
     # record atomic masses and the contents of the input script as system info
-    sysinfo = dict()
-    sysinfo['masses'] = []
+    sys_info = dict()
+    sys_info['masses'] = []
     input_script_file = open(input_script, 'r')
     input_script_lines = input_script_file.read()
     input_script_file.close()
-    sysinfo['input_script'] = input_script_lines
+    sys_info['input_script'] = input_script_lines
 
     # regex to find cell lengths, cell angles, masses, and atomic coordinates
     # atom line has the format atom-ID atom-type q (charge) x y z
     anynum = '-?\d+\.?\d*(?:e(?:\+|-)\d+)?'
 
     # determine which style is used for the Atoms input
-    style_reg = re.search('atom_style\s+(?P<atom_style>\w+)', sysinfo['input_script'])
+    style_reg = re.search('atom_style\s+(?P<atom_style>\w+)', sys_info['input_script'])
     atom_style = style_reg.group('atom_style')
     if atom_style == 'charge':
         atom_line = '^\s*\d+\s+(?P<i>\d+)\s+(?P<q>{})(?P<coords>(?:\s+{}){{3}})'.format(anynum, anynum)
@@ -208,7 +208,7 @@ def parse_lammps(datafile, unit_cell, input_script, path='./'):
         if in_masses:
             mass_match = mass_reg.search(line)
             if mass_match:
-                sysinfo['masses'].append([int(mass_match.group('i')), 
+                sys_info['masses'].append([int(mass_match.group('i')), 
                                          float(mass_match.group('m'))])
                 continue
             elif (not line.strip()) or line.strip().startswith('#'):
@@ -230,7 +230,7 @@ def parse_lammps(datafile, unit_cell, input_script, path='./'):
     for atom in unit_cell:
         atom.to_cell(unit_cell.getLattice())
 
-    return sysinfo
+    return sys_info
 
 def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_cart=True,
                     add_constraints=False, relax_type='conv', impurities=None):
@@ -281,26 +281,26 @@ def write_lammps(outstream, struc, sys_info, defected=True, do_relax=True, to_ca
         outstream.write('{} {:.2f}\n'.format(species[0], species[1]))
 
     # change the input script
-    read_and_write_data(outstream, sysinfo)
+    read_and_write_data(outstream, sys_info)
 
     iscript = open('script.{}'.format(outstream.name), 'w')
-    iscript.write(sysinfo['input_script'])
+    iscript.write(sys_info['input_script'])
     iscript.close() 
 
     outstream.close()    
     return
 
-def read_and_write_data(outstream, sysinfo):
+def read_and_write_data(outstream, sys_info):
     '''Changes the values of the <read_data> and <write_data> variables in 
     the lammps input script to match the datafile containing the dislocation(s),
     <outstream>.
     '''
 
-    read_data = re.search('read_data\s+\S+', sysinfo['input_script']).group()
-    write_data = re.search('write_data\s+\S+', sysinfo['input_script']).group()
+    read_data = re.search('read_data\s+\S+', sys_info['input_script']).group()
+    write_data = re.search('write_data\s+\S+', sys_info['input_script']).group()
 
-    sysinfo['input_script'].replace(read_data, 'read_data {}'.format(outstream.name))
-    sysinfo['input_script'].replace(write_data, 'write_data new.{}'.format(outstream.name))
+    sys_info['input_script'].replace(read_data, 'read_data {}'.format(outstream.name))
+    sys_info['input_script'].replace(write_data, 'write_data new.{}'.format(outstream.name))
     return
     
 def run_lammps(lammps_exec, basename, nproc=1, para_exec='mpiexec', 
