@@ -199,7 +199,7 @@ def write_energies(outname, site_info, e_excess, e_seg, pars=None):
 ### PLOTTING FUNCTIONS
 
 def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=False,
-                                 units='eV', figformat='tif', levels=100, nlabels=5):
+      units='eV', figformat='tif', levels=100, nlabels=5, vmin=np.nan, vmax=np.nan):
     '''Produces a contour plot of the segregation energy at sites around a 
     dislocation. Use <levels> to control the number of contours.
     '''
@@ -218,10 +218,20 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=Fal
         # refine data for improved high-res plot
         refiner = tri.UniformTriRefiner(triang)
         tri_refi, es_refi = refiner.refine_field(e_seg, subdiv=3)
-        plt.tricontourf(tri_refi, es_refi, levels, cmap=plt.get_cmap(cmtype))
-    else:
+        if vmin != vmin and vmax != vmax:
+            # vmin and vmax not specified -> use default
+            plt.tricontourf(tri_refi, es_refi, levels, cmap=plt.get_cmap(cmtype))
+        else:
+            # use supplied values of vmin and vmax
+            plt.tricontourf(tri_refi, es_refi, levels, cmap=plt.get_cmap(cmtype),
+                                                             vmin=vmin, vmax=vmax)
+    else: 
         # use raw data to produce contours
-        plt.tricontourf(triang, e_seg, levels, cmap=plt.get_cmap(cmtype))
+        if vmin != vmin and vmax != vmax:
+            plt.tricontourf(triang, e_seg, levels, cmap=plt.get_cmap(cmtype)) 
+        else: 
+            plt.tricontourf(triang, e_seg, levels, cmap=plt.get_cmap(cmtype), 
+                                    vmin=vmin, vmax=vmax)
         
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
@@ -237,13 +247,13 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=Fal
     
     plt.tight_layout()
     
-    plt.savefig('{}.{}'.format(figname, figformat))
+    plt.savefig('{}.{}'.format(figname, figformat), dpi=400)
     plt.close()    
     
     return
     
 def plot_energies_scatter(sites, e_seg, figname, r, cmtype='viridis', units='eV',
-                                                             figformat='tif'):
+                                                          figformat='tif'):
     '''Produces a scatterplot showing all of the sites for which segregation 
     energies were calculated, with each point coloured according to the 
     segregation energy at that site.
@@ -266,17 +276,17 @@ def plot_energies_scatter(sites, e_seg, figname, r, cmtype='viridis', units='eV'
     
     cb = plt.colorbar()
     cb.set_label('E ({})'.format(units), size='x-large', family='serif')
-    plt.savefig('{}.{}'.format(figname, figformat))
+    plt.savefig('{}.{}'.format(figname, figformat), dpi=400)
     plt.close()
     
     return
 
 ### END PLOTTING FUNCTIONS
 
-def analyse_segregation_results(basename, e0, de, n, r, mirror=False, mirror_axis=1, 
-                              mirror_both=False, inversion=False, plot_scatter=True,  
-                          plot_contour=True, plotname='', figformat='tif', fit=True,
-                                                           fit_r=2.0, tolerance=1.0):
+def analyse_segregation_results(basename, e0, de, n, r, 
+    mirror=False, mirror_axis=1, mirror_both=False, inversion=False, 
+    fit=True, fit_r=2.0, tolerance=1.0, 
+    plot_scatter=True, plot_contour=True, plotname='', figformat='tif', vmin=np.nan, vmax=np.nan):
     '''Processes the output files from a segregation energy surface calculation.
     '''
     
@@ -320,10 +330,10 @@ def analyse_segregation_results(basename, e0, de, n, r, mirror=False, mirror_axi
         
     if plot_scatter:
         plot_energies_scatter(site_info, e_seg, plotname+'.scatter', r,
-                                            figformat=figformat)
+                             figformat=figformat)
     if plot_contour:
         plot_energies_contour(site_info, e_seg, plotname+'.contour', r,
-                                            figformat=figformat)
+                             figformat=figformat, vmin=vmin, vmax=vmax)
     
     return  
 

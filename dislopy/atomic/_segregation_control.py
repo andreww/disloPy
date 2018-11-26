@@ -162,13 +162,15 @@ def handle_segregation_control(param_dict):
                       ('axis', {'default': 1, 'type': int}),
                       ('mirror_both', {'default': False, 'type': to_bool}),
                       ('inversion', {'default': False, 'type': to_bool}),
+                      ('do_fit', {'default': True, 'type': to_bool}),
+                      ('fit_r', {'default': 2.0, 'type': float}),
+                      ('tolerance', {'default': 1.0, 'type': float}),
                       ('plot_scatter', {'default': True, 'type': to_bool}),
                       ('plot_contour', {'default': True, 'type': to_bool}),
                       ('plot_name', {'default': '', 'type': int}),
                       ('figformat', {'default': 'tif', 'type': str}),
-                      ('do_fit', {'default': True, 'type': to_bool}),
-                      ('fit_r', {'default': 2.0, 'type': float}),
-                      ('tolerance', {'default': 1.0, 'type': float})
+                      ('vmin', {'default': np.nan, 'type': float}),
+                      ('vmax', {'default': np.nan, 'type': float})
                      )
                         
     # read in specific namelists
@@ -478,13 +480,15 @@ class SegregationSim(object):
                                         mirror_axis=self.analysis('axis'),
                                         mirror_both=self.analysis('mirror_both'), 
                                         inversion=self.analysis('inversion'),
+                                        fit=self.analysis('do_fit'),
+                                        fit_r=self.analysis('fit_r'),
+                                        tolerance=self.analysis('tolerance'),
                                         plot_scatter=self.analysis('plot_scatter'),
                                         plot_contour=self.analysis('plot_contour'),
                                         plotname=self.analysis('plot_name'),
                                         figformat=self.analysis('figformat'),
-                                        fit=self.analysis('do_fit'),
-                                        fit_r=self.analysis('fit_r'),
-                                        tolerance=self.analysis('tolerance')
+                                        vmin=self.analysis('vmin'),
+                                        vmax=self.analysis('vmax')
                                        )
 
     ###!!!EXPERIMENTAL!!!### 
