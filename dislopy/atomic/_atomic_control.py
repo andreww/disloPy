@@ -9,7 +9,7 @@ import os
 from numpy.linalg import norm
 
 # list of atomic simulation codes currently supported by disloPy 
-supported_codes = ('qe', 'gulp', 'castep', lammps)
+supported_codes = ('qe', 'gulp', 'castep', 'lammps')
 
 #!!! need to shift the relevant functions to a simulation method-agnostic module  
 from dislopy.utilities.control_functions import control_file, from_mapping, change_type,  \
