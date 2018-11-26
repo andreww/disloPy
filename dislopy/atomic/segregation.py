@@ -14,6 +14,7 @@ from scipy.optimize import curve_fit
 try:
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
+    import matplotlib.colors as colors
 except ImportError:
     print("Module <matplotlib> not found. Do not use plotting functions.")
 
@@ -213,30 +214,28 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=Fal
     fig = plt.figure()
     plt.gca().set_aspect('equal')
     
+    if not (vmin != vmin and vmax != vmax):
+        normalize = colors.Normalize(vmin=vmin, vmax=vmax)
+    
     # plot energy contours
     if refine:
         # refine data for improved high-res plot
         refiner = tri.UniformTriRefiner(triang)
-        tri_refi, es_refi = refiner.refine_field(e_seg, subdiv=3)
-        if vmin != vmin and vmax != vmax:
-            # vmin and vmax not specified -> use default
-            plt.tricontourf(tri_refi, es_refi, levels, cmap=plt.get_cmap(cmtype))
-        else:
-            # use supplied values of vmin and vmax
-            plt.tricontourf(tri_refi, es_refi, levels, cmap=plt.get_cmap(cmtype),
-                                                             vmin=vmin, vmax=vmax)
+        points, values = refiner.refine_field(e_seg, subdiv=3)
     else: 
         # use raw data to produce contours
-        if vmin != vmin and vmax != vmax:
-            plt.tricontourf(triang, e_seg, levels, cmap=plt.get_cmap(cmtype)) 
-        else: 
-            plt.tricontourf(triang, e_seg, levels, cmap=plt.get_cmap(cmtype), 
-                                    vmin=vmin, vmax=vmax)
+        points, values = triang, e_seg
+        
+    if vmin != vmin and vmax != vmax:
+        plt.tricontourf(points, values, levels, cmap=plt.get_cmap(cmtype)) 
+    else: 
+        plt.tricontourf(points, values, levels, cmap=plt.get_cmap(cmtype), 
+                                                                norm=normalize)
         
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
     
-    cb = plt.colorbar(format='%.2f')
+    cb = plt.colorbar(format='%.2f', ticks=np.linspace(vmin, vmax, 3, endpoints=True))
     cb.set_label('E ({})'.format(units), size='x-large', family='serif')
 
     # add points to mark the locations of the atomic sites
