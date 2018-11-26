@@ -216,6 +216,9 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=Fal
     
     if not (vmin != vmin and vmax != vmax):
         normalize = colors.Normalize(vmin=vmin, vmax=vmax)
+        ticks = ticks=np.linspace(vmin, vmax, 3, endpoint=True)
+    else:   
+        ticks = ticks=np.linspace(min(values), max(values), 3, endpoint=True)
     
     # plot energy contours
     if refine:
@@ -229,14 +232,13 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=Fal
     if vmin != vmin and vmax != vmax:
         plt.tricontourf(points, values, levels, cmap=plt.get_cmap(cmtype)) 
     else: 
-        plt.tricontourf(points, values, levels, cmap=plt.get_cmap(cmtype), 
-                                                                norm=normalize)
+        plt.tricontourf(points, values, levels, cmap=plt.get_cmap(cmtype), norm=normalize)
         
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
     
-    cb = plt.colorbar(format='%.2f', ticks=np.linspace(vmin, vmax, 3, endpoints=True))
-    cb.set_label('E ({})'.format(units), size='x-large', family='serif')
+    cb = plt.colorbar(format='%.2f', ticks=ticks)
+    cb.set_label('E ({})'.format(units), size='x-large', family='serif', weight='semibold')
 
     # add points to mark the locations of the atomic sites
     plt.scatter(x, y, s=60, linewidth='2', facecolors='none', edgecolors='k')
