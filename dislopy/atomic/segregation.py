@@ -200,7 +200,7 @@ def write_energies(outname, site_info, e_excess, e_seg, pars=None):
 ### PLOTTING FUNCTIONS
 
 def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=False,
-      units='eV', figformat='tif', levels=100, nlabels=5, vmin=np.nan, vmax=np.nan):
+      units='eV', figformat='tif', levels=100, nlabels=5, nticks=4, vmin=np.nan, vmax=np.nan):
     '''Produces a contour plot of the segregation energy at sites around a 
     dislocation. Use <levels> to control the number of contours.
     '''
@@ -210,15 +210,16 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=Fal
     x = sites[:, 1]
     y = sites[:, 2]
     triang = tri.Triangulation(x, y)
+    levels = np.linspace(vmin, vmax, levels)
     
     fig = plt.figure()
     plt.gca().set_aspect('equal')
     
     if not (vmin != vmin and vmax != vmax):
         normalize = colors.Normalize(vmin=vmin, vmax=vmax)
-        ticks = ticks=np.linspace(vmin, vmax, 3, endpoint=True)
+        ticks = ticks=np.linspace(vmin, vmax, nticks, endpoint=True)
     else:   
-        ticks = ticks=np.linspace(min(values), max(values), 3, endpoint=True)
+        ticks = ticks=np.linspace(min(values), max(values), nticks, endpoint=True)
     
     # plot energy contours
     if refine:
