@@ -200,7 +200,7 @@ def write_energies(outname, site_info, e_excess, e_seg, pars=None):
 ### PLOTTING FUNCTIONS
 
 def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=False,
-      units='eV', figformat='tif', levels=100, nlabels=5, nticks=4, vmin=np.nan, vmax=np.nan):
+      units='eV', figformat='tif', levels=100, nticks=4, vmin=np.nan, vmax=np.nan):
     '''Produces a contour plot of the segregation energy at sites around a 
     dislocation. Use <levels> to control the number of contours.
     '''
@@ -288,7 +288,7 @@ def plot_energies_scatter(sites, e_seg, figname, r, cmtype='viridis', units='eV'
 def analyse_segregation_results(basename, e0, de, n, r, 
     mirror=False, mirror_axis=1, mirror_both=False, inversion=False, 
     fit=True, fit_r=2.0, tolerance=1.0, 
-    plot_scatter=True, plot_contour=True, plotname='', figformat='tif', vmin=np.nan, vmax=np.nan):
+    plot_scatter=True, plot_contour=True, plotname='', figformat='tif', vmin=np.nan, vmax=np.nan, nticks=4):
     '''Processes the output files from a segregation energy surface calculation.
     '''
     
@@ -335,7 +335,7 @@ def analyse_segregation_results(basename, e0, de, n, r,
                              figformat=figformat)
     if plot_contour:
         plot_energies_contour(site_info, e_seg, plotname+'.contour', r,
-                             figformat=figformat, vmin=vmin, vmax=vmax)
+                             figformat=figformat, vmin=vmin, vmax=vmax, nticks=nticks)
     
     return  
 

@@ -170,7 +170,8 @@ def handle_segregation_control(param_dict):
                       ('plot_name', {'default': '', 'type': int}),
                       ('figformat', {'default': 'tif', 'type': str}),
                       ('vmin', {'default': np.nan, 'type': float}),
-                      ('vmax', {'default': np.nan, 'type': float})
+                      ('vmax', {'default': np.nan, 'type': float}),
+                      ('nticks', {'default': 4, 'type': int})
                      )
                         
     # read in specific namelists
@@ -488,7 +489,8 @@ class SegregationSim(object):
                                         plotname=self.analysis('plot_name'),
                                         figformat=self.analysis('figformat'),
                                         vmin=self.analysis('vmin'),
-                                        vmax=self.analysis('vmax')
+                                        vmax=self.analysis('vmax'),
+                                        nticks=self.analysis('nticks')
                                        )
 
     ###!!!EXPERIMENTAL!!!### 
