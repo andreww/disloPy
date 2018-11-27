@@ -7,8 +7,8 @@ from __future__ import absolute_import
 import argparse
 import sys
 
-from pydis.atomic import _atomic_control, _segregation_control
-from pydis.pn import _pn_control
+from dislopy.atomic import _atomic_control, _segregation_control
+from dislopy.pn import _pn_control
 
 def main_generic(simtype):
     '''Runs a simulation of the specified kind.
