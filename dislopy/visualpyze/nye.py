@@ -2,8 +2,13 @@
 from __future__ import print_function
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.tri as tri
+
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.tri as tri
+    import matplotlib.colors as colors
+except ImportError:
+    print("Module <matplotlib> not found. Do not use plotting functions.")
 
 from numpy.linalg import norm, inv
 
@@ -476,30 +481,35 @@ def auto_nye(unit_cell, dis_cell, index, max_bond_length, atomtype, cell_dim,
     x, ajk = unravel_nye(a)
     return x, ajk
 
-def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi=300, psize=200,
-                                            cmap_type='bwr'):
+def scatter_nye(x, ajk, figname='nye', figtype='tif', dpi=400, psize=200,
+                 cmap_type='viridis', vmin=np.nan, vmax=np.nan, nticks=3):
     '''Create scatter plot showing specified component of the Nye tensor <ajk>
     '''
     
-    # create range limit for color map 
-    vmax = abs(ajk).max()
-    
     fig = plt.figure() 
     plt.gca().set_aspect('equal')
-    plt.scatter(x[:, 0], x[:, 1], c=ajk, cmap=plt.get_cmap(cmap_type), s=psize,
-                                linewidth='2')
+    
+    if vmin != vmin and vmax != vmax:
+        plt.scatter(x[:, 0], x[:, 1], c=ajk, cmap=plt.get_cmap(cmap_type), s=psize, linewidth='1')
+        ticks = np.linspace(min(ajk), max(ajk), nticks, endpoint=True)
+    else:
+        normalize = colors.Normalize(vmin=vmin, vmax=vmax)
+        ticks = np.linspace(vmin, vmax, nticks, endpoint=True)
+        plt.scatter(x[:, 0], x[:, 1], c=ajk, cmap=plt.get_cmap(cmap_type), s=psize, linewidth='1',
+                                            norm=normalize)
                      
     plt.xlim(x[:, 0].min()-1, x[:, 0].max()+1)
     plt.ylim(x[:, 1].min()-1, x[:, 1].max()+1)
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
-    plt.colorbar(format='%.1e')
+    
+    cb = plt.colorbar(format='%.1e', ticks=ticks)
     plt.tight_layout()
     plt.savefig('{}.{}'.format(figname, figtype), dpi=dpi)
     plt.close()
 
 def contour_nye(x, ajk, figname='nye_contour', figtype='tif', dpi=300, 
-                                            cmap_type='bwr'):
+                cmap_type='viridis', vmin=np.nan, vmax=np.nan, nticks=3):
     '''Creates a contour plot of the specified component of the Nye tensor.
     '''
                                                 
@@ -523,8 +533,7 @@ def save_nye(x, ajk, nye_file):
 
     outstream = open(nye_file, 'w')
     n = len(x)
-    nye_components = ['a00', 'a01', 'a02', 'a10', 'a11', 'a12', 'a20',
-                                                          'a21', 'a22']
+    nye_components = ['a00', 'a01', 'a02', 'a10', 'a11', 'a12', 'a20', 'a21', 'a22']
         
     # write header
     outstream.write('# x y')
