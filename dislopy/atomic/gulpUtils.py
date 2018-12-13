@@ -488,7 +488,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
                                           defected, coordType='pfractional', 
                                              add_constraints=add_constraints)
             writeRegion(struc.getRegionIIAtoms(), cell_lattice, outstream, 2, 
-                                            efected, coordType='pfractional', 
+                                            defected, coordType='pfractional', 
                                              add_constraints=add_constraints)
         else: # cartesian                
             writeRegion(struc.getRegionIAtoms(), cell_lattice, outstream, 1, 
@@ -501,7 +501,7 @@ def write_gulp(outstream, struc, sys_info, defected=True, do_relax=True, to_cart
                                           maxiter=maxiter, transition=transition) 
         writeVectors(struc.getLattice(), outstream)
         
-        if relax_type is None:
+        if relax_type is None or relax_type == '':
             # give strain optimization flags
             outstream.write('0 0 0 0 0 0\n')
             # GULP requires that optimization flags be set for all atoms

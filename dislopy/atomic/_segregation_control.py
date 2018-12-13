@@ -9,6 +9,7 @@ import argparse
 import numpy as np
 
 from shutil import copyfile
+from numpy.linalg import norm
 
 supported_codes = ('gulp')
 
@@ -116,6 +117,7 @@ def handle_segregation_control(param_dict):
                      ('do_calc', {'default': True, 'type': to_bool}),
                      ('noisy', {'default': False, 'type': to_bool}),
                      ('executable', {'default': '', 'type': str}),
+                     ('calc_type', {'default': None, 'type': str}), # NEW
                      ('region_r', {'default': 10, 'type': float}),
                      ('new_r1', {'default': 10, 'type': int}),
                      ('centre_on_impurity', {'default': True, 'type': to_bool}),
@@ -128,6 +130,7 @@ def handle_segregation_control(param_dict):
                      ('collate', {'default': True, 'type': to_bool}),
                      ('site', {'default': None, 'type': str}),
                      ('label', {'default': 'dfct', 'type': str}),
+                     ('suffix', {'default': 'in', 'type': str}),
                      ('uses_hydroxyl', {'default': False, 'type': to_bool}),
                      ('o_str', {'default': 'O', 'type': str}),
                      ('oh_str', {'default': 'Oh', 'type': str})
@@ -152,7 +155,9 @@ def handle_segregation_control(param_dict):
     constraints_cards = (('height_min', {'default':np.nan, 'type':float}),
                          ('height_max', {'default':np.nan, 'type':float}),
                          ('phi_min', {'default':np.nan, 'type':float}),
-                         ('phi_max', {'default':np.nan, 'type':float})
+                         ('phi_max', {'default':np.nan, 'type':float}),
+                         ('x0', {'default': 0., 'type': float}), #NEW
+                         ('y0', {'default': 0., 'type': float}) #NEW
                         )
                         
     # cards for the <&analysis> namelist
@@ -184,7 +189,7 @@ def handle_segregation_control(param_dict):
                 
     # populate namelists 
     for i, cards in enumerate([control_cards, migration_cards, constraints_cards, 
-                                                                analysis_cards]):
+                                                                 analysis_cards]):
         # read in cards specifying sim. parameters
         for var in cards:
             try:
@@ -263,12 +268,18 @@ class SegregationSim(object):
             # parse the results
             if not self.control('dislocation_file'):
                 raise ValueError('Must supply a dislocation.')
+            
+            # construct point defect-free simulation cell, together with the 
+            # appropriate set of contraints
+            
+            if self.control('calc_type').lower() == 'cluster':     #NEW
+                self.make_cluster()
+            elif self.control('calc_type').lower() == 'multipole': #NEW
+                self.make_supercell() #NEW
+            else: #NEW
+                raise ValueError('{} is an invalid simulaion type'.format(self.control('calc_type'))) #NEW 
                 
-            # make cluster
-            self.make_cluster()
-                
-            # create constraint functions
-            self.form_constraints()  
+            self.form_constraints()
 
         # run separately for 1 vs. multiple defect configurations
         if len(self.impurities) == 1:    
@@ -276,6 +287,8 @@ class SegregationSim(object):
                 # create defect and input files
                 self.make_defect()
                 self.segregate_defect()
+            if do_calc:
+                self.calculate_defect()
         else:    
             for i in range(len(self.impurities)): 
                 # make and segregate the defect
@@ -361,6 +374,16 @@ class SegregationSim(object):
                                                        
         self.cluster = rs.extend_cluster(base_clus, self.control('n'))
         
+    def make_supercell(self): #NEW
+        '''Constructs the supercell that will be used in subsequent simulations.
+        '''
+        
+        base_sc = cry.Crystal() #NEW
+        self.sysinfo = gulp.parse_gulp(self.control('dislocation_file'), base_sc) #NEW
+        
+        # extend normal to dislocation line
+        self.supercell = cry.superConstructor(base_sc, np.array([1., 1., self.control('n')])) #NEW       
+        
     def make_defect(self):
         '''Constructs the Impurity object whose segregation energy surface
         around the dislocation is to be calculated.
@@ -394,54 +417,65 @@ class SegregationSim(object):
         self.cons_funcs = []
         
         # height of simulation cell
-        H = self.cluster.getHeight()
+        if self.control('calc_type').lower() == 'cluster':
+            H = self.cluster.getHeight()
+        else: # supercell 
+            H = 1.
+            
+        # location of the dislocation line
+        self.x0 = [self.constraints('x0'), self.constraints('y0')]
         
         # create height constraint. The supplied values of <height_min> and
         # <height_max> are in fractional units.
-        if self.constraints('height_min') is not np.nan:
-            hmin = self.constraints('height_min')*H
-            if self.constraints('height_max') is not np.nan:
-                hmax = float(self.constraints('height_max'))*H
+        if (self.constraints('height_min') is not np.nan) or (self.constraints('height_max') is not np.nan):
+            if self.constraints('height_min') is not np.nan:
+                hmin = self.constraints('height_min')*H                
+            else:
+                # note that height_min is NaN -> assume base of cell
+                hmin = 0.
+                    
+            if self.constraints('height_max') is not np.nan:  
+                hmax = self.constraints('height_max')*H
             else:
                 # assume max height is the top of the unitcell
                 hmax = hmin+H/float(self.control('n'))
                 
             # create constraint function
-            self.cons_funcs.append(lambda atom: mut.heightConstraint(hmin, hmax, 
-                                                                atom, period=H))
-        elif self.constraints('height_max') is not np.nan:
-            # note that height_min is NaN -> assume base of cell
-            hmin = 0.
-            hmax = self.constraints('height_max')*H
-            self.cons_funcs.append(lambda atom: mut.heightConstraint(hmin, hmax, 
-                                                                atom, period=H))
+            self.cons_funcs.append(lambda atom: mut.heightConstraint(hmin, hmax, atom, period=H))
             
         # create azimuthal constraints, if supplied
-        if self.constraints('phi_min') is not np.nan:
-            fmin = float(self.constraints('phi_min'))
-            if self.constraints('phi_max') is not np.nan:
-                fmax = float(self.constraints('phi_max'))
+        if (self.constraints('phi_min') is not np.nan) or (self.constraints('phi_max') is not np.nan):
+            if self.constraint('phi_min') is not np.nan:
+                fmin = self.constraints('phi_min')
             else:
-                # assume phi_max is upper bound of range of possible azimuthal
-                # values
+                # set to lower bound of range of possible values
+                fmin = -np.pi
+                    
+            if self.constraints('phi_max') is not np.nan:
+                fmax = self.constraints('phi_max')
+            else:
+                # assume phi_max is upper bound of range of possible azimuthal values
                 fmax = np.pi
-            self.cons_funcs.append(lambda atom: mut.azimuthConstraint(fmin, fmax, atom))
-        elif self.constraints('phi_max') is not np.nan:
-            # phi_min guaranteed to be NaN, set to lower bound of range of 
-            # possible values
-            fmin = -np.pi
-            fmax = float(self.constraints('phi_max'))
-            self.cons_funcs.append(lambda atom: mut.azimuthConstraint(fmin, fmax, atom))
+                            
+            self.cons_funcs.append(lambda atom: mut.azimuthConstraint(fmin, fmax, atom, x0=self.x0))  
         
     def segregate_defect(self):
         '''Creates the input files for the segregation energy calculation.
         '''
         
         # calculate impurity energies
+        if self.control('calc_type').lower() == 'cluster':
+            use_cell = self.cluster
+        else: 
+            use_cell = self.supercell
+            
         ms.insert_defect(self.sysinfo, 
-                         self.cluster, 
+                         use_cell, 
                          self.control('region_r'),
                          self.dfct, 
+                         self.control('new_r1'),
+                         calc_type=self.control('calc_type'),
+                         suffix=self.control('suffix'),
                          centre_on_impurity=self.control('centre_on_impurity'),
                          constraints=self.cons_funcs,              
                          noisy=self.control('noisy'),
@@ -450,7 +484,8 @@ class SegregationSim(object):
                          oh_str=self.control('oh_str'),
                          bonds=self.migration('find_bonded'), 
                          has_mirror_symmetry=self.migration('has_mirror_symmetry'),
-                         dx_thresh=self.migration('dx_thresh')
+                         dx_thresh=self.migration('dx_thresh'),
+                         x0 = self.x0
                         )
                                  
     def calculate_defect(self):

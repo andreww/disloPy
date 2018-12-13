@@ -259,7 +259,7 @@ def write_castep(outstream, cas_struc, sys_info, defected=True, to_cart=False,
 
     # write pseupotential filenames and Monkhorst-Pack k-point grid
     if sys_info['psps']:
-        outstream.write('%s\n\n' % sys_info['psps'])
+        outstream.write('{}\n\n'.format(sys_info['psps']))
 
     util.write_kgrid(outstream.write, sys_info['mp_kgrid'])
 

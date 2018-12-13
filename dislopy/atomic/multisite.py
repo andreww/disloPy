@@ -18,6 +18,9 @@ from dislopy.atomic import castep_utils as castep
 from dislopy.atomic import lammps_utils as lammps
 from dislopy.atomic import transmutation as mutate
 
+# list of atomic simulation codes currently supported by disloPy 
+supported_codes = ('qe', 'gulp', 'castep', 'lammps')
+
 def periodic_distance(atom1, atom2, lattice, use_displaced=True, oned=False,
                                                 to_cart=True):
     '''Calculates the smallest distance between <atom1> and any periodic image
@@ -400,11 +403,12 @@ def sites_to_replace_bonds(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=N
             pass
         else:
             for test in constraints:
-                useAtom = test(atomi) 
-                if not useAtom:
-                    print("Skipping atom {}.".format(i))
+                use_atom = test(atomi) 
+                if not use_atom:
+                    if noisy:
+                        print("Skipping atom {}.".format(i))
                     break
-            if not useAtom:
+            if not use_atom:
                 continue  
                      
         if noisy:        
@@ -481,6 +485,70 @@ def sites_to_replace_bonds(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=N
     create_bond_file(defect, bond_pairs, cluster)
     
     return use_indices
+    
+###!!! SUPERCELL STUFF EXPERIMENTAL
+
+def supercell_sites_to_replace(cell, defect, radius, x0=np.zeros(2), constraints=None, noisy=False):
+    '''Determines into which sites in <cell> <defect> should be inserted.
+    '''
+
+    # need the lattice to calculate (a) locations of periodic images and (b) the 
+    # distances from the dislocation line
+    lattice = cell.getLattice()
+    
+    # find the indices of sites to be replaced
+    use_indices = []   
+    for i, atom in enumerate(cell):
+        if atom.getSpecies() != defect.getSite():
+            # <defect> cannot substitute for atom at site <i>
+            continue
+        
+        # atom <i> outside region of interest    
+        dist = period_norm(atom.getCoordinates(), x0, lattice[0], lattice[1])
+        if dist > radius:            
+            continue
+            
+        # test constraints
+        if constraints is None:
+            use_indices.append(i)
+        else:
+            for test in constraints:
+                use_atom = test(atom)
+                if not use_atom:
+                    if noisy:
+                        print('Skipping atom {}'.format(i))
+                    break
+            if not use_atom:
+                continue
+        
+        if noisy:
+            print('Replacing atom {} (index {})'.format(str(atom), i))
+            
+        use_indices.append(i)
+        
+    create_id_file(defect, use_indices, cell) 
+    
+    return use_indices 
+            
+        
+def period_norm(x, x0, a, b):
+    '''Calculates the minimum cartesian distance between <x> and <x0>.'''
+    
+    # convert atom locations to cartesian coordinates
+    x_c = x[0]*a+x[1]*b
+    x0_c = x0[0]*a+x0[1]*b
+    
+    # calculate distances to between x0 and all periodic images of x
+    dmin = np.inf
+    for m in range(-1, 2):
+        for n in range(-1, 2):
+            d = norm(x_c+m*a+n*b-x0_c) 
+            if d < dmin:
+                dmin = d
+    
+    return dmin
+    
+###!!! END SUPERCELL STUFF EXPERIMENTAL    
 
 def create_id_file(defect, indices, cluster):
     '''Record information about sites for which defect energies should be 
@@ -538,11 +606,30 @@ def create_bond_file(defect, bond_pairs, cluster):
         
     bondfile.close() 
     
-def insert_defect(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
-         constraints=None, minimizer='bfgs', maxcyc=100, noisy=False, tol=1e-1,
-                     centre_on_impurity=False, do_calc=False, dx_thresh=np.nan,
-                  contains_hydroxyl=False, oh_str='Oh', o_str='O', bonds=False,
-                    has_mirror_symmetry=False, in_parallel=False, nprocesses=1):
+def insert_defect(sysinfo, 
+                  simcell, 
+                  radius, 
+                  defect, 
+                  relax_r,
+                  calc_type=None,
+                  program='gulp',
+                  suffix='in',
+                  constraints=None, 
+                  minimizer='bfgs', 
+                  maxcyc=100, 
+                  noisy=False, 
+                  tol=1e-1,
+                  x0=np.zeros(2),
+                  centre_on_impurity=False, 
+                  do_calc=False, 
+                  dx_thresh=np.nan,
+                  contains_hydroxyl=False,
+                  oh_str='Oh',
+                  o_str='O',
+                  bonds=False,
+                  has_mirror_symmetry=False,
+                  in_parallel=False, 
+                  nprocesses=1):
     '''Iterates through all atoms in <relaxedCluster> within distance <radius>
     of the dislocation line, and sequentially replaces one atom of type 
     <replaceType> with an impurity <newType>. dRMin is the minimum difference
@@ -568,6 +655,12 @@ def insert_defect(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     bonded to H atoms with their hydroxyl counterparts.
     '''
     
+    if calc_type is None:
+        raise ValueError("Variable <calc_type> must be defined.")
+        
+    if not(program in supported_codes):
+        raise ValueError("Code {} not supported.".format(program)) 
+    
     # dummy variables for lattice and toCart. Due to the way the program
     # is set up, disloc is set equal to false, as the atoms are displaced 
     # and relaxed BEFORE we read them in
@@ -582,31 +675,32 @@ def insert_defect(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
     else:
         raise TypeError('Invalid impurity type.')
     
-    if bonds:
-        # find all sites for which energies need to be calculated in order
-        # to determine energy barriers for diffusion 
-        if dx_thresh != dx_thresh:
-            raise ValueError("Intersite distance must be defined.")
-            
-        use_indices = sites_to_replace_bonds(gulpcluster, defect, radius, dx_thresh,
+    if calc_type == 'cluster':
+        if bonds:
+            # find all sites for which energies need to be calculated in order
+            # to determine energy barriers for diffusion 
+            if dx_thresh != dx_thresh:
+                raise ValueError("Intersite distance must be defined.")
+                
+            use_indices = sites_to_replace_bonds(simcell, defect, radius, dx_thresh,
                                       tol=tol, constraints=constraints, noisy=noisy, 
-                                           has_mirror_symmetry=has_mirror_symmetry)
-    else:     
-        use_indices = sites_to_replace(gulpcluster, defect, radius, tol=tol,
-                                     constraints=constraints, noisy=noisy)
+                                             has_mirror_symmetry=has_mirror_symmetry)
+        else:     
+            use_indices = sites_to_replace(simcell, defect, radius, tol=tol, constraints=constraints, noisy=noisy)
+    elif calc_type == 'multipole':
+        use_indices = supercell_sites_to_replace(simcell, defect, radius, x0=x0, constraints=constraints, noisy=noisy)
                                      
     # construct input files and, if requested by the user, run calculations  
-    site_list = []  
     for i in use_indices:        
         # set the coordinates and site index of the impurity
-        atom = gulpcluster[i]
+        atom = simcell[i]
         defect.site_location(atom)
         defect.set_index(i)
         
         # if the defect contains hydrogen, replace normal oxygen atoms with 
         # hydroyl oxygen atoms
         if contains_hydroxyl:
-            full_defect = hydroxyl_oxygens(defect, gulpcluster, oh_str, 
+            full_defect = hydroxyl_oxygens(defect, simcell, oh_str, 
                                 oxy_str=o_str, oned=True, to_cart=False)  
         else:
             full_defect = defect        
@@ -614,10 +708,7 @@ def insert_defect(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
         # create .gin file for the calculation
         coords = atom.getCoordinates()
         prefix = make_outname(defect)
-        outstream = open(make_outname(defect)+'.gin','w')
-        
-        # record prefix for later use in parallel run
-        site_list.append(prefix)
+        outstream = open('{}.{}'.format(make_outname(defect), suffix),'w')
        
         # write structure to output file, including the coordinates of the 
         # impurity atom(s)
@@ -626,11 +717,31 @@ def insert_defect(sysinfo, gulpcluster, radius, defect, gulpexec='./gulp',
             rI_centre = coords[:-1]
         else:
             # centre on cylinder axis
-            rI_centre = np.zeros(2)           
+            rI_centre = np.zeros(2)   
             
-        gulp.write_gulp(outstream, gulpcluster, sysinfo, defected=False, to_cart=False,
+        # add constraints for atoms in a supercell simulation #NEW
+        if calc_type == 'multipole':
+            for atom in simcell:
+                d = period_norm(atom.getCoordinates(), rI_centre, simcell.getA(), simcell.getB())
+                if d < relax_r: 
+                    atom.set_constraints(np.ones(3))
+                else: 
+                    # fix the atom in place
+                    atom.set_constraints(np.zeros(3))        
+        
+        if program.lower() == 'gulp':    
+            gulp.write_gulp(outstream, simcell, sysinfo, defected=False, to_cart=False,
                             impurities=full_defect, rI_centre=rI_centre, relax_type='',
                                                                   add_constraints=True)
+        elif program.lower() == 'lammps':
+            lammps.write_lammps(outstream, simcell, sysinfo, defected=False, to_cart=False,
+                           relax_type='', impurities=full_defect, add_constraints=True)
+        elif program.lower() == 'qe':
+            qe.write_qe(outstream, simcell, sysinfo, defect=False, to_cart=False,
+                        relax_type='relax', impurities=full_defect, add_constraints=True)
+        elif program.lower() =='castep':
+            castep.write_castep(outstream, simcell, sysinfo, defect=False, to_cart=False,
+                        relax_type='', impurities=full_defect, add_constraints=True)
                                                                   
     return 
 
