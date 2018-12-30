@@ -787,20 +787,20 @@ def cluster_cartesian(atom_coords, lattice):
 
 # additional utilities that can be helpful for working with GULP
 
-def run_gulp(gulp_exec, basename):
+def run_gulp(gulp_exec, basename, in_suffix='gin', out_suffix='gout'):
     '''Runs a gulp calculation (using the gulp executable <gulp_exec>) taking
     <basename>.gin -> <basename>.gout.
     '''
 
-    gin = open('{}.gin'.format(basename))
-    gout = open('{}.gout'.format(basename), 'w')
+    gin = open('{}.{}'.format(basename, in_suffix), 'r')
+    gout = open('{}.{}'.format(basename, out_suffix), 'w')
     subprocess.call(gulp_exec, stdin=gin, stdout=gout)
 
     gin.close()
     gout.close()
     return
     
-def gulp_process(prefix, gulpexec, message=None):
+def gulp_process(prefix, gulpexec, message=None, in_suffix='gin', out_suffix='gout'):
     '''An individual GULP process to be called when running in parallel.
     '''
     
@@ -820,15 +820,15 @@ def gulp_process(prefix, gulpexec, message=None):
     
     # copy .gin file into child directory, and then descend into subdirectory
     # to run simulation
-    copyfile('{}.gin'.format(prefix), '{}/{}.gin'.format(prefix, prefix))    
+    copyfile('{}.{}'.format(prefix, in_suffix), '{}/{}.{}'.format(prefix, prefix, in_suffix))    
     os.chdir(prefix)
    
     # run simulation and return to the primary impurity directory    
-    run_gulp(gulpexec, prefix)
+    run_gulp(gulpexec, prefix, in_suffix=in_suffix, out_suffix=out_suffix)
     os.chdir('../')
     
     # copy output file to main directory 
-    copyfile('{}/{}.gout'.format(prefix, prefix), '{}.gout'.format(prefix))
+    copyfile('{}/{}.{}'.format(prefix, prefix, out_suffix), '{}.{}'.format(prefix, out_suffix))
     return 0
 
 def cluster_from_grs(filename, rI, rII, new_rI=None, r=None):

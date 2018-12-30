@@ -159,8 +159,9 @@ def handle_atomistic_control(param_dict):
                        ('grid', {'default': True, 'type': to_bool}),
                        ('bdir', {'default': 0, 'type': int}),
                        ('alignment', {'default': 0, 'type': int}),
-                       ('method', {'default': '', 'type': str}),
-                       ('fit_K', {'default': True, 'type': to_bool})
+                       ('method', {'default': 'standard', 'type': str}),
+                       ('fit_K', {'default': True, 'type': to_bool}),
+                       ('e_unit_cell', {'default': np.nan, 'type': float})
                       )
                       
     # cards for the <&cluster> namelist. Remember that the Stroh sextic theory
@@ -528,11 +529,7 @@ class AtomisticSim(object):
             atm.scale_kpoints(self.sys_info['cards']['K_POINTS'], np.array([nx, ny, 1.]))
                     
         # construct supercell
-        supercell = cry.superConstructor(self.base_struc, np.array([nx, ny, 1.]))
-        
-        ''' #!!! Changing this to use functions from <super_edge>
-        supercell.applyField(self.ufield, self.cores, self.burgers, Sij=self.sij)
-        '''            
+        supercell = cry.superConstructor(self.base_struc, np.array([nx, ny, 1.]))           
         
         if self.elast('disl_type') == 'edge':
             if self.multipole('npoles') == 2:
@@ -663,9 +660,11 @@ class AtomisticSim(object):
         '''
             
         # check that valid method has been supplied
-        if not (self.multipole('method') in ['compare', 'edge']):
+        if not (self.multipole('method') in ['standard', 'edge']):
+            # standard: substract energy of unit cell multiplied by nx x ny
+            # edge: subtract energy of individual atoms in the perfect material 
             raise ValueError(("{} does not correspond to a valid way to " +
-                   "calculate the core energy.").format(self.cluster('method')))
+                   "calculate the core energy.").format(self.multipole('method')))
 
         # determine suffix of atomistic simulation output files
         if self.control('program') == 'gulp':
@@ -681,14 +680,12 @@ class AtomisticSim(object):
                               suffix, self.multipole('nx'), j_index=self.multipole('ny'), 
                                               relax=True, gridded=self.multipole('grid')) 
                         
-        if self.multipole('method') == 'compare':
-            # read in energy of undislocated reference cell
-            eperf = mp.gridded_energies('ndf.{}'.format(self.control('basename')),
-                             self.control('program'), suffix, self.multipole('nx'),
-                   self.multipole('ny'), relax=False, gridded=self.multipole('grid'))
-                
-            # calculate excess energy of the cell introduced by dislocations    
-            dE = mp.excess_energy(edis, 'compare', eperf)
+        if self.multipole('method') == 'standard':
+            # check that a valid unit cell energy has been provided
+            if self.multipole('e_unit_cell') != self.multipole('e_unit_cell'):
+                raise ValueError('<e_unit_cell> must be a real number.')
+                 
+            dE = mp.excess_energy_standard(edis, self.multipole('e_unit_cell'))
                 
         elif self.multipole('method') == 'edge':
             # calculate excess energy from energies of atoms in perfect crystal
@@ -696,8 +693,7 @@ class AtomisticSim(object):
                 # prompt use to enter energies for all atoms
                 self.atomic_energies = ce.make_atom_dict()
                     
-            dE = mp.excess_energy(edis, 'edge', Edict=self.atomic_energies,
-                        parse_fn=self.parse_fn, in_suffix=self.control('suffix'))
+            dE = mp.excess_energy_edge(edis, self.atomic_energies, self.parse_fn, self.control('suffix'))
                         
         # fit the core energy and other parameters
         if self.multipole('npoles') == 4:
@@ -715,6 +711,7 @@ class AtomisticSim(object):
             par, err = mp.fit_core_energy_mp(dE, self.base_struc, norm(self.burgers),
                                                 self.elast('rcore'), ndis=ndis, K=self.K)
             
+        mp.write_sc_energies(self.control('basename'), dE, par, err, K=self.K, using_atomic=True)
         return
         
     def write_output(self):

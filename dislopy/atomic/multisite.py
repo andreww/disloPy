@@ -354,13 +354,14 @@ def sites_to_replace(cluster, defect, radius, tol=1e-1, constraints=None,
             continue  
               
         # check <constraints>
-        if constraints is None:
+        if constraints is None or constraints == []:
             pass
         else:
             for test in constraints:
                 useAtom = test(atom) 
                 if not useAtom:
-                    print("Skipping atom {}.".format(i))
+                    if noisy:
+                        print("Skipping atom {}.".format(i))
                     break
             if not useAtom:
                 continue       
@@ -372,7 +373,7 @@ def sites_to_replace(cluster, defect, radius, tol=1e-1, constraints=None,
     
     # record site IDs and coordinates
     create_id_file(defect, use_indices, cluster)
-    
+
     return use_indices
     
 def sites_to_replace_bonds(cluster, defect, radius, dx_thresh, tol=1e-1, bonds=None,
@@ -689,7 +690,7 @@ def insert_defect(sysinfo,
             use_indices = sites_to_replace(simcell, defect, radius, tol=tol, constraints=constraints, noisy=noisy)
     elif calc_type == 'multipole':
         use_indices = supercell_sites_to_replace(simcell, defect, radius, x0=x0, constraints=constraints, noisy=noisy)
-                                     
+                                 
     # construct input files and, if requested by the user, run calculations  
     for i in use_indices:        
         # set the coordinates and site index of the impurity
@@ -745,7 +746,7 @@ def insert_defect(sysinfo,
                                                                   
     return 
 
-def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocesses=1):
+def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocesses=1, suffix='gin'):
     '''Calculates energies for dislocation clusters containing a single impurity
     previously constructed using the <calculate_impurity> function.
     '''
@@ -754,13 +755,14 @@ def calculate_impurity_energies(site_list, gulpexec, in_parallel=False, nprocess
         for site in site_list:
             i = site.split('.')[-1]
             print('Relaxing structure with defect at site {}...'.format(i))
-            gulp.run_gulp(gulpexec, site)
+            gulp.run_gulp(gulpexec, site, in_suffix=suffix)
     else:
         pool = Pool(processes=nprocesses)
         for site in site_list:
             i = site.split('.')[-1]
-            pool.apply_async(gulp.gulp_process, args=(site, gulpexec, 
-                      'Relaxing structure with defect at site {}...'.format(i)))
+            msg = 'Relaxing structure with defect at site {}...'.format(i)
+            pool.apply_async(gulp.gulp_process, args=(site, gulpexec), 
+                      kwds=dict(message=msg, in_suffix=suffix))
                 
         pool.close()
         pool.join()

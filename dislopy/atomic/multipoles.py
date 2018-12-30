@@ -58,7 +58,10 @@ from dislopy.atomic import castep_utils as castep
 from dislopy.atomic import qe_utils as qe
 from dislopy.atomic import lammps_utils as lammps
 
-supported_codes = ('qe', 'gulp', 'castep')
+supported_codes = ('qe', 'gulp', 'castep', 'lammps')
+
+# convert elastic modulus in eV/ang**3 to GPa
+CONV_EV_TO_GPA = 160.2176487 
 
 def compare(a, b):
     if abs(a) < 1 and abs(b) < 1:
@@ -417,57 +420,39 @@ def screw_quadrupole(supercell, b, screwfield, sij):
     
 ### FUNCTIONS TO EXTRACT CORE ENERGY ###
     
-def excess_energy(energy_grid, method, perf_grid=None, Edict=None, parse_fn=None,
-                                                                   in_suffix='in'):
+def excess_energy_standard(energy_grid, e_unit_cell):
     '''Calculate the excess energy due to the presence of dislocations in the 
-    cells whose total energies and dimensions (in units of lattice parameters)
-    are contained in <energy_grid>. Valid methods are "compare" and "edge," 
-    which require additional input data contained in either <perf_grid> (the
-    energies of undislocated cells) or <Edict> (energies of atoms), respectively
+    cells with base unit cell energy <e_unit_cell>.
     '''
     
     E_excess = []
     
-    if method == 'compare':
-        # check that the user has supplied energies for perfect cells
-        if perf_grid is None: # may be better to check type
-            raise TypeError("Undislocated energies cannot be <None>.") 
-        else:
-            # test that <perf_grid> has the right dimensions
-            if np.shape(energy_grid) != np.shape(perf_grid):
-                raise ValueError("Dimensions of gridded energies are incompatible.")
-                
-        for discell, perfcell in zip(energy_grid, perf_grid):
-            # make sure that supercell dimensions match
-            if discell[0] != perfcell[0] or discell[1] != perfcell[1]:  
-                raise ValueError("Incompatible cell dimensions")
-                
-            E_excess.append([discell[0], discell[1], discell[2]-perfcell[2]])
-        
-    elif method == 'edge':
-        # check that the user has supplied atomic energies
-        if Edict is None:
-            raise TypeError("<Edict> not defined.")
-        if parse_fn is None:
-            raise AttributeError("<parse_fn> not defined.")
+    for discell in energy_grid:
+        # calculate energy of an undislocated supercell with the same dimensions as <discell>
+        Eperf = discell[0]*discell[1]*e_unit_cell
+        E_excess.append([discell[0], discell[1], discell[2]-Eperf])
             
-        for discell in energy_grid:
-            # extract atoms in simulation cell
-            temp_crystal = cry.Crystal()
-            sysinfo = parse_fn('{}.{}'.format(discell[-1], in_suffix), temp_crystal)
-            
-            # calculate total energy of atoms in cell if no dislocations were
-            # present
-            Eperf = 0.
-            for atom in temp_crystal:
-                Eperf += Edict[atom.getSpecies()]
-                
-            E_excess.append([discell[0], discell[1], discell[2] - Eperf])
-    else:
-        raise ValueError("{} is not a valid method for calculating the excess" +
-                         " energy of a dislocation multipole.".format(method))
-    
     return E_excess
+
+def excess_energy_edge(energy_grid, Edict, parse_fn, in_suffix):        
+    '''Calculate the excess energy due to the presence of a dislocation multipole
+    by subtracting from the energy of a dislocated cell the energies of all its
+    atoms calculated individually in the reference (i.e. undislocated) state.
+    '''
+    
+    for discell in energy_grid:
+        # extract atoms in simulation cell
+        temp_crystal = cry.Crystal()
+        sysinfo = parse_fn('{}.{}'.format(discell[-1], in_suffix), temp_crystal)
+            
+        # calculate total energy of atoms in cell if no dislocations were present
+        Eperf = 0.
+        for atom in temp_crystal:
+            Eperf += Edict[atom.getSpecies()]
+                
+        E_excess.append([discell[0], discell[1], discell[2] - Eperf])
+    
+    return E_excess 
   
 def gridded_energies(basename, program, suffix, i_index, j_index=None, gridded=False,
                                                                         relax=True):
@@ -524,7 +509,7 @@ def multipole_energy(spacing, Ecore, A, K, b, rcore, n):
     a1, a2 = spacing
 
     #!!! need to check factors of pi
-    E = Ecore + K*b**2/(4*np.pi)*(np.log(abs(a1)/(2*rcore))+A*abs(a1)/abs(a2))
+    E = Ecore + K*b**2*(np.log(abs(a1)/(2*rcore))+A*abs(a1)/abs(a2))
     
     return E 
     
@@ -534,6 +519,8 @@ def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev', A=None,
     dislocations in simulation cells of varying sizes. The elements of <ndis>
     give the number of dislocations along the x and y axes.
     '''
+    
+    dEij = np.array(dEij)
     
     # test to see if <rcore> has been defined; if not, default to 2*b
     if rcore != rcore:
@@ -545,26 +532,24 @@ def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev', A=None,
         
     n = np.product(ndis)
     
-    # extract the cell sizes (in \AA) and energies (in eV), and then normalise
-    # to eV/\AA
-    dEij = np.array(dEij)/norm(basestruc.getC())
-    print(n)
-    energies = dEij[:, -1]/n
-    if units.lower() == 'ev':
-        pass
-    elif 'ry' in units.lower(): # assume Rydberg, can add others later
-        energies *= 13.60569172
-         
-    
     # extract cell dimensions
     dims = []
     for i in range(3):
         dims.append(norm(basestruc.getVector(i)))
+
+    # extract the cell sizes (in \AA) and energies (in eV), and then normalise
+    # to eV/\AA
+    energies = np.array(dEij[:, -1])/(n*dims[-1])
+
+    if units.lower() == 'ev':
+        pass
+    elif 'ry' in units.lower(): # assume Rydberg, can add others later
+        energies *= 13.60569172
         
     spacing = dEij[:, :2]
     spacing = np.array([[dims[0]*x[0]/ndis[0], dims[1]*x[1]/ndis[1]] for x in spacing])
     spacing = spacing.transpose()
-    
+
     # create version of the energy function with specific <b> and maybe <K>
     if K is None and A is None:
         # fit both K and A
@@ -587,3 +572,42 @@ def fit_core_energy_mp(dEij, basestruc, b, rcore, K=None, units='ev', A=None,
     par, err = curve_fit(fittable_energy, spacing, energies)
     
     return par, err    
+    
+def write_sc_energies(basename, dEij, par, err, K=None, using_atomic=False):
+    '''Write the cell energies and fitted core energy for the collection of
+    dislocation multipoles.
+    '''
+    
+    ostream = open('{}.energies'.format(basename), 'w')
+    
+    # write header containing fit values
+    EString = "Core energy: {:.4f} +- {:.4f} eV/angstrom".format(par[0], np.sqrt(err[0, 0]))
+    AString = "A coefficient: {:.4f} +- {:.4f}".format(par[1], np.sqrt(err[1, 1]))
+    
+    # Do the K stuff
+    try:
+        Ktemp = par[2]
+        errKtemp = np.sqrt(err[2, 2])
+    except IndexError:
+        if K is None:
+            raise NameError('K is not defined.')
+        else:
+            Ktemp = K
+            errKtemp = 0.0
+            
+    if using_atomic:
+        KGPa = CONV_EV_TO_GPA*Ktemp
+        errKGPa = CONV_EV_TO_GPA*errKtemp
+    else:
+        KGPa, errKGPa = Ktemp, errKtemp
+        
+    KString = "Energy coefficient: {:.2f} +- {:.2f} GPa".format(KGPa, errKGPa)
+    
+    ostream.write('# {}; {}; {}\n'.format(EString, AString, KString))
+    
+    for cell in dEij:
+        ostream.write('{:.0f} {:.0f} {:.6f}\n'.format(cell[0], cell[1], cell[2])) 
+    
+    ostream.close()
+    
+    return  

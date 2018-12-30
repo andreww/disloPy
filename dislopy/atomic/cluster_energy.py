@@ -418,7 +418,7 @@ def fitCoreEnergy(basename, b, rcore=10, fit_K=False, in_K=-1,
     radius-energy data is stored in <basename>.energies. Returns K in eV/ang**3
     and Ecore in eV/ang. <thickness> is the length of the simulation cell.
     '''
-    
+
     E = readEnergies(basename)
    
     # define dislocation energy function -> contains specified core radius. If

@@ -445,7 +445,7 @@ class SegregationSim(object):
             
         # create azimuthal constraints, if supplied
         if (self.constraints('phi_min') is not np.nan) or (self.constraints('phi_max') is not np.nan):
-            if self.constraint('phi_min') is not np.nan:
+            if self.constraints('phi_min') is not np.nan:
                 fmin = self.constraints('phi_min')
             else:
                 # set to lower bound of range of possible values
@@ -498,7 +498,8 @@ class SegregationSim(object):
         # run calculation
         ms.calculate_impurity_energies(sitelist, self.control('executable'), 
                                        in_parallel=self.control('parallel'), 
-                                               nprocesses=self.control('np'))
+                                       nprocesses=self.control('np'),
+                                       suffix=self.control('suffix'))
                                   
     def analyse_results(self):
         '''Analyses the output of the segregation calculation, getting segregation
