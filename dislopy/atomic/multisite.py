@@ -558,7 +558,7 @@ def create_id_file(defect, indices, cluster):
     
     # record defect sites and IDs
     idfile = open('{}.{}.id.txt'.format(defect.getName(), defect.getSite()), 'w')
-    idfile.write('# site-id x y z\n')
+    idfile.write('# site-id x y z r\n')
     # record base name of simulation files
     idfile.write('# {}.{}\n'.format(defect.getName(), defect.getSite())) 
     
@@ -582,10 +582,10 @@ def create_bond_file(defect, bond_pairs, cluster):
     '''
     
     bondfile = open('{}.{}.bonds.txt'.format(defect.getName(), defect.getSite()), 'w')
-    bondfile.write('# site-id x y z\n')
-    bondfile.write('# bond-id-1 x y z\n')
+    bondfile.write('# site-id x y z r\n')
+    bondfile.write('# bond-id-1 x1 y1 z1 r1\n')
     bondfile.write('# ...\n')
-    bondfile.write('# bond-id-n xn yn zn;\n')
+    bondfile.write('# bond-id-n xn yn zn rn;\n')
     # record base name of simulation files
     bondfile.write('# {}.{}\n'.format(defect.getName(), defect.getSite()))
     

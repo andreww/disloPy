@@ -439,9 +439,14 @@ class SegregationSim(object):
             else:
                 # assume max height is the top of the unitcell
                 hmax = hmin+H/float(self.control('n'))
-                
-            # create constraint function
-            self.cons_funcs.append(lambda atom: mut.heightConstraint(hmin, hmax, atom, period=H))
+        else:
+            # neither defined -> assume that all sites to be replaced will be 
+            # in the lowermost replicate
+            hmin = 0.
+            hmax = H/float(self.control('n'))
+            
+        # create constraint function
+        self.cons_funcs.append(lambda atom: mut.heightConstraint(hmin, hmax, atom, period=H))
             
         # create azimuthal constraints, if supplied
         if (self.constraints('phi_min') is not np.nan) or (self.constraints('phi_max') is not np.nan):
