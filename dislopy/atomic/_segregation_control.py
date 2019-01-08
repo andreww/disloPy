@@ -490,7 +490,7 @@ class SegregationSim(object):
                          bonds=self.migration('find_bonded'), 
                          has_mirror_symmetry=self.migration('has_mirror_symmetry'),
                          dx_thresh=self.migration('dx_thresh'),
-                         x0 = self.x0
+                         x0=self.x0
                         )
                                  
     def calculate_defect(self):

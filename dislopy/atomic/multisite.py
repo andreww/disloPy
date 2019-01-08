@@ -628,9 +628,7 @@ def insert_defect(sysinfo,
                   oh_str='Oh',
                   o_str='O',
                   bonds=False,
-                  has_mirror_symmetry=False,
-                  in_parallel=False, 
-                  nprocesses=1):
+                  has_mirror_symmetry=False):
     '''Iterates through all atoms in <relaxedCluster> within distance <radius>
     of the dislocation line, and sequentially replaces one atom of type 
     <replaceType> with an impurity <newType>. dRMin is the minimum difference
