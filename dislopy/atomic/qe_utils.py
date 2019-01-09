@@ -171,6 +171,11 @@ def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
     
     # write namelists
     for block in namelists:
+        # test that the namelist <block> is not empty
+        if not (block in sys_info['namelists'].keys()):
+            continue
+        
+        # else, write the block    
         outstream.write(' {}\n'.format(block))
         for variable in sys_info['namelists'][block]:
             if variable == 'calculation':
