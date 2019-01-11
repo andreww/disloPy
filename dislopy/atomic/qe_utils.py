@@ -80,7 +80,7 @@ def extract_parameters(name_dict, card_dict):
     sys_info = dict()
     
     # regex to capture variable definition
-    var_form = re.compile('(?P<name>\w[\w\d_\(\)]*)\s*=\s*(?P<value>[^,]+)')
+    var_form = re.compile('(?P<name>\w[\w\d_\(\)]*(?:\([\w\d_,\s]+\))?)\s*=\s*(?P<value>[^,]+)')
     
     # extract namelist guff to <sys_info>
     sys_info['namelists'] = dict()
@@ -153,6 +153,20 @@ class Pseudopotential(object):
     def __str__(self):
         return '  {} {:.4f} {}'.format(self.species, self.weight, 
                                                      self.psp)
+                                                     
+def scale_nbands(system_nmlst, sc_dims):
+    '''If the <nbands> variable (number of valence bands) is specified in the 
+    system information for the base cell, scale by the size of the new supercell
+    defined by <sc_dims> (i.e. the multiples of unit cell parameters in x,y,z).
+    '''
+    
+    if 'nbnd' in system_nmlst.keys():
+        # increase number of bands to reflect new sc size
+        old_nbands = int(system_nmlst['nbnd'])
+        new_nbands = old_nbands*sc_dims[0]*sc_dims[1]*sc_dims[2]
+        system_nmlst['nbnd'] = new_nbands
+    
+    return 
         
 def write_qe(outstream, qe_struc, sys_info, defected=True, to_cart=False,
        add_constraints=False, relax_type='scf', impurities=None, do_relax=None, prop=None):

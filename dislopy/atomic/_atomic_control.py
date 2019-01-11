@@ -525,8 +525,11 @@ class AtomisticSim(object):
         dislocation multipole.
         '''
         
+        # if necessary, scale the grid of kpoints and number of valence bands
         if self.ab_initio:
             atm.scale_kpoints(self.sys_info['cards']['K_POINTS'], np.array([nx, ny, 1.]))
+            if self.control('program') == 'qe':
+                qe.scale_nbands(self.sys_info['namelists']['&system'], np.array([nx, ny, 1.]))
                     
         # construct supercell
         supercell = cry.superConstructor(self.base_struc, np.array([nx, ny, 1.]))           

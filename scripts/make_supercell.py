@@ -80,6 +80,8 @@ def main():
     sys_info = read_fn(args.unitcell, base_struc)
     if ab_initio:
         atm.scale_kpoints(sys_info['cards']['K_POINTS'], np.array(args.dims))
+        if args.prog == 'qe':
+            qe.scale_nbands(sys_info['namelists']['&system'], np.array(args.dims))
                               
     supercell = cry.superConstructor(base_struc, np.array(args.dims))
     
