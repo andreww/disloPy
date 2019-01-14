@@ -155,7 +155,7 @@ def main():
         if 'qe' == args.prog.lower():
             atm.scale_kpoints(sys_info['cards']['K_POINTS'], 
                               np.array([1., 1., args.n]))
-             qe.scale_nbands(sys_info['namelists']['&system'], np.array([1., 1., args.n]))
+            qe.scale_nbands(sys_info['namelists']['&system'], np.array([1., 1., args.n]))
         elif 'castep' == args.prog.lower():
             atm.scale_kpoints(sys_info['mp_kgrid'], np.array([1., 1., args.n]))
     

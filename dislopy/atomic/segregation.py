@@ -209,17 +209,30 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=Fal
     # scheme
     x = sites[:, 1]
     y = sites[:, 2]
-    triang = tri.Triangulation(x, y)
-    levels = np.linspace(vmin, vmax, levels)
+    triang = tri.Triangulation(x, y)    
     
     fig = plt.figure()
     plt.gca().set_aspect('equal')
-    
-    if not (vmin != vmin and vmax != vmax):
+
+    if not (vmin is np.nan) and not (vmax is np.nan):
+        # both vmin and vmax are defined
+        ticks = np.linspace(vmin, vmax, nticks, endpoint=True)
         normalize = colors.Normalize(vmin=vmin, vmax=vmax)
-        ticks = ticks=np.linspace(vmin, vmax, nticks, endpoint=True)
-    else:   
-        ticks = ticks=np.linspace(min(values), max(values), nticks, endpoint=True)
+        levels = np.linspace(vmin, vmax, levels)
+    elif vmin is np.nan and not (vmax is np.nan):
+        # only vmax is defined => use minimum value of e_seg for vmin
+        ticks = np.linspace(min(e_seg), vmax, nticks, endpoint=True)
+        normalize = colors.Normalize(vmin=min(e_seg), vmax=vmax)
+        levels = np.linspace(min(e_seg), vmax, levels)
+    elif not (vmin is np.nan) and vmax is np.nan:
+        # only vmin is defined => use maximum value of e_seg for vmax
+        ticks = np.linspace(vmin, max(e_seg), nticks, endpoint=True)
+        normalize = colors.Normalize(vmin=vmin, vmax=max(e_seg))
+        levels = np.linspace(vmin, max(e_seg), levels)
+    else:  
+        ticks = np.linspace(min(e_seg), max(e_seg), nticks, endpoint=True)
+        normalize = colors.Normalize(vmin=min(e_seg), vmax=max(e_seg))
+        levels = np.linspace(min(e_seg), max(e_seg), levels)
     
     # plot energy contours
     if refine:
@@ -230,10 +243,10 @@ def plot_energies_contour(sites, e_seg, figname, r, cmtype='viridis', refine=Fal
         # use raw data to produce contours
         points, values = triang, e_seg
         
-    if vmin != vmin and vmax != vmax:
-        plt.tricontourf(points, values, levels, cmap=plt.get_cmap(cmtype)) 
-    else: 
-        plt.tricontourf(points, values, levels, cmap=plt.get_cmap(cmtype), norm=normalize)
+    #if vmin != vmin and vmax != vmax:
+    #    plt.tricontourf(points, values, levels, cmap=plt.get_cmap(cmtype)) 
+    #else: 
+    plt.tricontourf(points, values, levels, cmap=plt.get_cmap(cmtype), norm=normalize)
         
     plt.xlabel('x ($\AA$)', size='x-large', family='serif')
     plt.ylabel('y ($\AA$)', size='x-large', family='serif')
@@ -384,4 +397,4 @@ def main():
                   plotname=args.plotname, figformat=args.figformat, fit=args.fit)
                   
 if __name__ == "__main__":
-    main()    
+    main()
