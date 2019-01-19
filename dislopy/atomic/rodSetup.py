@@ -7,6 +7,8 @@ import numpy as np
 import numpy.linalg as L
 import sys
 
+from numpy.random import uniform
+
 from dislopy.atomic import crystal as cry
 from dislopy.atomic import circleConstruct as grid
 
@@ -247,7 +249,8 @@ class TwoRegionCluster(PeriodicCluster):
         
     def applyField(self, field_type, dis_cores, dis_burgers, Sij=0.5, branch=[0,-1],
                             branch_thresh=0.5, use_branch=True, centre_thresh=1e-10, 
-                   at_dip=False, use_dip=False, centre_line=0., species_no_merge=[]):
+                   at_dip=False, use_dip=False, centre_line=0., species_no_merge=[], 
+                   randomise=False, random_r=5., random_amp=0.01):
         '''Applies field to cluster and then updates list of RI
         and RII atoms. Default branch cut is appropriate for the displacement
         field corresponding to a pure edge dislocation in isotropic elasticity.
@@ -343,6 +346,17 @@ class TwoRegionCluster(PeriodicCluster):
         else:
             # no branch cut
             pass
+
+        # randomise the coordinates of atoms < <random_r> from the dislocation line
+        # if the option <randomise> is True    
+        if randomise:
+            for atom in self._atoms:
+                x = atom.getDisplacedCoordinates()
+                r = L.norm(x[:-1])
+                if r < random_r:
+                    # add some numerical noise to the coordinates
+                    dx = uniform(low=-random_amp, high=random_amp, size=3)
+                    atom.setDisplacedCoordinates(x+dx)
                                                        
         self.specifyRegions()
         return

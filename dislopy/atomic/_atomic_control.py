@@ -145,7 +145,10 @@ def handle_atomistic_control(param_dict):
                    ('in_gpa', {'default': True, 'type': to_bool}),
                    ('rcore', {'default': np.nan, 'type': float}),
                    ('centre', {'default': np.zeros(2), 'type': vector}),
-                   ('field_type', {'default': None, 'type': str})
+                   ('field_type', {'default': None, 'type': str}),
+                   ('randomise', {'default': False, 'type': to_bool}),
+                   ('random_r', {'default': 5., 'type': float}),
+                   ('amplitude', {'default': 0.01, 'type': float})
                   )
                   
     # Now move on to namelists that specify parameters for specific simulation
@@ -471,14 +474,20 @@ class AtomisticSim(object):
                                      Sij=self.sij, branch=self.cluster('branch_cut'),
                                             branch_thresh=self.cluster('cut_thresh'),
                                          centre_thresh=self.cluster('centre_thresh'),
-                                                                    use_branch=False)
+                                                                    use_branch=False,
+                                                                    randomise=self.elast('randomise'),
+                                                                    random_r=self.elast('random_r'),
+                                                                    random_amp=self.elast('amplitude'))
             else:              
                 # delete/merge atoms that cross the branch cut          
                 cluster.applyField(self.ufield, np.array([[0., 0.]]), [self.burgers], 
                                      Sij=self.sij, branch=self.cluster('branch_cut'),
                                                use_branch=self.cluster('use_branch'),
                                             branch_thresh=self.cluster('cut_thresh'),
-                                         centre_thresh=self.cluster('centre_thresh'))
+                                         centre_thresh=self.cluster('centre_thresh'),
+                                                                    randomise=self.elast('randomise'),
+                                                                    random_r=self.elast('random_r'),
+                                                                    random_amp=self.elast('amplitude'))
             
             outname = '{}.{:.0f}.{:.0f}'.format(self.control('basename'), r1, r2)
                                                 
