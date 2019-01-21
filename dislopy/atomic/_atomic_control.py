@@ -430,7 +430,15 @@ class AtomisticSim(object):
         
         # check that equal numbers of region 1 and region 2 radii have been provided
         if len(self.cluster('region1')) != len(self.cluster('region2')):
-            raise ValueError('Number of region 1 and 2 radii provided must be equal.')
+            # if one of the regions has a single value, assume that the radius of
+            # that region should be held constant while iterating over the values given for the other
+            if len(self.cluster('region1')) == 1:
+                self.sim['cluster']['region1'] = self.cluster('region1')[0]*np.ones(len(self.cluster('region2')))
+            elif len(self.cluster('region2')) == 1:
+                self.sim['cluster']['region2'] = self.cluster('region2')[0]*np.ones(len(self.cluster('region1')))
+            else:
+                # region radius list are incompatible => raise an error
+                raise ValueError('Number of region 1 and 2 radii provided must be equal.')
         
         for r1, r2 in zip(self.cluster('region1'), self.cluster('region2')):
             self.make_cluster(r1, r2)
