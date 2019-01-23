@@ -181,7 +181,7 @@ def handle_atomistic_control(param_dict):
                      ('method', {'default': '', 'type': str}),
                      ('rgap', {'default': 0, 'type': int}),
                      ('rmin', {'default': 1, 'type': int}),
-                     ('dr', {'default': 1, 'type': int}),
+                     ('dr', {'default': 1, 'type': float}),
                      ('fit_K', {'default': False, 'type': to_bool}),
                      ('cut_thresh', {'default': 0.5, 'type': float}),
                      ('centre_thresh', {'default': 1e-10, 'type': float})
